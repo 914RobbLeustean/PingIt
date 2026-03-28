@@ -1,5 +1,34 @@
-# Ignore personal documentation folder
-documentation_for_me/
+# Xcode
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
 
-# Ignore specific file at root
-claude.md
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods (if used)
+Pods/
+
+# Firebase
+GoogleService-Info.plist
+
+# Environment
+.env.example
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Documentation (local only)
+docs/
+
+# AI tooling
+.claude/
+.agents/
+skills-lock.json
+CLAUDE.md
