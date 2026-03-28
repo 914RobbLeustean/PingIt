@@ -1,0 +1,5 @@
+# Ignore personal documentation folder
+documentation_for_me/
+
+# Ignore specific file at root
+claude.md
