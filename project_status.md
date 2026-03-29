@@ -27,10 +27,14 @@
 - ProfileView with photo picker, username editing, AsyncImage display
 - SettingsView with sign-out confirmation
 - ViewModel refactor: configure() pattern, zero Binding(get:set:), @Bindable throughout
-- 35 unit tests total (+ username validation tests)
+- Chat Core: Join Chat, Send Message, Real-Time Message Updates
+- ChatViewModel with Firestore listener, ChatView with auto-scroll
+- Launch screen with branded logo
+- 35 unit tests total
 
 ## In Progress
 - Protocol abstractions + ViewModel testing (post-MVP refactor)
+- UI polish and edge case fixes
 
 ## Up Next
 - Phase 1: Safety & Discovery
