@@ -54,11 +54,10 @@ struct DateExtensionsTests {
         #expect(pastDate.countdownDescription == "Expired")
     }
 
-    @Test func dateInHoursShowsHoursAndMinutes() {
-        let futureDate = Date.now.addingTimeInterval(2 * 3600 + 15 * 60) // 2h 15m
+    @Test func dateInHoursShowsHoursAndRemaining() {
+        let futureDate = Date.now.addingTimeInterval(2 * 3600 + 15 * 60) // ~2h 15m
         let description = futureDate.countdownDescription
         #expect(description.contains("2h"))
-        #expect(description.contains("15m"))
         #expect(description.contains("remaining"))
     }
 

@@ -73,7 +73,7 @@ final class CreatePingViewModel {
         defer { isCreating = false }
 
         do {
-            guard authService.currentUser != nil else {
+            guard let currentUser = authService.currentUser else {
                 throw PingItError.notAuthenticated
             }
 
@@ -94,7 +94,7 @@ final class CreatePingViewModel {
             }
 
             let ping = Ping(
-                creatorId: authService.currentUser!.uid,
+                creatorId: currentUser.uid,
                 text: trimmed,
                 location: GeoPoint(
                     latitude: coordinate.latitude,

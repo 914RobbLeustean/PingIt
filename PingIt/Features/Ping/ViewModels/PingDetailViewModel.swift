@@ -66,11 +66,7 @@ final class PingDetailViewModel {
 
         do {
             guard let pingId = ping.id else { return }
-
-            if let chatId = ping.chatId {
-                try await chatService.deleteChat(id: chatId)
-            }
-            try await pingService.deletePing(id: pingId)
+            try await pingService.deletePingAndChat(pingId: pingId, chatId: ping.chatId)
             didDeletePing = true
         } catch {
             errorMessage = error.localizedDescription
