@@ -61,13 +61,13 @@ final class ChatService {
     ) -> ListenerRegistration {
         db.collection(Constants.Firestore.chatMessagesCollection)
             .whereField("chatId", isEqualTo: chatId)
-            .order(by: "createdAt")
             .addSnapshotListener { snapshot, error in
                 if let error {
                     onUpdate(.failure(error))
                     return
                 }
-                let messages = snapshot?.documents.compactMap { try? $0.data(as: ChatMessage.self) } ?? []
+                let messages = (snapshot?.documents.compactMap { try? $0.data(as: ChatMessage.self) } ?? [])
+                    .sorted { ($0.createdAt ?? .distantFuture) < ($1.createdAt ?? .distantFuture) }
                 onUpdate(.success(messages))
             }
     }
