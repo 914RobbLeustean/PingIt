@@ -13,9 +13,17 @@ struct LocationPickerView: View {
     @State private var searchCompleter = LocationSearchCompleter()
     @State private var showMapPicker = false
     @State private var mapPickerCoordinate: CLLocationCoordinate2D?
+    @State private var errorMessage: String?
 
     var body: some View {
         List {
+            if let errorMessage {
+                Section {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                }
+            }
+
             Section {
                 Button("Use Current Location", systemImage: "location.fill", action: handleUseCurrentLocation)
                     .foregroundStyle(.blue)
@@ -58,7 +66,10 @@ struct LocationPickerView: View {
     // MARK: - Actions
 
     private func handleUseCurrentLocation() {
-        guard let location = locationService.currentLocation else { return }
+        guard let location = locationService.currentLocation else {
+            errorMessage = PingItError.locationUnavailable.localizedDescription
+            return
+        }
         selectedLocation = location.coordinate
         selectedLocationName = "Current Location"
         dismiss()
@@ -70,7 +81,11 @@ struct LocationPickerView: View {
 
     private func handleSearchResultTap(_ completion: MKLocalSearchCompletion) {
         Task {
-            guard let coordinate = await resolveSearchResult(completion) else { return }
+            guard let coordinate = await resolveSearchResult(completion) else {
+                errorMessage = "Could not find location. Please try again."
+                return
+            }
+            errorMessage = nil
             selectedLocation = coordinate
             selectedLocationName = completion.title
             dismiss()
@@ -131,7 +146,8 @@ final class LocationSearchCompleter: NSObject {
 extension LocationSearchCompleter: MKLocalSearchCompleterDelegate {
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         results = completer.results.filter { result in
-            result.subtitle.localizedStandardContains("Cluj")
+            let haystack = "\(result.title) \(result.subtitle)"
+            return haystack.localizedStandardContains("Cluj")
         }
     }
 
