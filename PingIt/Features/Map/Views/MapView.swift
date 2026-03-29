@@ -72,8 +72,9 @@ struct MapView: View {
             }
             .task {
                 viewModel.configure(pingService: pingService, locationService: locationService)
+                handleAppear()
             }
-            .onAppear(perform: handleAppear)
+            .onAppear(perform: handleReappear)
             .onDisappear(perform: handleDisappear)
             .onChange(of: viewModel.userLocation?.coordinate.latitude) { _, _ in
                 moveToUserLocation(viewModel.userLocation)
@@ -102,6 +103,11 @@ struct MapView: View {
     }
 
     // MARK: - Lifecycle
+
+    private func handleReappear() {
+        // Re-attach listener after returning from another tab (task already configured)
+        viewModel.startObserving()
+    }
 
     private func handleAppear() {
         viewModel.startObserving()
