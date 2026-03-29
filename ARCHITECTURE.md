@@ -115,6 +115,11 @@ PingIt/
 ### 1. Ping Creation
 ```
 User taps "Create Ping"
+  → LocationPickerView lets user choose location:
+      Option A: "Use Current Location" (GPS)
+      Option B: Search address (MapKit MKLocalSearchCompleter autocomplete)
+      Option C: Drag pin on map (interactive Map with draggable annotation)
+      Future: Saved Places (Phase 2+)
   → CreatePingViewModel validates input (text, location, expiration)
   → CreatePingViewModel checks Cluj boundary (local GeoJSON)
   → PingService creates Firestore document (status: active)

@@ -30,5 +30,7 @@ docs/
 # AI tooling
 .claude/
 .agents/
+.codex/
 skills-lock.json
 CLAUDE.md
+

@@ -34,6 +34,27 @@ final class ChatService {
         }
     }
 
+    func createChat(pingId: String) async throws -> String {
+        let chat = Chat(pingId: pingId)
+        do {
+            let ref = try db.collection(Constants.Firestore.chatsCollection)
+                .addDocument(from: chat)
+            return ref.documentID
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
+    func deleteChat(id: String) async throws {
+        do {
+            try await db.collection(Constants.Firestore.chatsCollection)
+                .document(id)
+                .delete()
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
     func observeMessages(chatId: String, onUpdate: @escaping @Sendable ([ChatMessage]) -> Void) -> ListenerRegistration {
         db.collection(Constants.Firestore.chatMessagesCollection)
             .whereField("chatId", isEqualTo: chatId)

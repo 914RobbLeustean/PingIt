@@ -8,6 +8,9 @@ struct MapView: View {
     @State private var viewModel: MapViewModel?
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
+    @State private var showCreatePing = false
+    @State private var selectedPing: Ping?
+    @State private var createdPingLocation: CLLocationCoordinate2D?
 
     private static let clujRegion = MKCoordinateRegion(
         center: Constants.Cluj.center,
@@ -30,7 +33,7 @@ struct MapView: View {
                                 )
                             ) {
                                 PingAnnotationView(ping: ping) {
-                                    // TODO: Navigate to ping detail
+                                    selectedPing = ping
                                 }
                             }
                         }
@@ -58,6 +61,20 @@ struct MapView: View {
                 }
             }
             .navigationTitle("Map")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Create Ping", systemImage: "plus", action: handleCreatePingTap)
+                }
+            }
+            .navigationDestination(for: Ping.self) { ping in
+                PingDetailView(ping: ping)
+            }
+            .navigationDestination(item: $selectedPing) { ping in
+                PingDetailView(ping: ping)
+            }
+            .sheet(isPresented: $showCreatePing, onDismiss: handleCreatePingDismiss) {
+                CreatePingView(createdPingLocation: $createdPingLocation)
+            }
             .onAppear(perform: handleAppear)
             .onDisappear(perform: handleDisappear)
             .onChange(of: viewModel?.userLocation?.coordinate.latitude) { _, _ in
@@ -66,6 +83,23 @@ struct MapView: View {
             .onChange(of: viewModel?.authorizationStatus) { _, newStatus in
                 handleAuthorizationChange(newStatus)
             }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func handleCreatePingTap() {
+        showCreatePing = true
+    }
+
+    private func handleCreatePingDismiss() {
+        guard let location = createdPingLocation else { return }
+        createdPingLocation = nil
+        withAnimation {
+            cameraPosition = .region(MKCoordinateRegion(
+                center: location,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            ))
         }
     }
 

@@ -35,6 +35,41 @@ final class PingService {
         }
     }
 
+    /// Creates a ping and its associated chat atomically using a batched write.
+    /// Rate limiting is deferred to a Cloud Function (Phase 1).
+    func createPingWithChat(_ ping: Ping, chatService: ChatService) async throws {
+        let pingRef = db.collection(Constants.Firestore.pingsCollection).document()
+        let chatRef = db.collection(Constants.Firestore.chatsCollection).document()
+
+        var pingWithChat = ping
+        pingWithChat.chatId = chatRef.documentID
+
+        let chat = Chat(pingId: pingRef.documentID)
+
+        let batch = db.batch()
+        do {
+            try batch.setData(from: pingWithChat, forDocument: pingRef)
+            try batch.setData(from: chat, forDocument: chatRef)
+            try await batch.commit()
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
+    /// Deletes a ping and its associated chat atomically using a batched write.
+    func deletePingAndChat(pingId: String, chatId: String?) async throws {
+        let batch = db.batch()
+        batch.deleteDocument(db.collection(Constants.Firestore.pingsCollection).document(pingId))
+        if let chatId {
+            batch.deleteDocument(db.collection(Constants.Firestore.chatsCollection).document(chatId))
+        }
+        do {
+            try await batch.commit()
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
     func observeActivePings(
         onUpdate: @escaping @Sendable (Result<[Ping], Error>) -> Void
     ) -> ListenerRegistration {
