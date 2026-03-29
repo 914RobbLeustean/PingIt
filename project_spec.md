@@ -127,7 +127,7 @@ The application uses 14 primary Firestore collections. Each ping has a one-to-on
 6. **Location Permission Management** — iOS location authorization flow
 
 #### Ping Core (5 features)
-7. **Create Text Ping** — Text input (max 280 chars), location auto-populated
+7. **Create Text Ping** — Text input (max 280 chars), user-selected location via: (a) current GPS location, (b) search address with autocomplete, or (c) drag pin on map. Must be within Cluj-Napoca boundary. Future: Saved Places (Phase 2+)
 8. **Set Ping Expiration** — 3 preset options: 6hr, 24hr, 48hr (simple picker UI)
 9. **View Ping Details** — Full-screen detail view with text, creator, expiration countdown
 10. **Delete Own Ping** — Creator can delete before expiration (cascading delete of chat)

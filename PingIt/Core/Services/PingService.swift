@@ -35,6 +35,18 @@ final class PingService {
         }
     }
 
+    func createPingWithChat(_ ping: Ping, chatService: ChatService) async throws {
+        do {
+            let pingId = try await createPing(ping)
+            let chatId = try await chatService.createChat(pingId: pingId)
+            try await db.collection(Constants.Firestore.pingsCollection)
+                .document(pingId)
+                .updateData(["chatId": chatId])
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
     func observeActivePings(
         onUpdate: @escaping @Sendable (Result<[Ping], Error>) -> Void
     ) -> ListenerRegistration {

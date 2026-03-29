@@ -1,7 +1,16 @@
 import Foundation
 import FirebaseFirestore
 
-struct Ping: Codable, Identifiable, Sendable {
+struct Ping: Codable, Identifiable, Hashable, Sendable {
+
+    static func == (lhs: Ping, rhs: Ping) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
     @DocumentID var id: String?
     var creatorId: String
     var text: String

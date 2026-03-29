@@ -15,13 +15,16 @@
 - Map & Location: Real-Time Map Display, Boundary Detection, Location Permission Management
 - GeoJSONBoundaryValidator with ray casting point-in-polygon algorithm
 - MapViewModel with Firestore real-time listener lifecycle
+- Ping Core: Create Text Ping, Set Expiration, View Details, Delete Own Ping, Live Visualization
+- CreatePingViewModel/View with validation, ChatService/PingService enhancements
+- PingDetailViewModel/View with creator loading, countdown timer, cascade delete
 
 ## In Progress
 - Phase 0 MVP feature implementation
 
 ## Up Next
 - Authentication features (Registration, Login, Profile Management)
-- Ping Core features (Create, Expiration, View, Delete, Visualization)
+- Chat Core features (Join Chat, Send Message, Real-Time Updates)
 
 ---
 
@@ -34,11 +37,11 @@
 - [x] Real-Time Map Display
 - [x] Cluj-Napoca Boundary Detection
 - [x] Location Permission Management
-- [ ] Create Text Ping
-- [ ] Set Ping Expiration
-- [ ] View Ping Details
-- [ ] Delete Own Ping
-- [ ] Live Ping Visualization
+- [x] Create Text Ping
+- [x] Set Ping Expiration
+- [x] View Ping Details
+- [x] Delete Own Ping
+- [x] Live Ping Visualization
 - [ ] Join Ping Chat
 - [ ] Send Text Message
 - [ ] Real-Time Message Updates

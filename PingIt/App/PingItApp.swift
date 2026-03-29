@@ -7,6 +7,8 @@ struct PingItApp: App {
 
     @State private var authService = { _ = PingItApp.configuredFirebase; return AuthService() }()
     @State private var pingService = PingService()
+    @State private var chatService = ChatService()
+    @State private var userService = UserService()
     @State private var locationService = LocationService()
 
     var body: some Scene {
@@ -14,6 +16,8 @@ struct PingItApp: App {
             RootView()
                 .environment(authService)
                 .environment(pingService)
+                .environment(chatService)
+                .environment(userService)
                 .environment(locationService)
         }
     }

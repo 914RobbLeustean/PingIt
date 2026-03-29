@@ -6,6 +6,46 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-03-29] — Location Picker for Ping Creation
+
+### Changed
+- **project_spec.md** — Feature #7 updated: ping location is user-selected (current GPS, search address, or drag pin on map), not auto-populated. Saved Places deferred to Phase 2+.
+- **ARCHITECTURE.md** — Ping creation flow updated to include LocationPickerView with three location selection modes
+
+---
+
+## [2026-03-29] — Ping Core Features
+
+### Added
+- **CreatePingViewModel** — Ping creation with text validation (280 char limit), expiration picker, location boundary check, Firestore write with auto-created chat
+- **CreatePingView** — Form with TextField (vertical axis), segmented expiration picker (6h/24h/48h), character counter, presented as sheet from map
+- **PingDetailViewModel** — Loads creator profile, countdown timer via Task.sleep, cascade delete (ping + chat)
+- **PingDetailView** — Full detail with creator info, countdown, join chat button, delete with confirmation dialog (creator only)
+- **ChatService.createChat/deleteChat** — Chat document CRUD for ping lifecycle
+- **PingService.createPingWithChat** — Atomic-ish ping + chat creation with chatId backlink
+- **Ping model** — Added Hashable conformance for navigationDestination
+- **MapView** — "Create Ping" toolbar button (sheet), annotation tap → PingDetailView navigation
+- **UserService + ChatService** added to environment injection (5 total services)
+
+### Changed
+- MapView annotation tap wired to PingDetailView via `.navigationDestination(item:)`
+
+### Removed
+- `PingPlaceholderView.swift` — Replaced by CreatePingView and PingDetailView
+
+### Files created or modified
+- `PingIt/Features/Ping/ViewModels/CreatePingViewModel.swift` (new)
+- `PingIt/Features/Ping/Views/CreatePingView.swift` (new)
+- `PingIt/Features/Ping/ViewModels/PingDetailViewModel.swift` (new)
+- `PingIt/Features/Ping/Views/PingDetailView.swift` (new)
+- `PingIt/Core/Models/Ping.swift` (modified)
+- `PingIt/Core/Services/ChatService.swift` (modified)
+- `PingIt/Core/Services/PingService.swift` (modified)
+- `PingIt/App/PingItApp.swift` (modified)
+- `PingIt/Features/Map/Views/MapView.swift` (modified)
+
+---
+
 ## [2026-03-29] — Map & Location Features
 
 ### Added
