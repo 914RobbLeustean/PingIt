@@ -4,6 +4,7 @@ struct ChatView: View {
     @Environment(AuthService.self) private var authService
     @Environment(ChatService.self) private var chatService
     @State private var viewModel: ChatViewModel
+    @State private var scrollPosition = ScrollPosition(edge: .bottom)
 
     init(chatId: String, pingId: String) {
         self._viewModel = State(initialValue: ChatViewModel(chatId: chatId, pingId: pingId))
@@ -24,7 +25,9 @@ struct ChatView: View {
                 }
                 .padding()
             }
+            .scrollPosition($scrollPosition)
             .defaultScrollAnchor(.bottom)
+            .scrollDismissesKeyboard(.immediately)
             .overlay {
                 if viewModel.isLoading {
                     ProgressView()
@@ -61,6 +64,9 @@ struct ChatView: View {
         .onDisappear {
             viewModel.stopObserving()
         }
+        .onChange(of: viewModel.messages.count) { _, _ in
+            scrollToBottom()
+        }
     }
 
     // MARK: - Actions
@@ -68,6 +74,12 @@ struct ChatView: View {
     private func handleSend() {
         Task {
             await viewModel.sendMessage()
+        }
+    }
+
+    private func scrollToBottom() {
+        withAnimation {
+            scrollPosition.scrollTo(edge: .bottom)
         }
     }
 }
