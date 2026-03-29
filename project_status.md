@@ -1,16 +1,25 @@
 # Project Status
 
 ## Current Phase
-**Planning** — No implementation started yet.
+**Phase 0 — Foundation** — Core project structure, models, services, and navigation in place.
 
 ## Completed
-_None yet._
+- Project specification and documentation setup
+- Foundation setup: folder structure, Firebase SDK (Auth, Firestore, Storage) via SPM
+- Core models: User, Ping, Chat, ChatMessage, ChatParticipant
+- Core services (stubs): AuthService, PingService, ChatService, UserService, LocationService
+- Core utilities: Constants, PingItError, Date+Extensions
+- App entry point with Firebase initialization and auth-gated root navigation
+- Placeholder views for all feature areas (Auth, Map, Ping, Chat, Profile, Settings)
+- Cluj-Napoca administrative boundary GeoJSON (from OpenStreetMap)
+- GoogleService-Info.plist configured
 
 ## In Progress
-- Project specification and documentation setup
+- Phase 0 MVP feature implementation
 
 ## Up Next
-- Phase 0 MVP: Authentication, Map, Ping creation, Chat
+- Authentication features (Registration, Login, Profile Management)
+- Map & Location features (Real-Time Map, Boundary Detection, Location Permissions)
 
 ---
 

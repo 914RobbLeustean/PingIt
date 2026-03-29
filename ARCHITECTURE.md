@@ -36,6 +36,8 @@ Infrastructure diagram lives in `project_spec.md` Section 2.2.
 
 **Key rule:** Views never call Services directly. ViewModels never call Firebase SDK directly.
 
+> **Note (2026-03-29):** During foundation setup, `LoginView` and placeholder views access `AuthService` directly via `@Environment` for the auth-gated skeleton. Once ViewModels are implemented for each feature, views will be refactored to observe ViewModels instead.
+
 ---
 
 ## Folder Structure
@@ -57,7 +59,49 @@ PingIt/
 └── Resources/               Assets, GeoJSON, config files
 ```
 
-**Naming:** Feature folders are self-contained. Each has `ViewModels/` and `Views/` subfolders. Shared UI components go under the feature that owns them.
+**Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
+
+### Actual File Listing (as of 2026-03-29)
+
+```
+PingIt/
+├── App/
+│   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection
+│   ├── RootView.swift               Auth gate: LoginView or MainTabView
+│   └── MainTabView.swift            Tab bar (Map, Profile, Settings)
+├── Core/
+│   ├── Models/
+│   │   ├── User.swift               Firestore: users collection
+│   │   ├── Ping.swift               Firestore: pings collection (+ PingStatus enum)
+│   │   ├── Chat.swift               Firestore: chats collection
+│   │   ├── ChatMessage.swift        Firestore: chatMessages collection
+│   │   └── ChatParticipant.swift    Firestore: chatParticipants collection
+│   ├── Services/
+│   │   ├── AuthService.swift        Firebase Auth wrapper, auth state listener
+│   │   ├── PingService.swift        Ping CRUD, real-time snapshot listener
+│   │   ├── ChatService.swift        Messages, participants, snapshot listener
+│   │   ├── UserService.swift        User profile CRUD
+│   │   └── LocationService.swift    CLLocationManager, boundary check
+│   └── Utilities/
+│       ├── Constants.swift          Cluj coords, limits, Firestore collection names
+│       ├── PingItError.swift        Typed error enum
+│       └── Date+Extensions.swift    Countdown, relative formatting
+├── Features/
+│   ├── Authentication/Views/
+│   │   └── LoginView.swift          Functional login/signup form
+│   ├── Map/Views/
+│   │   └── MapPlaceholderView.swift
+│   ├── Ping/Views/
+│   │   └── PingPlaceholderView.swift
+│   ├── Chat/Views/
+│   │   └── ChatPlaceholderView.swift
+│   ├── Profile/Views/
+│   │   └── ProfilePlaceholderView.swift
+│   └── Settings/Views/
+│       └── SettingsPlaceholderView.swift
+└── Resources/
+    └── ClujNapoca.geojson           Cluj-Napoca admin boundary (OSM)
+```
 
 ---
 
@@ -146,14 +190,18 @@ LoginView ──observes──▶ LoginViewModel ──calls──▶ AuthServic
 
 ## Services Overview
 
-| Service | Responsibility |
-|---------|---------------|
-| **AuthService** | Sign up, sign in, sign out, session state |
-| **PingService** | Ping CRUD, geospatial queries, boost |
-| **ChatService** | Messages, snapshot listeners, participant tracking |
-| **UserService** | Profile read/write, block/unblock |
-| **LocationService** | CLLocationManager wrapper, permission handling |
-| **NotificationService** | FCM token registration, notification handling |
+| Service | Responsibility | Status |
+|---------|---------------|--------|
+| **AuthService** | Sign up, sign in, sign out, session state | Implemented (stub) |
+| **PingService** | Ping CRUD, geospatial queries, real-time listener | Implemented (stub) |
+| **ChatService** | Messages, snapshot listeners, participant tracking | Implemented (stub) |
+| **UserService** | Profile read/write | Implemented (stub) |
+| **LocationService** | CLLocationManager wrapper, boundary check | Implemented (stub) |
+| **NotificationService** | FCM token registration, notification handling | Not yet created (Phase 1+) |
+
+### Service Injection Pattern
+
+Services are created as `@State` in `PingItApp` and injected via `.environment()`. Views access them with `@Environment(ServiceType.self)`. ViewModels will receive services via init parameters for testability.
 
 ---
 

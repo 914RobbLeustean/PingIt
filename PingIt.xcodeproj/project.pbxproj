@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		3AD97F362F78A0B600C56A39 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 3AD97F352F78A0B600C56A39 /* FirebaseAuth */; };
+		3AD97F382F78A0B600C56A39 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3AD97F372F78A0B600C56A39 /* FirebaseFirestore */; };
+		3AD97F3A2F78A0B600C56A39 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 3AD97F392F78A0B600C56A39 /* FirebaseStorage */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		3A1E75CD2F787EB500A2237A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +35,22 @@
 		3A1E75D62F787EB500A2237A /* PingItUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PingItUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3AD97F482F78A27700C56A39 /* Exceptions for "PingIt" folder in "PingIt" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3A1E75BE2F787EB400A2237A /* PingIt */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3A1E75C12F787EB400A2237A /* PingIt */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3AD97F482F78A27700C56A39 /* Exceptions for "PingIt" folder in "PingIt" target */,
+			);
 			path = PingIt;
 			sourceTree = "<group>";
 		};
@@ -52,6 +71,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3AD97F362F78A0B600C56A39 /* FirebaseAuth in Frameworks */,
+				3AD97F382F78A0B600C56A39 /* FirebaseFirestore in Frameworks */,
+				3AD97F3A2F78A0B600C56A39 /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +134,9 @@
 			);
 			name = PingIt;
 			packageProductDependencies = (
+				3AD97F352F78A0B600C56A39 /* FirebaseAuth */,
+				3AD97F372F78A0B600C56A39 /* FirebaseFirestore */,
+				3AD97F392F78A0B600C56A39 /* FirebaseStorage */,
 			);
 			productName = PingIt;
 			productReference = 3A1E75BF2F787EB400A2237A /* PingIt.app */;
@@ -195,6 +220,9 @@
 			);
 			mainGroup = 3A1E75B62F787EB400A2237A;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3A1E75C02F787EB400A2237A /* Products */;
 			projectDirPath = "";
@@ -400,6 +428,8 @@
 				DEVELOPMENT_TEAM = LYXJC8MA7G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PingIt/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "PingIt needs your location to show nearby pings and let you create pings on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -432,6 +462,8 @@
 				DEVELOPMENT_TEAM = LYXJC8MA7G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PingIt/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "PingIt needs your location to show nearby pings and let you create pings on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -578,6 +610,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3AD97F352F78A0B600C56A39 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		3AD97F372F78A0B600C56A39 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		3AD97F392F78A0B600C56A39 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3A1E75B72F787EB400A2237A /* Project object */;
 }
