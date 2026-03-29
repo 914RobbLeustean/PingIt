@@ -65,7 +65,15 @@ final class ProfileViewModel {
         guard let currentUserId, let userService else { return }
 
         let trimmed = editedUsername.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, isUsernameValid else {
+        if trimmed.count < Constants.Username.minLength {
+            errorMessage = PingItError.usernameTooShort.localizedDescription
+            return
+        }
+        if trimmed.count > Constants.Username.maxLength {
+            errorMessage = PingItError.usernameTooLong.localizedDescription
+            return
+        }
+        if trimmed.range(of: Constants.Username.allowedCharacterPattern, options: .regularExpression) == nil {
             errorMessage = PingItError.usernameInvalidCharacters.localizedDescription
             return
         }

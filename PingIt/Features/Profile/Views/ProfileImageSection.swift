@@ -62,7 +62,9 @@ struct ProfileImageSection: View {
     private var editButton: some View {
         Menu("Edit Photo", systemImage: "pencil.circle") {
             Button("Choose from Library", systemImage: "photo.on.rectangle", action: handleLibraryTap)
-            Button("Take Photo", systemImage: "camera", action: handleCameraTap)
+            if CameraPickerView.isCameraAvailable {
+                Button("Take Photo", systemImage: "camera", action: handleCameraTap)
+            }
             if profileImageUrl != nil {
                 Divider()
                 Button("Remove Photo", systemImage: "trash", role: .destructive, action: handleRemoveTap)

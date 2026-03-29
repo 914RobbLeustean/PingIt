@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AuthService.self) private var authService
     @State private var showSignOutConfirmation = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -13,6 +14,13 @@ struct SettingsView: View {
                             Button("Sign Out", role: .destructive, action: handleConfirmSignOut)
                             Button("Cancel", role: .cancel) {}
                         }
+                }
+
+                if let errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -26,6 +34,10 @@ struct SettingsView: View {
     }
 
     private func handleConfirmSignOut() {
-        try? authService.signOut()
+        do {
+            try authService.signOut()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
