@@ -81,16 +81,21 @@ PingIt/
 │   │   ├── PingService.swift        Ping CRUD, real-time snapshot listener
 │   │   ├── ChatService.swift        Messages, participants, snapshot listener
 │   │   ├── UserService.swift        User profile CRUD
-│   │   └── LocationService.swift    CLLocationManager, boundary check
+│   │   └── LocationService.swift    CLLocationManager, GeoJSON boundary check
 │   └── Utilities/
 │       ├── Constants.swift          Cluj coords, limits, Firestore collection names
 │       ├── PingItError.swift        Typed error enum
-│       └── Date+Extensions.swift    Countdown, relative formatting
+│       ├── Date+Extensions.swift    Countdown, relative formatting
+│       └── GeoJSONBoundaryValidator.swift  Ray casting point-in-polygon
 ├── Features/
 │   ├── Authentication/Views/
 │   │   └── LoginView.swift          Functional login/signup form
-│   ├── Map/Views/
-│   │   └── MapPlaceholderView.swift
+│   ├── Map/
+│   │   ├── ViewModels/
+│   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state
+│   │   └── Views/
+│   │       ├── MapView.swift        MapKit map with annotations
+│   │       └── PingAnnotationView.swift  Custom ping marker
 │   ├── Ping/Views/
 │   │   └── PingPlaceholderView.swift
 │   ├── Chat/Views/

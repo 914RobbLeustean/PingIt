@@ -6,6 +6,33 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-03-29] — Map & Location Features
+
+### Added
+- **GeoJSONBoundaryValidator** — Parses ClujNapoca.geojson, implements ray casting point-in-polygon algorithm with bounding-box fast rejection
+- **MapViewModel** — Manages Firestore real-time ping listener lifecycle, exposes location state
+- **MapView** — Interactive MapKit map centered on Cluj-Napoca with ping annotations, user location blue dot, map controls (compass, scale, user location button)
+- **PingAnnotationView** — Custom map annotation showing ping marker with expiration countdown
+- **PingService** added to environment injection in PingItApp
+
+### Changed
+- **LocationService** — Upgraded `isWithinClujBoundary` from 15km radius check to proper GeoJSON polygon containment
+- **MainTabView** — Map tab now shows real MapView instead of placeholder
+
+### Removed
+- `MapPlaceholderView.swift` — Replaced by MapView
+
+### Files created or modified
+- `PingIt/Core/Utilities/GeoJSONBoundaryValidator.swift` (new)
+- `PingIt/Features/Map/ViewModels/MapViewModel.swift` (new)
+- `PingIt/Features/Map/Views/MapView.swift` (new)
+- `PingIt/Features/Map/Views/PingAnnotationView.swift` (new)
+- `PingIt/Core/Services/LocationService.swift` (modified)
+- `PingIt/App/PingItApp.swift` (modified)
+- `PingIt/App/MainTabView.swift` (modified)
+
+---
+
 ## [2026-03-29] — Foundation Setup
 
 ### Added

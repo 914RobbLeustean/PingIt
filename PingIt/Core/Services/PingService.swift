@@ -35,13 +35,18 @@ final class PingService {
         }
     }
 
-    func observeActivePings(onUpdate: @escaping @Sendable ([Ping]) -> Void) -> ListenerRegistration {
+    func observeActivePings(
+        onUpdate: @escaping @Sendable (Result<[Ping], Error>) -> Void
+    ) -> ListenerRegistration {
         db.collection(Constants.Firestore.pingsCollection)
             .whereField("status", isEqualTo: Ping.PingStatus.active.rawValue)
-            .addSnapshotListener { snapshot, _ in
-                guard let documents = snapshot?.documents else { return }
-                let pings = documents.compactMap { try? $0.data(as: Ping.self) }
-                onUpdate(pings)
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    onUpdate(.failure(error))
+                    return
+                }
+                let pings = snapshot?.documents.compactMap { try? $0.data(as: Ping.self) } ?? []
+                onUpdate(.success(pings))
             }
     }
 }

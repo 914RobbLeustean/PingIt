@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 0 — Foundation** — Core project structure, models, services, and navigation in place.
+**Phase 0 — MVP** — Foundation complete, Map & Location done. Building core features.
 
 ## Completed
 - Project specification and documentation setup
@@ -10,16 +10,18 @@
 - Core services (stubs): AuthService, PingService, ChatService, UserService, LocationService
 - Core utilities: Constants, PingItError, Date+Extensions
 - App entry point with Firebase initialization and auth-gated root navigation
-- Placeholder views for all feature areas (Auth, Map, Ping, Chat, Profile, Settings)
 - Cluj-Napoca administrative boundary GeoJSON (from OpenStreetMap)
 - GoogleService-Info.plist configured
+- Map & Location: Real-Time Map Display, Boundary Detection, Location Permission Management
+- GeoJSONBoundaryValidator with ray casting point-in-polygon algorithm
+- MapViewModel with Firestore real-time listener lifecycle
 
 ## In Progress
 - Phase 0 MVP feature implementation
 
 ## Up Next
 - Authentication features (Registration, Login, Profile Management)
-- Map & Location features (Real-Time Map, Boundary Detection, Location Permissions)
+- Ping Core features (Create, Expiration, View, Delete, Visualization)
 
 ---
 
@@ -29,9 +31,9 @@
 - [ ] User Registration
 - [ ] User Login
 - [ ] Basic Profile Management
-- [ ] Real-Time Map Display
-- [ ] Cluj-Napoca Boundary Detection
-- [ ] Location Permission Management
+- [x] Real-Time Map Display
+- [x] Cluj-Napoca Boundary Detection
+- [x] Location Permission Management
 - [ ] Create Text Ping
 - [ ] Set Ping Expiration
 - [ ] View Ping Details
