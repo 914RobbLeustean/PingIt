@@ -17,6 +17,7 @@ final class ChatViewModel {
     private(set) var isSending = false
     private(set) var errorMessage: String?
     private(set) var hasJoined = false
+    private var participantDocId: String?
     var messageText = ""
 
     var canSend: Bool {
@@ -66,8 +67,19 @@ final class ChatViewModel {
     func joinChat() async {
         guard let chatService, let currentUserId, !hasJoined else { return }
         do {
-            try await chatService.joinChat(chatId: chatId, userId: currentUserId)
+            participantDocId = try await chatService.joinChatIfNeeded(chatId: chatId, userId: currentUserId)
             hasJoined = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func leaveChat() async {
+        guard let chatService, let participantDocId else { return }
+        do {
+            try await chatService.leaveChat(participantId: participantDocId)
+            self.participantDocId = nil
+            hasJoined = false
         } catch {
             errorMessage = error.localizedDescription
         }

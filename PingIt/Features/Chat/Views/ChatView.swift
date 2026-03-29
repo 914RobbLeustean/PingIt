@@ -29,7 +29,13 @@ struct ChatView: View {
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.immediately)
             .overlay {
-                if viewModel.isLoading {
+                if let errorMessage = viewModel.errorMessage {
+                    ContentUnavailableView(
+                        "Chat unavailable",
+                        systemImage: "wifi.exclamationmark",
+                        description: Text(errorMessage)
+                    )
+                } else if viewModel.isLoading {
                     ProgressView()
                 } else if viewModel.messages.isEmpty {
                     ContentUnavailableView(
@@ -63,6 +69,9 @@ struct ChatView: View {
         }
         .onDisappear {
             viewModel.stopObserving()
+            Task {
+                await viewModel.leaveChat()
+            }
         }
         .onChange(of: viewModel.messages.count) { _, _ in
             scrollToBottom()
