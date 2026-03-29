@@ -26,16 +26,10 @@ final class LocationService: NSObject {
         locationManager.stopUpdatingLocation()
     }
 
-    /// Checks if a coordinate falls within the Cluj-Napoca boundary.
-    /// Uses a simple radius check for now; will be upgraded to GeoJSON polygon containment.
+    /// Checks if a coordinate falls within the Cluj-Napoca administrative boundary
+    /// using the GeoJSON polygon from the app bundle.
     func isWithinClujBoundary(_ coordinate: CLLocationCoordinate2D) -> Bool {
-        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        let centerLocation = CLLocation(
-            latitude: Constants.Cluj.center.latitude,
-            longitude: Constants.Cluj.center.longitude
-        )
-        let distanceKm = location.distance(from: centerLocation) / 1000.0
-        return distanceKm <= Constants.Cluj.radiusKilometers
+        GeoJSONBoundaryValidator.contains(coordinate)
     }
 }
 
