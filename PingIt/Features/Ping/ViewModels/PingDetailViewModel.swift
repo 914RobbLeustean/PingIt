@@ -4,10 +4,11 @@ import FirebaseAuth
 @Observable
 final class PingDetailViewModel {
     let ping: Ping
-    private let authService: AuthService
-    private let pingService: PingService
-    private let chatService: ChatService
-    private let userService: UserService
+    private var authService: AuthService?
+    private var pingService: PingService?
+    private var chatService: ChatService?
+    private var userService: UserService?
+    private var isConfigured = false
 
     private(set) var creator: User?
     private(set) var isDeleting = false
@@ -18,25 +19,30 @@ final class PingDetailViewModel {
     private var countdownTask: Task<Void, Never>?
 
     var isCreator: Bool {
-        authService.currentUser?.uid == ping.creatorId
+        authService?.currentUser?.uid == ping.creatorId
     }
 
-    init(
-        ping: Ping,
+    init(ping: Ping) {
+        self.ping = ping
+        self.countdownText = ping.expiresAt.countdownDescription
+    }
+
+    func configure(
         authService: AuthService,
         pingService: PingService,
         chatService: ChatService,
         userService: UserService
     ) {
-        self.ping = ping
+        guard !isConfigured else { return }
         self.authService = authService
         self.pingService = pingService
         self.chatService = chatService
         self.userService = userService
-        self.countdownText = ping.expiresAt.countdownDescription
+        isConfigured = true
     }
 
     func loadCreator() async {
+        guard let userService else { return }
         do {
             creator = try await userService.fetchUser(id: ping.creatorId)
         } catch {
@@ -61,6 +67,7 @@ final class PingDetailViewModel {
     }
 
     func deletePing() async {
+        guard let pingService else { return }
         isDeleting = true
         defer { isDeleting = false }
 

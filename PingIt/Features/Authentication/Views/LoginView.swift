@@ -2,62 +2,75 @@ import SwiftUI
 
 struct LoginView: View {
     @Environment(AuthService.self) private var authService
-    @State private var email = ""
-    @State private var password = ""
-    @State private var isSignUp = false
-    @State private var errorMessage: String?
+    @State private var viewModel = LoginViewModel()
 
     var body: some View {
+        @Bindable var viewModel = viewModel
+
         NavigationStack {
             VStack(spacing: 20) {
                 Text("PingIt")
                     .font(.largeTitle)
                     .bold()
 
-                TextField("Email", text: $email)
+                TextField("Email", text: $viewModel.email)
                     .textContentType(.emailAddress)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
 
-                SecureField("Password", text: $password)
-                    .textContentType(isSignUp ? .newPassword : .password)
+                if viewModel.isSignUp {
+                    TextField("Username", text: $viewModel.username)
+                        .textContentType(.username)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
 
-                if let errorMessage {
+                    if let validationMessage = viewModel.usernameValidationMessage {
+                        Text(validationMessage)
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                    }
+                }
+
+                SecureField("Password", text: $viewModel.password)
+                    .textContentType(viewModel.isSignUp ? .newPassword : .password)
+
+                if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .foregroundStyle(.red)
                         .font(.caption)
                 }
 
-                Button(isSignUp ? "Create Account" : "Sign In") {
-                    Task {
-                        await authenticate()
-                    }
-                }
+                Button(
+                    viewModel.isSignUp ? "Create Account" : "Sign In",
+                    action: handleAuthenticate
+                )
                 .buttonStyle(.borderedProminent)
-                .disabled(email.isEmpty || password.isEmpty || authService.isLoading)
+                .disabled(viewModel.canSubmit == false || viewModel.isLoading)
 
-                Button(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up") {
-                    isSignUp.toggle()
-                    errorMessage = nil
-                }
+                Button(
+                    viewModel.isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up",
+                    action: handleToggleMode
+                )
                 .font(.footnote)
             }
             .padding()
-            .navigationTitle(isSignUp ? "Sign Up" : "Sign In")
+            .navigationTitle(viewModel.isSignUp ? "Sign Up" : "Sign In")
+            .task {
+                viewModel.configure(authService: authService)
+            }
         }
     }
 
-    private func authenticate() async {
-        errorMessage = nil
-        do {
-            if isSignUp {
-                try await authService.signUp(email: email, password: password, username: email)
-            } else {
-                try await authService.signIn(email: email, password: password)
-            }
-        } catch {
-            errorMessage = error.localizedDescription
+    // MARK: - Actions
+
+    private func handleAuthenticate() {
+        Task {
+            await viewModel.authenticate()
         }
+    }
+
+    private func handleToggleMode() {
+        viewModel.toggleMode()
     }
 }

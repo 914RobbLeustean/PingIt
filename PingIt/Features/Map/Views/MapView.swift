@@ -5,7 +5,7 @@ import FirebaseFirestore
 struct MapView: View {
     @Environment(PingService.self) private var pingService
     @Environment(LocationService.self) private var locationService
-    @State private var viewModel: MapViewModel?
+    @State private var viewModel = MapViewModel()
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
     @State private var showCreatePing = false
@@ -23,18 +23,16 @@ struct MapView: View {
                 Map(position: $cameraPosition) {
                     UserAnnotation()
 
-                    if let viewModel {
-                        ForEach(viewModel.pings) { ping in
-                            Annotation(
-                                ping.text,
-                                coordinate: CLLocationCoordinate2D(
-                                    latitude: ping.location.latitude,
-                                    longitude: ping.location.longitude
-                                )
-                            ) {
-                                PingAnnotationView(ping: ping) {
-                                    selectedPing = ping
-                                }
+                    ForEach(viewModel.pings) { ping in
+                        Annotation(
+                            ping.text,
+                            coordinate: CLLocationCoordinate2D(
+                                latitude: ping.location.latitude,
+                                longitude: ping.location.longitude
+                            )
+                        ) {
+                            PingAnnotationView(ping: ping) {
+                                selectedPing = ping
                             }
                         }
                     }
@@ -46,7 +44,7 @@ struct MapView: View {
                 }
                 .mapStyle(.standard)
 
-                if let errorMessage = viewModel?.errorMessage {
+                if let errorMessage = viewModel.errorMessage {
                     VStack {
                         Spacer()
                         Label(errorMessage, systemImage: "wifi.exclamationmark")
@@ -56,7 +54,7 @@ struct MapView: View {
                             .clipShape(.rect(cornerRadius: 12))
                             .padding()
                     }
-                } else if viewModel?.isLoading == true {
+                } else if viewModel.isLoading {
                     ProgressView()
                 }
             }
@@ -66,21 +64,21 @@ struct MapView: View {
                     Button("Create Ping", systemImage: "plus", action: handleCreatePingTap)
                 }
             }
-            .navigationDestination(for: Ping.self) { ping in
-                PingDetailView(ping: ping)
-            }
             .navigationDestination(item: $selectedPing) { ping in
                 PingDetailView(ping: ping)
             }
             .sheet(isPresented: $showCreatePing, onDismiss: handleCreatePingDismiss) {
                 CreatePingView(createdPingLocation: $createdPingLocation)
             }
+            .task {
+                viewModel.configure(pingService: pingService, locationService: locationService)
+            }
             .onAppear(perform: handleAppear)
             .onDisappear(perform: handleDisappear)
-            .onChange(of: viewModel?.userLocation?.coordinate.latitude) { _, _ in
-                moveToUserLocation(viewModel?.userLocation)
+            .onChange(of: viewModel.userLocation?.coordinate.latitude) { _, _ in
+                moveToUserLocation(viewModel.userLocation)
             }
-            .onChange(of: viewModel?.authorizationStatus) { _, newStatus in
+            .onChange(of: viewModel.authorizationStatus) { _, newStatus in
                 handleAuthorizationChange(newStatus)
             }
         }
@@ -106,24 +104,21 @@ struct MapView: View {
     // MARK: - Lifecycle
 
     private func handleAppear() {
-        if viewModel == nil {
-            viewModel = MapViewModel(pingService: pingService, locationService: locationService)
-        }
-        viewModel?.startObserving()
+        viewModel.startObserving()
 
-        if viewModel?.authorizationStatus == .notDetermined {
-            viewModel?.requestLocationPermission()
+        if viewModel.authorizationStatus == .notDetermined {
+            viewModel.requestLocationPermission()
         }
 
-        if viewModel?.authorizationStatus == .authorizedWhenInUse
-            || viewModel?.authorizationStatus == .authorizedAlways {
-            viewModel?.startLocationUpdates()
+        if viewModel.authorizationStatus == .authorizedWhenInUse
+            || viewModel.authorizationStatus == .authorizedAlways {
+            viewModel.startLocationUpdates()
         }
     }
 
     private func handleDisappear() {
-        viewModel?.stopObserving()
-        viewModel?.stopLocationUpdates()
+        viewModel.stopObserving()
+        viewModel.stopLocationUpdates()
     }
 
     // MARK: - Camera
@@ -139,9 +134,9 @@ struct MapView: View {
         }
     }
 
-    private func handleAuthorizationChange(_ status: CLAuthorizationStatus?) {
+    private func handleAuthorizationChange(_ status: CLAuthorizationStatus) {
         if status == .authorizedWhenInUse || status == .authorizedAlways {
-            viewModel?.startLocationUpdates()
+            viewModel.startLocationUpdates()
         }
     }
 }

@@ -26,6 +26,14 @@ enum PingItError: LocalizedError {
     case locationPermissionDenied
     case locationUnavailable
 
+    // Profile
+    case usernameTooShort
+    case usernameTooLong
+    case usernameInvalidCharacters
+    case profileImageTooLarge
+    case profileImageUploadFailed(underlying: Error)
+    case profileUpdateFailed(underlying: Error)
+
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
@@ -58,6 +66,18 @@ enum PingItError: LocalizedError {
             "Location access is required. Please enable it in Settings."
         case .locationUnavailable:
             "Unable to determine your location."
+        case .usernameTooShort:
+            "Username must be at least \(Constants.Username.minLength) characters."
+        case .usernameTooLong:
+            "Username cannot exceed \(Constants.Username.maxLength) characters."
+        case .usernameInvalidCharacters:
+            "Username can only contain letters, numbers, and underscores."
+        case .profileImageTooLarge:
+            "Profile image must be under 5 MB."
+        case .profileImageUploadFailed(let error):
+            "Failed to upload profile image: \(error.localizedDescription)"
+        case .profileUpdateFailed(let error):
+            "Failed to update profile: \(error.localizedDescription)"
         }
     }
 }

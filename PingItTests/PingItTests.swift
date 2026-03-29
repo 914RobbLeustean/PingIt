@@ -111,3 +111,100 @@ struct PingModelTests {
         #expect(Ping.PingStatus.removed.rawValue == "removed")
     }
 }
+
+// MARK: - Username Validation Tests
+
+struct UsernameValidationTests {
+    @Test func validUsernamesAccepted() {
+        let vm = LoginViewModel()
+        vm.username = "john_doe"
+        #expect(vm.isUsernameValid)
+        #expect(vm.usernameValidationMessage == nil)
+    }
+
+    @Test func tooShortUsernameRejected() {
+        let vm = LoginViewModel()
+        vm.username = "ab"
+        #expect(vm.isUsernameValid == false)
+        #expect(vm.usernameValidationMessage != nil)
+    }
+
+    @Test func tooLongUsernameRejected() {
+        let vm = LoginViewModel()
+        vm.username = String(repeating: "a", count: 21)
+        #expect(vm.isUsernameValid == false)
+        #expect(vm.usernameValidationMessage != nil)
+    }
+
+    @Test func specialCharactersRejected() {
+        let vm = LoginViewModel()
+        vm.username = "john doe!"
+        #expect(vm.isUsernameValid == false)
+        #expect(vm.usernameValidationMessage != nil)
+    }
+
+    @Test func underscoresAllowed() {
+        let vm = LoginViewModel()
+        vm.username = "john_doe_123"
+        #expect(vm.isUsernameValid)
+    }
+
+    @Test func emptyUsernameIsInvalid() {
+        let vm = LoginViewModel()
+        vm.username = ""
+        #expect(vm.isUsernameValid == false)
+        // No validation message for empty (user hasn't started typing)
+        #expect(vm.usernameValidationMessage == nil)
+    }
+
+    @Test(arguments: [
+        ("abc", true),         // Minimum length
+        ("ab", false),         // Below minimum
+        ("user_123", true),    // Valid with underscore and numbers
+        ("a b c", false),      // Spaces not allowed
+        ("user@name", false),  // Special chars not allowed
+    ])
+    func usernameValidation(username: String, expected: Bool) {
+        let vm = LoginViewModel()
+        vm.username = username
+        #expect(vm.isUsernameValid == expected)
+    }
+
+    @Test func canSubmitFalseWhenSignUpWithInvalidUsername() {
+        let vm = LoginViewModel()
+        vm.isSignUp = true
+        vm.email = "test@test.com"
+        vm.password = "password123"
+        vm.username = "ab" // Too short
+        #expect(vm.canSubmit == false)
+    }
+
+    @Test func canSubmitTrueWhenSignUpWithValidFields() {
+        let vm = LoginViewModel()
+        vm.isSignUp = true
+        vm.email = "test@test.com"
+        vm.password = "password123"
+        vm.username = "validuser"
+        #expect(vm.canSubmit)
+    }
+
+    @Test func canSubmitTrueForSignInWithoutUsername() {
+        let vm = LoginViewModel()
+        vm.isSignUp = false
+        vm.email = "test@test.com"
+        vm.password = "password123"
+        #expect(vm.canSubmit)
+    }
+}
+
+// MARK: - Username Constants Tests
+
+struct UsernameConstantsTests {
+    @Test func usernameMinLengthIs3() {
+        #expect(Constants.Username.minLength == 3)
+    }
+
+    @Test func usernameMaxLengthIs20() {
+        #expect(Constants.Username.maxLength == 20)
+    }
+}

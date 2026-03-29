@@ -4,24 +4,27 @@ import FirebaseFirestore
 
 @Observable
 final class MapViewModel {
-    private let pingService: PingService
-    private let locationService: LocationService
+    private var pingService: PingService?
+    private var locationService: LocationService?
     private var listenerRegistration: ListenerRegistration?
+    private var isConfigured = false
 
     private(set) var pings: [Ping] = []
     private(set) var isLoading = false
     var errorMessage: String?
 
-    var userLocation: CLLocation? { locationService.currentLocation }
-    var authorizationStatus: CLAuthorizationStatus { locationService.authorizationStatus }
+    var userLocation: CLLocation? { locationService?.currentLocation }
+    var authorizationStatus: CLAuthorizationStatus { locationService?.authorizationStatus ?? .notDetermined }
 
-    init(pingService: PingService, locationService: LocationService) {
+    func configure(pingService: PingService, locationService: LocationService) {
+        guard !isConfigured else { return }
         self.pingService = pingService
         self.locationService = locationService
+        isConfigured = true
     }
 
     func startObserving() {
-        guard listenerRegistration == nil else { return }
+        guard let pingService, listenerRegistration == nil else { return }
         isLoading = true
 
         listenerRegistration = pingService.observeActivePings { [weak self] result in
@@ -45,15 +48,15 @@ final class MapViewModel {
     }
 
     func requestLocationPermission() {
-        locationService.requestAuthorization()
+        locationService?.requestAuthorization()
     }
 
     func startLocationUpdates() {
-        locationService.startUpdatingLocation()
+        locationService?.startUpdatingLocation()
     }
 
     func stopLocationUpdates() {
-        locationService.stopUpdatingLocation()
+        locationService?.stopUpdatingLocation()
     }
 
     deinit {

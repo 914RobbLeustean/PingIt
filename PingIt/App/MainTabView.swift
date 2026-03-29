@@ -7,10 +7,10 @@ struct MainTabView: View {
                 MapView()
             }
             Tab("Profile", systemImage: "person.circle") {
-                ProfilePlaceholderView()
+                ProfileView()
             }
             Tab("Settings", systemImage: "gearshape") {
-                SettingsPlaceholderView()
+                SettingsView()
             }
         }
     }
