@@ -14,11 +14,24 @@ final class ChatService {
         }
     }
 
-    func joinChat(chatId: String, userId: String) async throws {
+    /// Joins chat if not already an active participant. Returns the participant document ID.
+    func joinChatIfNeeded(chatId: String, userId: String) async throws -> String {
+        // Check if already an active participant (no leftAt)
+        let existing = try await db.collection(Constants.Firestore.chatParticipantsCollection)
+            .whereField("chatId", isEqualTo: chatId)
+            .whereField("userId", isEqualTo: userId)
+            .whereField("leftAt", isEqualTo: NSNull())
+            .getDocuments()
+
+        if let doc = existing.documents.first {
+            return doc.documentID
+        }
+
         let participant = ChatParticipant(chatId: chatId, userId: userId)
         do {
-            try db.collection(Constants.Firestore.chatParticipantsCollection)
+            let ref = try db.collection(Constants.Firestore.chatParticipantsCollection)
                 .addDocument(from: participant)
+            return ref.documentID
         } catch {
             throw PingItError.firestoreWriteFailed(underlying: error)
         }
@@ -55,14 +68,20 @@ final class ChatService {
         }
     }
 
-    func observeMessages(chatId: String, onUpdate: @escaping @Sendable ([ChatMessage]) -> Void) -> ListenerRegistration {
+    func observeMessages(
+        chatId: String,
+        onUpdate: @escaping @Sendable (Result<[ChatMessage], Error>) -> Void
+    ) -> ListenerRegistration {
         db.collection(Constants.Firestore.chatMessagesCollection)
             .whereField("chatId", isEqualTo: chatId)
-            .order(by: "createdAt")
-            .addSnapshotListener { snapshot, _ in
-                guard let documents = snapshot?.documents else { return }
-                let messages = documents.compactMap { try? $0.data(as: ChatMessage.self) }
-                onUpdate(messages)
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    onUpdate(.failure(error))
+                    return
+                }
+                let messages = (snapshot?.documents.compactMap { try? $0.data(as: ChatMessage.self) } ?? [])
+                    .sorted { ($0.createdAt ?? .distantFuture) < ($1.createdAt ?? .distantFuture) }
+                onUpdate(.success(messages))
             }
     }
 }

@@ -6,6 +6,27 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-03-29] — Chat Core + Launch Screen (Phase 0 MVP Complete)
+
+### Added
+- **ChatViewModel** — Real-time message listener, join chat, send messages
+- **ChatView** — Message list with LazyVStack, auto-scroll on new messages, text input with send button
+- **MessageBubbleView** — Sender-aligned bubbles with timestamps
+- **LaunchScreen.storyboard** — Branded launch screen with logo
+- **App Icon** — Custom PingIt icon in asset catalog
+
+### Changed
+- ChatService.observeMessages updated to Result pattern, client-side sorting (fixes @ServerTimestamp ordering)
+- PingDetailView "Join Chat" wired to navigate to ChatView
+- MapView: fixed pings not loading on first launch (configure before startObserving in .task)
+- Chat auto-scrolls to bottom via ScrollPosition on new messages
+- Keyboard dismiss on scroll in ChatView
+
+### Removed
+- `ChatPlaceholderView.swift` — Replaced by ChatView
+
+---
+
 ## [2026-03-29] — Authentication Features + ViewModel Refactor
 
 ### Added

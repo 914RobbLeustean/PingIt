@@ -88,8 +88,11 @@ PingIt/
 │       ├── Date+Extensions.swift    Countdown, relative formatting
 │       └── GeoJSONBoundaryValidator.swift  Ray casting point-in-polygon
 ├── Features/
-│   ├── Authentication/Views/
-│   │   └── LoginView.swift          Functional login/signup form
+│   ├── Authentication/
+│   │   ├── ViewModels/
+│   │   │   └── LoginViewModel.swift        Username validation, form state
+│   │   └── Views/
+│   │       └── LoginView.swift             Login/signup with username field
 │   ├── Map/
 │   │   ├── ViewModels/
 │   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state
@@ -104,13 +107,24 @@ PingIt/
 │   │       ├── CreatePingView.swift        Form: text, location picker, expiration
 │   │       ├── PingDetailView.swift        Detail with creator, countdown, actions
 │   │       ├── LocationPickerView.swift    GPS / search / map pin selection
-│   │       └── MapPinPickerView.swift      Drag-pin-on-map picker
-│   ├── Chat/Views/
-│   │   └── ChatPlaceholderView.swift
-│   ├── Profile/Views/
-│   │   └── ProfilePlaceholderView.swift
+│   │       ├── MapPinPickerView.swift      Drag-pin-on-map picker
+│   │       ├── PingDetailCreatorSection.swift  Creator info + profile picture
+│   │       └── PingDetailActionSection.swift   Join chat + delete buttons
+│   ├── Chat/
+│   │   ├── ViewModels/
+│   │   │   └── ChatViewModel.swift         Message listener, send, join
+│   │   └── Views/
+│   │       ├── ChatView.swift              Real-time message list + input
+│   │       └── MessageBubbleView.swift     Sender-aligned message bubble
+│   ├── Profile/
+│   │   ├── ViewModels/
+│   │   │   └── ProfileViewModel.swift      Profile CRUD, Storage upload
+│   │   └── Views/
+│   │       ├── ProfileView.swift           Username edit, photo management
+│   │       ├── ProfileImageSection.swift   AsyncImage + PhotosPicker + camera
+│   │       └── CameraPickerView.swift      UIKit camera wrapper
 │   └── Settings/Views/
-│       └── SettingsPlaceholderView.swift
+│       └── SettingsView.swift              Sign out with confirmation
 └── Resources/
     └── ClujNapoca.geojson           Cluj-Napoca admin boundary (OSM)
 ```
