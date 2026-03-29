@@ -94,7 +94,7 @@ struct LocationPickerView: View {
         )
         do {
             let response = try await MKLocalSearch(request: request).start()
-            return response.mapItems.first?.placemark.coordinate
+            return response.mapItems.first?.location.coordinate
         } catch {
             return nil
         }

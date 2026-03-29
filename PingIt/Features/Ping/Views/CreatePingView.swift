@@ -8,7 +8,6 @@ struct CreatePingView: View {
     @Environment(LocationService.self) private var locationService
     @Environment(\.dismiss) private var dismiss
     @Binding var createdPingLocation: CLLocationCoordinate2D?
-    @FocusState private var isTextFieldFocused: Bool
     @State private var viewModel: CreatePingViewModel?
 
     var body: some View {
@@ -24,7 +23,6 @@ struct CreatePingView: View {
                         axis: .vertical
                     )
                     .lineLimit(3...6)
-                    .focused($isTextFieldFocused)
 
                     HStack {
                         Spacer()
@@ -78,9 +76,6 @@ struct CreatePingView: View {
                 }
             }
             .scrollDismissesKeyboard(.immediately)
-            .onTapGesture {
-                isTextFieldFocused = false
-            }
             .navigationTitle("Create Ping")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
