@@ -55,14 +55,20 @@ final class ChatService {
         }
     }
 
-    func observeMessages(chatId: String, onUpdate: @escaping @Sendable ([ChatMessage]) -> Void) -> ListenerRegistration {
+    func observeMessages(
+        chatId: String,
+        onUpdate: @escaping @Sendable (Result<[ChatMessage], Error>) -> Void
+    ) -> ListenerRegistration {
         db.collection(Constants.Firestore.chatMessagesCollection)
             .whereField("chatId", isEqualTo: chatId)
             .order(by: "createdAt")
-            .addSnapshotListener { snapshot, _ in
-                guard let documents = snapshot?.documents else { return }
-                let messages = documents.compactMap { try? $0.data(as: ChatMessage.self) }
-                onUpdate(messages)
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    onUpdate(.failure(error))
+                    return
+                }
+                let messages = snapshot?.documents.compactMap { try? $0.data(as: ChatMessage.self) } ?? []
+                onUpdate(.success(messages))
             }
     }
 }

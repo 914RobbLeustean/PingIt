@@ -8,6 +8,7 @@ struct PingDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: PingDetailViewModel
     @State private var showDeleteConfirmation = false
+    @State private var navigateToChat = false
 
     init(ping: Ping) {
         self._viewModel = State(initialValue: PingDetailViewModel(ping: ping))
@@ -37,6 +38,7 @@ struct PingDetailView: View {
                     chatId: viewModel.ping.chatId,
                     isCreator: viewModel.isCreator,
                     isDeleting: viewModel.isDeleting,
+                    onJoinChat: handleJoinChat,
                     onDelete: handleDeleteTap
                 )
 
@@ -50,6 +52,11 @@ struct PingDetailView: View {
         }
         .navigationTitle("Ping Details")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $navigateToChat) {
+            if let chatId = viewModel.ping.chatId {
+                ChatView(chatId: chatId, pingId: viewModel.ping.id ?? "")
+            }
+        }
         .alert("Delete this ping?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive, action: handleConfirmDelete)
             Button("Cancel", role: .cancel) {}
@@ -78,6 +85,10 @@ struct PingDetailView: View {
 
     private func handleDisappear() {
         viewModel.stopCountdownTimer()
+    }
+
+    private func handleJoinChat() {
+        navigateToChat = true
     }
 
     private func handleDeleteTap() {

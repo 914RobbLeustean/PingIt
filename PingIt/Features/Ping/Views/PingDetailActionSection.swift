@@ -4,6 +4,7 @@ struct PingDetailActionSection: View {
     let chatId: String?
     let isCreator: Bool
     let isDeleting: Bool
+    var onJoinChat: () -> Void
     var onDelete: () -> Void
 
     var body: some View {
@@ -24,7 +25,7 @@ struct PingDetailActionSection: View {
     }
 
     private func handleJoinChat() {
-        // TODO: Navigate to ChatView when implemented
+        onJoinChat()
     }
 
     private func handleDelete() {

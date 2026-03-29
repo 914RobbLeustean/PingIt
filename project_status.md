@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 0 — MVP** — 11/14 features done. Auth, Map, Ping Core complete. Chat Core remaining.
+**Phase 0 — MVP** — 14/14 features complete. All core features implemented.
 
 ## Completed
 - Project specification and documentation setup
@@ -30,10 +30,10 @@
 - 35 unit tests total (+ username validation tests)
 
 ## In Progress
-- Phase 0 MVP feature implementation
+- Protocol abstractions + ViewModel testing (post-MVP refactor)
 
 ## Up Next
-- Chat Core features (Join Chat, Send Message, Real-Time Updates)
+- Phase 1: Safety & Discovery
 
 ---
 
@@ -51,9 +51,9 @@
 - [x] View Ping Details
 - [x] Delete Own Ping
 - [x] Live Ping Visualization
-- [ ] Join Ping Chat
-- [ ] Send Text Message
-- [ ] Real-Time Message Updates
+- [x] Join Ping Chat
+- [x] Send Text Message
+- [x] Real-Time Message Updates
 
 ### Phase 1: Safety & Discovery (16 features)
 - [ ] Automated Image/Video Filtering
