@@ -16,31 +16,47 @@ struct MapView: View {
 
     var body: some View {
         NavigationStack {
-            Map(position: $cameraPosition) {
-                UserAnnotation()
+            ZStack {
+                Map(position: $cameraPosition) {
+                    UserAnnotation()
 
-                if let viewModel {
-                    ForEach(viewModel.pings) { ping in
-                        Annotation(
-                            ping.text,
-                            coordinate: CLLocationCoordinate2D(
-                                latitude: ping.location.latitude,
-                                longitude: ping.location.longitude
-                            )
-                        ) {
-                            PingAnnotationView(ping: ping) {
-                                // TODO: Navigate to ping detail
+                    if let viewModel {
+                        ForEach(viewModel.pings) { ping in
+                            Annotation(
+                                ping.text,
+                                coordinate: CLLocationCoordinate2D(
+                                    latitude: ping.location.latitude,
+                                    longitude: ping.location.longitude
+                                )
+                            ) {
+                                PingAnnotationView(ping: ping) {
+                                    // TODO: Navigate to ping detail
+                                }
                             }
                         }
                     }
                 }
+                .mapControls {
+                    MapUserLocationButton()
+                    MapCompass()
+                    MapScaleView()
+                }
+                .mapStyle(.standard)
+
+                if let errorMessage = viewModel?.errorMessage {
+                    VStack {
+                        Spacer()
+                        Label(errorMessage, systemImage: "wifi.exclamationmark")
+                            .font(.callout)
+                            .padding()
+                            .background(.ultraThinMaterial)
+                            .clipShape(.rect(cornerRadius: 12))
+                            .padding()
+                    }
+                } else if viewModel?.isLoading == true {
+                    ProgressView()
+                }
             }
-            .mapControls {
-                MapUserLocationButton()
-                MapCompass()
-                MapScaleView()
-            }
-            .mapStyle(.standard)
             .navigationTitle("Map")
             .onAppear(perform: handleAppear)
             .onDisappear(perform: handleDisappear)

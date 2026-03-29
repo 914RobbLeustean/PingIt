@@ -24,10 +24,16 @@ final class MapViewModel {
         guard listenerRegistration == nil else { return }
         isLoading = true
 
-        listenerRegistration = pingService.observeActivePings { [weak self] pings in
+        listenerRegistration = pingService.observeActivePings { [weak self] result in
             guard let self else { return }
             Task { @MainActor [self] in
-                self.pings = pings
+                switch result {
+                case .success(let pings):
+                    self.pings = pings
+                    self.errorMessage = nil
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
                 self.isLoading = false
             }
         }
