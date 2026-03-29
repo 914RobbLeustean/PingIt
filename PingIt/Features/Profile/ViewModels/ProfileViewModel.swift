@@ -155,7 +155,8 @@ final class ProfileViewModel {
         defer { isUploadingImage = false }
 
         do {
-            guard let compressedData = image.jpegData(compressionQuality: Constants.Storage.imageCompressionQuality) else {
+            let resized = resizeImage(image, maxDimension: 500)
+            guard let compressedData = resized.jpegData(compressionQuality: Constants.Storage.imageCompressionQuality) else {
                 errorMessage = "Could not process the captured image."
                 return
             }
@@ -177,7 +178,22 @@ final class ProfileViewModel {
     // MARK: - Private
 
     private func compressImage(_ data: Data) -> Data? {
-        UIImage(data: data)?.jpegData(compressionQuality: Constants.Storage.imageCompressionQuality)
+        guard let image = UIImage(data: data) else { return nil }
+        let resized = resizeImage(image, maxDimension: 500)
+        return resized.jpegData(compressionQuality: Constants.Storage.imageCompressionQuality)
+    }
+
+    private func resizeImage(_ image: UIImage, maxDimension: Double) -> UIImage {
+        let size = image.size
+        guard size.width > maxDimension || size.height > maxDimension else { return image }
+
+        let scale = maxDimension / max(size.width, size.height)
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 
     private func uploadToStorage(data: Data, userId: String) async throws -> String {
