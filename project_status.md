@@ -33,11 +33,20 @@
 - 35 unit tests total
 
 ## In Progress
-- Protocol abstractions + ViewModel testing (post-MVP refactor)
-- UI polish and edge case fixes
+_Nothing actively in progress._
 
-## Up Next
-- Phase 1: Safety & Discovery
+## Up Next (choose one or more)
+- **Polish MVP:** Protocol abstractions for testability, ViewModel unit tests with mocks, UI/UX refinements
+- **Phase 1: Safety & Discovery** (16 features): Content moderation, user reporting, blocking, boost pings, hot pings algorithm, push notifications, GDPR account deletion, email verification, spam detection, notification/privacy preferences
+- **Phase 2: Polish & Launch** (10 features): Custom ping duration, onboarding flow, empty/error states, performance optimization, analytics, crash reporting, app icon/splash, privacy policy, beta testing
+
+## Known Technical Debt
+- No protocol abstractions for services → ViewModels can't be unit tested in isolation
+- Cloud Functions not deployed (ping expiration cron, rate limiting, push notifications)
+- Geohash field is empty string (geospatial radius queries need GeoFirestore for Phase 1)
+- No offline mode handling (Firestore caches automatically but no explicit UI for offline state)
+- Launch screen may not display on first install (iOS caching — requires device restart)
+- Simulator networking blocked by Netskope (corporate SSL interception) — must test on physical iPhone
 
 ---
 
