@@ -6,6 +6,33 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-03-29] — Authentication Features + ViewModel Refactor
+
+### Added
+- **LoginViewModel** — Username validation (3-20 chars, alphanumeric + underscore), form state management
+- **LoginView** — Username TextField during sign-up, real-time validation feedback
+- **ProfileViewModel** — Profile loading, username editing, Firebase Storage photo upload/remove
+- **ProfileView** — Form with AsyncImage profile picture, PhotosPicker, username editor, account info
+- **ProfileImageSection** — Extracted subview for profile picture display and management
+- **SettingsView** — Renamed from placeholder, added sign-out confirmation dialog
+- **Constants.Username** — minLength, maxLength, allowedCharacterPattern
+- **Constants.Storage** — profilePicturesPath, maxProfileImageSizeBytes, imageCompressionQuality
+- **PingItError** — Added 6 profile-related error cases
+- **PingDetailCreatorSection/ActionSection** — Extracted from PingDetailView to separate files
+- **17 new tests** — Username validation (parameterized + individual), constants (35 total)
+
+### Changed
+- **ViewModel pattern refactored** — All ViewModels now use parameterless init + `configure()` method instead of service injection via init. Views use `@State private var viewModel = SomeVM()` (non-optional) with `@Bindable` for direct `$viewModel.property` bindings.
+- **Zero `Binding(get:set:)` in view bodies** — Eliminated from CreatePingView and all other views per swiftui-pro rules
+- **MapViewModel, CreatePingViewModel, PingDetailViewModel** — Refactored to configure pattern
+- **MapView, CreatePingView, PingDetailView** — Updated to use @Bindable and .task for configuration
+
+### Removed
+- `ProfilePlaceholderView.swift` — Replaced by ProfileView
+- All `Binding(get:set:)` usage from view bodies
+
+---
+
 ## [2026-03-29] — Location Picker for Ping Creation
 
 ### Changed

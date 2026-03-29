@@ -26,6 +26,18 @@ enum Constants {
         static let maxMessagesPerTenSeconds = 6
     }
 
+    enum Username {
+        static let minLength = 3
+        static let maxLength = 20
+        static let allowedCharacterPattern = "^[a-zA-Z0-9_]+$"
+    }
+
+    enum Storage {
+        static let profilePicturesPath = "profile_pictures"
+        static let maxProfileImageSizeBytes: Int64 = 5 * 1024 * 1024
+        static let imageCompressionQuality: Double = 0.8
+    }
+
     enum Firestore {
         static let usersCollection = "users"
         static let pingsCollection = "pings"

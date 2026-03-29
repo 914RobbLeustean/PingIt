@@ -8,67 +8,53 @@ struct CreatePingView: View {
     @Environment(LocationService.self) private var locationService
     @Environment(\.dismiss) private var dismiss
     @Binding var createdPingLocation: CLLocationCoordinate2D?
-    @State private var viewModel: CreatePingViewModel?
+    @State private var viewModel = CreatePingViewModel()
 
     var body: some View {
+        @Bindable var viewModel = viewModel
+
         NavigationStack {
             Form {
                 Section("What's happening?") {
-                    TextField(
-                        "Describe your activity...",
-                        text: Binding(
-                            get: { viewModel?.text ?? "" },
-                            set: { viewModel?.text = $0 }
-                        ),
-                        axis: .vertical
-                    )
-                    .lineLimit(3...6)
+                    TextField("Describe your activity...", text: $viewModel.text, axis: .vertical)
+                        .lineLimit(3...6)
 
                     HStack {
                         Spacer()
-                        Text("\(viewModel?.characterCount ?? 0) / \(Constants.Ping.maxTextLength)")
+                        Text("\(viewModel.characterCount) / \(Constants.Ping.maxTextLength)")
                             .font(.caption)
-                            .foregroundStyle(viewModel?.isOverLimit == true ? .red : .secondary)
+                            .foregroundStyle(viewModel.isOverLimit ? .red : .secondary)
                     }
                 }
 
                 Section("Location") {
                     NavigationLink {
                         LocationPickerView(
-                            selectedLocation: Binding(
-                                get: { viewModel?.selectedLocation },
-                                set: { viewModel?.selectedLocation = $0 }
-                            ),
-                            selectedLocationName: Binding(
-                                get: { viewModel?.selectedLocationName },
-                                set: { viewModel?.selectedLocationName = $0 }
-                            )
+                            selectedLocation: $viewModel.selectedLocation,
+                            selectedLocationName: $viewModel.selectedLocationName
                         )
                     } label: {
                         HStack {
                             Label(
-                                viewModel?.locationDisplayText ?? "Choose location",
-                                systemImage: viewModel?.selectedLocation != nil ? "mappin.circle.fill" : "mappin.circle"
+                                viewModel.locationDisplayText,
+                                systemImage: viewModel.selectedLocation != nil ? "mappin.circle.fill" : "mappin.circle"
                             )
                             Spacer()
                         }
-                        .foregroundStyle(viewModel?.selectedLocation != nil ? .primary : .secondary)
+                        .foregroundStyle(viewModel.selectedLocation != nil ? .primary : .secondary)
                     }
                 }
 
                 Section("Expires in") {
-                    Picker("Expiration", selection: Binding(
-                        get: { viewModel?.selectedExpirationIndex ?? 1 },
-                        set: { viewModel?.selectedExpirationIndex = $0 }
-                    )) {
+                    Picker("Expiration", selection: $viewModel.selectedExpirationIndex) {
                         ForEach(0..<3, id: \.self) { index in
-                            Text(viewModel?.expirationLabel(for: index) ?? "").tag(index)
+                            Text(viewModel.expirationLabel(for: index)).tag(index)
                         }
                     }
                     .pickerStyle(.segmented)
                 }
 
-                if let errorMessage = viewModel?.errorMessage {
+                if let errorMessage = viewModel.errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.red)
@@ -83,13 +69,20 @@ struct CreatePingView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create", action: handleCreate)
-                        .disabled(viewModel?.canCreate != true)
+                        .disabled(viewModel.canCreate == false)
                 }
             }
-            .onAppear(perform: handleAppear)
-            .onChange(of: viewModel?.didCreatePing) { _, didCreate in
-                if didCreate == true {
-                    createdPingLocation = viewModel?.selectedLocation
+            .task {
+                viewModel.configure(
+                    authService: authService,
+                    pingService: pingService,
+                    chatService: chatService,
+                    locationService: locationService
+                )
+            }
+            .onChange(of: viewModel.didCreatePing) { _, didCreate in
+                if didCreate {
+                    createdPingLocation = viewModel.selectedLocation
                     dismiss()
                 }
             }
@@ -98,24 +91,13 @@ struct CreatePingView: View {
 
     // MARK: - Actions
 
-    private func handleAppear() {
-        if viewModel == nil {
-            viewModel = CreatePingViewModel(
-                authService: authService,
-                pingService: pingService,
-                chatService: chatService,
-                locationService: locationService
-            )
-        }
-    }
-
     private func handleCancel() {
         dismiss()
     }
 
     private func handleCreate() {
         Task {
-            await viewModel?.createPing()
+            await viewModel.createPing()
         }
     }
 }

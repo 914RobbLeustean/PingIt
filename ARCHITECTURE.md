@@ -96,8 +96,15 @@ PingIt/
 │   │   └── Views/
 │   │       ├── MapView.swift        MapKit map with annotations
 │   │       └── PingAnnotationView.swift  Custom ping marker
-│   ├── Ping/Views/
-│   │   └── PingPlaceholderView.swift
+│   ├── Ping/
+│   │   ├── ViewModels/
+│   │   │   ├── CreatePingViewModel.swift   Validation, location, Firestore write
+│   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete
+│   │   └── Views/
+│   │       ├── CreatePingView.swift        Form: text, location picker, expiration
+│   │       ├── PingDetailView.swift        Detail with creator, countdown, actions
+│   │       ├── LocationPickerView.swift    GPS / search / map pin selection
+│   │       └── MapPinPickerView.swift      Drag-pin-on-map picker
 │   ├── Chat/Views/
 │   │   └── ChatPlaceholderView.swift
 │   ├── Profile/Views/
@@ -122,8 +129,7 @@ User taps "Create Ping"
       Future: Saved Places (Phase 2+)
   → CreatePingViewModel validates input (text, location, expiration)
   → CreatePingViewModel checks Cluj boundary (local GeoJSON)
-  → PingService creates Firestore document (status: active)
-  → PingService creates associated Chat document
+  → PingService.createPingWithChat() writes ping + chat atomically (Firestore batch)
   → Firestore listener on MapViewModel fires → new pin appears on map
 ```
 

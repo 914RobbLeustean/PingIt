@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 0 — MVP** — Foundation complete, Map & Location done. Building core features.
+**Phase 0 — MVP** — 11/14 features done. Auth, Map, Ping Core complete. Chat Core remaining.
 
 ## Completed
 - Project specification and documentation setup
@@ -18,12 +18,21 @@
 - Ping Core: Create Text Ping, Set Expiration, View Details, Delete Own Ping, Live Visualization
 - CreatePingViewModel/View with validation, ChatService/PingService enhancements
 - PingDetailViewModel/View with creator loading, countdown timer, cascade delete
+- Location Picker (Uber-style): current GPS, address search with autocomplete, drag-pin-on-map
+- Atomic Firestore batch writes for ping+chat creation and deletion
+- Search results filtered to Cluj-Napoca (title + subtitle)
+- 19 unit tests: boundary validator, date extensions, constants, ping model
+- Authentication: User Registration with username, Login with session management, Profile Management
+- LoginViewModel with username validation, ProfileViewModel with Firebase Storage upload
+- ProfileView with photo picker, username editing, AsyncImage display
+- SettingsView with sign-out confirmation
+- ViewModel refactor: configure() pattern, zero Binding(get:set:), @Bindable throughout
+- 35 unit tests total (+ username validation tests)
 
 ## In Progress
 - Phase 0 MVP feature implementation
 
 ## Up Next
-- Authentication features (Registration, Login, Profile Management)
 - Chat Core features (Join Chat, Send Message, Real-Time Updates)
 
 ---
@@ -31,9 +40,9 @@
 ## Milestone Tracker
 
 ### Phase 0: MVP (14 features)
-- [ ] User Registration
-- [ ] User Login
-- [ ] Basic Profile Management
+- [x] User Registration
+- [x] User Login
+- [x] Basic Profile Management
 - [x] Real-Time Map Display
 - [x] Cluj-Napoca Boundary Detection
 - [x] Location Permission Management

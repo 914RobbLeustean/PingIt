@@ -5,10 +5,11 @@ import FirebaseFirestore
 
 @Observable
 final class CreatePingViewModel {
-    private let authService: AuthService
-    private let pingService: PingService
-    private let chatService: ChatService
-    private let locationService: LocationService
+    private var authService: AuthService?
+    private var pingService: PingService?
+    private var chatService: ChatService?
+    private var locationService: LocationService?
+    private var isConfigured = false
 
     var text = ""
     var selectedExpirationIndex = 1 // Default: 24hr
@@ -46,28 +47,23 @@ final class CreatePingViewModel {
         Self.expirationLabels[index]
     }
 
-    init(
+    func configure(
         authService: AuthService,
         pingService: PingService,
         chatService: ChatService,
         locationService: LocationService
     ) {
+        guard !isConfigured else { return }
         self.authService = authService
         self.pingService = pingService
         self.chatService = chatService
         self.locationService = locationService
-    }
-
-    func useCurrentLocation() {
-        guard let location = locationService.currentLocation else {
-            errorMessage = PingItError.locationUnavailable.localizedDescription
-            return
-        }
-        selectedLocation = location.coordinate
-        selectedLocationName = "Current Location"
+        isConfigured = true
     }
 
     func createPing() async {
+        guard let authService, let pingService, let chatService, let locationService else { return }
+
         isCreating = true
         errorMessage = nil
         defer { isCreating = false }
