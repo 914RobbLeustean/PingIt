@@ -27,6 +27,9 @@ GoogleService-Info.plist
 # Documentation (local only)
 docs/
 
+# Git worktrees
+.worktrees/
+
 # AI tooling
 .claude/
 .agents/
