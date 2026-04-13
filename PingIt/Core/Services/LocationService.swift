@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 
 @Observable
-final class LocationService: NSObject {
+final class LocationService: NSObject, LocationServicing {
     private let locationManager = CLLocationManager()
     private(set) var currentLocation: CLLocation?
     private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -34,11 +34,20 @@ final class LocationService: NSObject {
 }
 
 extension LocationService: CLLocationManagerDelegate {
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        currentLocation = locations.last
+    nonisolated func locationManager(
+        _ manager: CLLocationManager,
+        didUpdateLocations locations: [CLLocation]
+    ) {
+        let location = locations.last
+        Task { @MainActor [weak self] in
+            self?.currentLocation = location
+        }
     }
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorizationStatus = manager.authorizationStatus
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor [weak self] in
+            self?.authorizationStatus = status
+        }
     }
 }

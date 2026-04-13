@@ -2,7 +2,7 @@ import Foundation
 
 @Observable
 final class LoginViewModel {
-    private var authService: AuthService?
+    private var authService: (any AuthServicing)?
     private var isConfigured = false
 
     var email = ""
@@ -44,7 +44,7 @@ final class LoginViewModel {
         return nil
     }
 
-    func configure(authService: AuthService) {
+    func configure(authService: any AuthServicing) {
         guard !isConfigured else { return }
         self.authService = authService
         isConfigured = true

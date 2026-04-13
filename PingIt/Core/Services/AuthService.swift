@@ -3,8 +3,8 @@ import FirebaseAuth
 import FirebaseFirestore
 
 @Observable
-final class AuthService {
-    private(set) var currentUser: FirebaseAuth.User?
+final class AuthService: AuthServicing {
+    private(set) var currentUser: (any AuthUserRepresentable)?
     private(set) var isLoading = false
     private var authStateHandle: AuthStateDidChangeListenerHandle?
 

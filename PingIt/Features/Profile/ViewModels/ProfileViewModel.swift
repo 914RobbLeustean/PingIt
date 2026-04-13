@@ -1,13 +1,12 @@
 import Foundation
 import PhotosUI
 import SwiftUI
-import FirebaseAuth
 import FirebaseStorage
 
 @Observable
 final class ProfileViewModel {
-    private var authService: AuthService?
-    private var userService: UserService?
+    private var authService: (any AuthServicing)?
+    private var userService: (any UserServicing)?
     private var isConfigured = false
 
     private(set) var user: User?
@@ -41,7 +40,7 @@ final class ProfileViewModel {
         authService?.currentUser?.uid
     }
 
-    func configure(authService: AuthService, userService: UserService) {
+    func configure(authService: any AuthServicing, userService: any UserServicing) {
         guard !isConfigured else { return }
         self.authService = authService
         self.userService = userService

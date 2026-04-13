@@ -6,6 +6,31 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-04-13] — Testability Refactor: Protocol Abstractions + ViewModel Unit Tests
+
+### Added
+- **`PingIt/Core/Protocols/`** — New directory containing all service protocol abstractions
+  - `ListenerRemovable.swift` — `ListenerHandle` concrete class wrapping `ListenerRegistration` (Firebase's `ListenerRegistration` is an ObjC protocol and can't retroactively conform to a Swift protocol)
+  - `AuthUserRepresentable.swift` — Minimal user identity protocol (`.uid` only)
+  - `FirebaseUser+AuthUserRepresentable.swift` — Conformance extension for `FirebaseAuth.User`
+  - `AuthServicing.swift`, `PingServicing.swift`, `ChatServicing.swift`, `UserServicing.swift`, `LocationServicing.swift`
+- **`PingItTests/Mocks/`** — Mock implementations for all 5 services + helpers
+  - `MockListenerRemovable`, `MockAuthUser`, `MockAuthService`, `MockPingService`, `MockChatService`, `MockUserService`, `MockLocationService`
+  - All mocks are `@Observable @MainActor final class` types with call-tracking and injectable errors
+- **`PingItTests/ViewModelTests/`** — 6 ViewModel test suites (~40 new tests)
+  - `CreatePingViewModelTests`, `ChatViewModelTests`, `PingDetailViewModelTests`, `LoginViewModelTests`, `MapViewModelTests`, `ProfileViewModelTests`
+
+### Changed
+- **`AuthService`** — Conforms to `AuthServicing`; `currentUser` type changed from `FirebaseAuth.User?` to `(any AuthUserRepresentable)?`
+- **`PingService`** — Conforms to `PingServicing`; `createPingWithChat` drops unused `chatService` parameter; `observeActivePings` returns `any ListenerRemovable`
+- **`ChatService`** — Conforms to `ChatServicing`; `observeMessages` returns `any ListenerRemovable`
+- **`UserService`** — Conforms to `UserServicing`
+- **`LocationService`** — Conforms to `LocationServicing`
+- **All 6 ViewModels** — Service stored properties and `configure()` parameters changed from concrete types to protocol existentials (`any AuthServicing`, etc.); `listenerRegistration` changed to `(any ListenerRemovable)?`
+- **`MapViewModel`, `ChatViewModel`, `PingDetailViewModel`** — Removed now-unnecessary `FirebaseAuth`/`FirebaseFirestore` imports
+
+---
+
 ## [2026-03-29] — Chat Core + Launch Screen (Phase 0 MVP Complete)
 
 ### Added

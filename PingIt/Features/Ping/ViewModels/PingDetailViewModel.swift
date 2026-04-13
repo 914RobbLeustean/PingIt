@@ -1,13 +1,12 @@
 import Foundation
-import FirebaseAuth
 
 @Observable
 final class PingDetailViewModel {
     let ping: Ping
-    private var authService: AuthService?
-    private var pingService: PingService?
-    private var chatService: ChatService?
-    private var userService: UserService?
+    private var authService: (any AuthServicing)?
+    private var pingService: (any PingServicing)?
+    private var chatService: (any ChatServicing)?
+    private var userService: (any UserServicing)?
     private var isConfigured = false
 
     private(set) var creator: User?
@@ -28,10 +27,10 @@ final class PingDetailViewModel {
     }
 
     func configure(
-        authService: AuthService,
-        pingService: PingService,
-        chatService: ChatService,
-        userService: UserService
+        authService: any AuthServicing,
+        pingService: any PingServicing,
+        chatService: any ChatServicing,
+        userService: any UserServicing
     ) {
         guard !isConfigured else { return }
         self.authService = authService
