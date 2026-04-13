@@ -2,7 +2,7 @@ import Foundation
 import FirebaseFirestore
 
 @Observable
-final class PingService {
+final class PingService: PingServicing {
     private let db = Firestore.firestore()
 
     func createPing(_ ping: Ping) async throws -> String {
@@ -37,7 +37,7 @@ final class PingService {
 
     /// Creates a ping and its associated chat atomically using a batched write.
     /// Rate limiting is deferred to a Cloud Function (Phase 1).
-    func createPingWithChat(_ ping: Ping, chatService: ChatService) async throws {
+    func createPingWithChat(_ ping: Ping) async throws {
         let pingRef = db.collection(Constants.Firestore.pingsCollection).document()
         let chatRef = db.collection(Constants.Firestore.chatsCollection).document()
 
@@ -72,8 +72,8 @@ final class PingService {
 
     func observeActivePings(
         onUpdate: @escaping @Sendable (Result<[Ping], Error>) -> Void
-    ) -> ListenerRegistration {
-        db.collection(Constants.Firestore.pingsCollection)
+    ) -> ListenerHandle {
+        let registration = db.collection(Constants.Firestore.pingsCollection)
             .whereField("status", isEqualTo: Ping.PingStatus.active.rawValue)
             .addSnapshotListener { snapshot, error in
                 if let error {
@@ -83,5 +83,6 @@ final class PingService {
                 let pings = snapshot?.documents.compactMap { try? $0.data(as: Ping.self) } ?? []
                 onUpdate(.success(pings))
             }
+        return ListenerHandle(registration)
     }
 }

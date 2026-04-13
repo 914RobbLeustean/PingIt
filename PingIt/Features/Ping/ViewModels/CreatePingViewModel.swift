@@ -1,14 +1,13 @@
 import Foundation
 import CoreLocation
-import FirebaseAuth
 import FirebaseFirestore
 
 @Observable
 final class CreatePingViewModel {
-    private var authService: AuthService?
-    private var pingService: PingService?
-    private var chatService: ChatService?
-    private var locationService: LocationService?
+    private var authService: (any AuthServicing)?
+    private var pingService: (any PingServicing)?
+    private var chatService: (any ChatServicing)?
+    private var locationService: (any LocationServicing)?
     private var isConfigured = false
 
     var text = ""
@@ -48,10 +47,10 @@ final class CreatePingViewModel {
     }
 
     func configure(
-        authService: AuthService,
-        pingService: PingService,
-        chatService: ChatService,
-        locationService: LocationService
+        authService: any AuthServicing,
+        pingService: any PingServicing,
+        chatService: any ChatServicing,
+        locationService: any LocationServicing
     ) {
         guard !isConfigured else { return }
         self.authService = authService
@@ -62,7 +61,7 @@ final class CreatePingViewModel {
     }
 
     func createPing() async {
-        guard let authService, let pingService, let chatService, let locationService else { return }
+        guard let authService, let pingService, let locationService else { return }
 
         isCreating = true
         errorMessage = nil
@@ -101,7 +100,7 @@ final class CreatePingViewModel {
                 status: .active
             )
 
-            try await pingService.createPingWithChat(ping, chatService: chatService)
+            try await pingService.createPingWithChat(ping)
             didCreatePing = true
         } catch {
             errorMessage = error.localizedDescription

@@ -1,12 +1,10 @@
 import Foundation
-import FirebaseAuth
-import FirebaseFirestore
 
 @Observable
 final class ChatViewModel {
-    private var authService: AuthService?
-    private var chatService: ChatService?
-    private var listenerRegistration: ListenerRegistration?
+    private var authService: (any AuthServicing)?
+    private var chatService: (any ChatServicing)?
+    private var listenerRegistration: ListenerHandle?
     private var isConfigured = false
 
     let chatId: String
@@ -33,7 +31,7 @@ final class ChatViewModel {
         self.pingId = pingId
     }
 
-    func configure(authService: AuthService, chatService: ChatService) {
+    func configure(authService: any AuthServicing, chatService: any ChatServicing) {
         guard !isConfigured else { return }
         self.authService = authService
         self.chatService = chatService

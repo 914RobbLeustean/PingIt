@@ -1,12 +1,11 @@
 import Foundation
 import CoreLocation
-import FirebaseFirestore
 
 @Observable
 final class MapViewModel {
-    private var pingService: PingService?
-    private var locationService: LocationService?
-    private var listenerRegistration: ListenerRegistration?
+    private var pingService: (any PingServicing)?
+    private var locationService: (any LocationServicing)?
+    private var listenerRegistration: ListenerHandle?
     private var isConfigured = false
 
     private(set) var pings: [Ping] = []
@@ -16,7 +15,7 @@ final class MapViewModel {
     var userLocation: CLLocation? { locationService?.currentLocation }
     var authorizationStatus: CLAuthorizationStatus { locationService?.authorizationStatus ?? .notDetermined }
 
-    func configure(pingService: PingService, locationService: LocationService) {
+    func configure(pingService: any PingServicing, locationService: any LocationServicing) {
         guard !isConfigured else { return }
         self.pingService = pingService
         self.locationService = locationService

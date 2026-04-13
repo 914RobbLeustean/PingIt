@@ -2,7 +2,7 @@ import Foundation
 import FirebaseFirestore
 
 @Observable
-final class UserService {
+final class UserService: UserServicing {
     private let db = Firestore.firestore()
 
     func createUserProfile(_ user: User) async throws {

@@ -2,7 +2,7 @@ import Foundation
 import FirebaseFirestore
 
 @Observable
-final class ChatService {
+final class ChatService: ChatServicing {
     private let db = Firestore.firestore()
 
     func sendMessage(_ message: ChatMessage) async throws {
@@ -71,8 +71,8 @@ final class ChatService {
     func observeMessages(
         chatId: String,
         onUpdate: @escaping @Sendable (Result<[ChatMessage], Error>) -> Void
-    ) -> ListenerRegistration {
-        db.collection(Constants.Firestore.chatMessagesCollection)
+    ) -> ListenerHandle {
+        let registration = db.collection(Constants.Firestore.chatMessagesCollection)
             .whereField("chatId", isEqualTo: chatId)
             .addSnapshotListener { snapshot, error in
                 if let error {
@@ -83,5 +83,6 @@ final class ChatService {
                     .sorted { ($0.createdAt ?? .distantFuture) < ($1.createdAt ?? .distantFuture) }
                 onUpdate(.success(messages))
             }
+        return ListenerHandle(registration)
     }
 }

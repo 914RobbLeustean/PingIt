@@ -21,7 +21,7 @@
 - Location Picker (Uber-style): current GPS, address search with autocomplete, drag-pin-on-map
 - Atomic Firestore batch writes for ping+chat creation and deletion
 - Search results filtered to Cluj-Napoca (title + subtitle)
-- 19 unit tests: boundary validator, date extensions, constants, ping model
+- 19 unit tests (at Map & Location phase): boundary validator, date extensions, constants, ping model
 - Authentication: User Registration with username, Login with session management, Profile Management
 - LoginViewModel with username validation, ProfileViewModel with Firebase Storage upload
 - ProfileView with photo picker, username editing, AsyncImage display
@@ -30,23 +30,28 @@
 - Chat Core: Join Chat, Send Message, Real-Time Message Updates
 - ChatViewModel with Firestore listener, ChatView with auto-scroll
 - Launch screen with branded logo
-- 35 unit tests total
+- 27 unit tests (foundation + validation)
+- Protocol abstractions: `AuthServicing`, `PingServicing`, `ChatServicing`, `UserServicing`, `LocationServicing`, `ListenerRemovable`, `AuthUserRepresentable`
+- 7 `@Observable @MainActor` mock implementations for all services
+- ~40 ViewModel unit tests across 6 suites (CreatePing, Chat, PingDetail, Login, Map, Profile)
+
+## Completed (Polish — Testability)
+- **Testability refactor (2026-04-13):** Protocol abstractions for all 5 services, supporting protocols (`ListenerRemovable`, `AuthUserRepresentable`), 7 mock implementations, ~40 new ViewModel unit tests across 6 test suites
 
 ## In Progress
 _Nothing actively in progress._
 
 ## Up Next (choose one or more)
-- **Polish MVP:** Protocol abstractions for testability, ViewModel unit tests with mocks, UI/UX refinements
+- **Polish MVP (UI/UX refinements):** Empty states, error states, loading skeletons, visual polish
 - **Phase 1: Safety & Discovery** (16 features): Content moderation, user reporting, blocking, boost pings, hot pings algorithm, push notifications, GDPR account deletion, email verification, spam detection, notification/privacy preferences
 - **Phase 2: Polish & Launch** (10 features): Custom ping duration, onboarding flow, empty/error states, performance optimization, analytics, crash reporting, app icon/splash, privacy policy, beta testing
 
 ## Known Technical Debt
-- No protocol abstractions for services → ViewModels can't be unit tested in isolation
 - Cloud Functions not deployed (ping expiration cron, rate limiting, push notifications)
 - Geohash field is empty string (geospatial radius queries need GeoFirestore for Phase 1)
 - No offline mode handling (Firestore caches automatically but no explicit UI for offline state)
-- Launch screen may not display on first install (iOS caching — requires device restart)
 - Simulator networking blocked by Netskope (corporate SSL interception) — must test on physical iPhone
+- ProfileViewModel directly calls Firebase Storage — should be extracted to `ImageStorageServicing` protocol for full testability
 
 ---
 

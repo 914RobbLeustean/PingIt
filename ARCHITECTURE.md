@@ -47,7 +47,8 @@ PingIt/
 ├── App/                     Entry point, app lifecycle
 ├── Core/
 │   ├── Models/              Firestore data mappings (User, Ping, Chat, etc.)
-│   ├── Services/            Firebase SDK wrappers (one per domain)
+│   ├── Protocols/           Service protocol abstractions (AuthServicing, PingServicing, etc.)
+│   ├── Services/            Firebase SDK wrappers (one per domain), each conforming to a protocol
 │   └── Utilities/           Extensions, constants, helpers
 ├── Features/                One folder per feature, each containing:
 │   ├── Authentication/      ViewModels/ + Views/
@@ -61,7 +62,7 @@ PingIt/
 
 **Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
 
-### Actual File Listing (as of 2026-03-29)
+### Actual File Listing (as of 2026-04-13)
 
 ```
 PingIt/
@@ -76,6 +77,15 @@ PingIt/
 │   │   ├── Chat.swift               Firestore: chats collection
 │   │   ├── ChatMessage.swift        Firestore: chatMessages collection
 │   │   └── ChatParticipant.swift    Firestore: chatParticipants collection
+│   ├── Protocols/
+│   │   ├── ListenerRemovable.swift                      ListenerHandle wrapping ListenerRegistration
+│   │   ├── AuthUserRepresentable.swift                  Minimal user identity (uid)
+│   │   ├── FirebaseUser+AuthUserRepresentable.swift     Firebase conformance
+│   │   ├── AuthServicing.swift                          Auth service contract
+│   │   ├── PingServicing.swift                          Ping service contract
+│   │   ├── ChatServicing.swift                          Chat service contract
+│   │   ├── UserServicing.swift                          User service contract
+│   │   └── LocationServicing.swift                      Location service contract
 │   ├── Services/
 │   │   ├── AuthService.swift        Firebase Auth wrapper, auth state listener
 │   │   ├── PingService.swift        Ping CRUD, real-time snapshot listener
@@ -124,9 +134,26 @@ PingIt/
 │   │       ├── ProfileImageSection.swift   AsyncImage + PhotosPicker + camera
 │   │       └── CameraPickerView.swift      UIKit camera wrapper
 │   └── Settings/Views/
-│       └── SettingsView.swift              Sign out with confirmation
+│       └── SettingsPlaceholderView.swift    Sign out with confirmation
 └── Resources/
     └── ClujNapoca.geojson           Cluj-Napoca admin boundary (OSM)
+
+PingItTests/
+├── Mocks/
+│   ├── MockAuthUser.swift           Stub AuthUserRepresentable
+│   ├── MockAuthService.swift        @Observable @MainActor mock
+│   ├── MockPingService.swift        Stores activePingsCallback, simulates updates
+│   ├── MockChatService.swift        Stores messagesCallback, simulates updates
+│   ├── MockUserService.swift        Returns preset User, tracks calls
+│   └── MockLocationService.swift    Settable location/auth/boundary result
+├── ViewModelTests/
+│   ├── CreatePingViewModelTests.swift
+│   ├── ChatViewModelTests.swift
+│   ├── PingDetailViewModelTests.swift
+│   ├── LoginViewModelTests.swift
+│   ├── MapViewModelTests.swift
+│   └── ProfileViewModelTests.swift
+└── PingItTests.swift                Existing: boundary, dates, constants, models
 ```
 
 ---
