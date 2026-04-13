@@ -50,9 +50,7 @@ _Nothing actively in progress._
 - Cloud Functions not deployed (ping expiration cron, rate limiting, push notifications)
 - Geohash field is empty string (geospatial radius queries need GeoFirestore for Phase 1)
 - No offline mode handling (Firestore caches automatically but no explicit UI for offline state)
-- Launch screen may not display on first install (iOS caching — requires device restart)
 - Simulator networking blocked by Netskope (corporate SSL interception) — must test on physical iPhone
-- `SettingsPlaceholderView.swift` never renamed to `SettingsView.swift`
 - ProfileViewModel directly calls Firebase Storage — should be extracted to `ImageStorageServicing` protocol for full testability
 
 ---
