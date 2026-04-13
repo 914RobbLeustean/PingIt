@@ -37,6 +37,7 @@ Infrastructure diagram lives in `project_spec.md` Section 2.2.
 **Key rule:** Views never call Services directly. ViewModels never call Firebase SDK directly.
 
 > **Note (2026-03-29):** During foundation setup, `LoginView` and placeholder views access `AuthService` directly via `@Environment` for the auth-gated skeleton. Once ViewModels are implemented for each feature, views will be refactored to observe ViewModels instead.
+> **Update (2026-04-13):** Auth screens now follow the full MVVM pattern — `AuthenticationCoordinatorView` owns navigation, each screen has its own ViewModel. The temporary direct-service access note above no longer applies to Authentication.
 
 ---
 
@@ -99,10 +100,24 @@ PingIt/
 │       └── GeoJSONBoundaryValidator.swift  Ray casting point-in-polygon
 ├── Features/
 │   ├── Authentication/
+│   │   ├── Models/
+│   │   │   ├── AuthRoute.swift             Navigation route enum
+│   │   │   └── PasswordValidator.swift     Pure password strength/rule validation
 │   │   ├── ViewModels/
-│   │   │   └── LoginViewModel.swift        Username validation, form state
+│   │   │   ├── LoginViewModel.swift        Sign-in form state, email validation
+│   │   │   ├── RegisterViewModel.swift     Registration: email/username/password/ToS, uniqueness check
+│   │   │   └── ForgotPasswordViewModel.swift  Password reset request
 │   │   └── Views/
-│   │       └── LoginView.swift             Login/signup with username field
+│   │       ├── AuthenticationCoordinatorView.swift  NavigationStack with AuthRoute routing
+│   │       ├── WelcomeView.swift           Landing screen with Sign In / Create Account
+│   │       ├── LoginView.swift             Email + password sign-in
+│   │       ├── RegisterView.swift          Full registration form with strength indicator
+│   │       ├── ForgotPasswordView.swift    Password reset request
+│   │       ├── TermsOfServiceView.swift    Placeholder (Phase 2: WebView)
+│   │       └── Components/
+│   │           ├── AuthTextField.swift         Styled field with icon + validation indicator
+│   │           ├── AuthSecureField.swift        Password field with show/hide toggle
+│   │           └── PasswordStrengthView.swift   Segmented strength bar + rule checklist
 │   ├── Map/
 │   │   ├── ViewModels/
 │   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state
@@ -151,6 +166,9 @@ PingItTests/
 │   ├── ChatViewModelTests.swift
 │   ├── PingDetailViewModelTests.swift
 │   ├── LoginViewModelTests.swift
+│   ├── RegisterViewModelTests.swift
+│   ├── ForgotPasswordViewModelTests.swift
+│   ├── PasswordValidatorTests.swift
 │   ├── MapViewModelTests.swift
 │   └── ProfileViewModelTests.swift
 └── PingItTests.swift                Existing: boundary, dates, constants, models
@@ -240,7 +258,10 @@ ChatView ──observes──▶ ChatViewModel ──calls──▶ ChatService 
 ProfileView ──observes──▶ ProfileViewModel ──calls──▶ UserService ──reads/writes──▶ Firestore (users)
                                                       AuthService ──calls──▶ Firebase Auth
 
+AuthenticationCoordinatorView ──routes──▶ LoginView / RegisterView / ForgotPasswordView
 LoginView ──observes──▶ LoginViewModel ──calls──▶ AuthService ──calls──▶ Firebase Auth
+RegisterView ──observes──▶ RegisterViewModel ──calls──▶ AuthService + UserService (username check)
+ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls──▶ AuthService.sendPasswordReset
 ```
 
 ---
@@ -249,7 +270,7 @@ LoginView ──observes──▶ LoginViewModel ──calls──▶ AuthServic
 
 | Service | Responsibility | Status |
 |---------|---------------|--------|
-| **AuthService** | Sign up, sign in, sign out, session state | Implemented (stub) |
+| **AuthService** | Sign up, sign in, sign out, password reset, session state | Implemented |
 | **PingService** | Ping CRUD, geospatial queries, real-time listener | Implemented (stub) |
 | **ChatService** | Messages, snapshot listeners, participant tracking | Implemented (stub) |
 | **UserService** | Profile read/write | Implemented (stub) |

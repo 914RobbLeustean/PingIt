@@ -31,14 +31,17 @@ final class AuthService: AuthServicing {
             // Create Firestore user profile using the Auth UID as the document ID
             let user = User(
                 username: username,
-                email: email
+                email: email,
+                usernameLowercase: username.lowercased()
             )
             try Firestore.firestore()
                 .collection(Constants.Firestore.usersCollection)
                 .document(result.user.uid)
                 .setData(from: user)
+        } catch let error as PingItError {
+            throw error
         } catch {
-            throw PingItError.signUpFailed(underlying: error)
+            throw PingItError.from(authError: error)
         }
     }
 
@@ -49,7 +52,7 @@ final class AuthService: AuthServicing {
         do {
             try await Auth.auth().signIn(withEmail: email, password: password)
         } catch {
-            throw PingItError.signInFailed(underlying: error)
+            throw PingItError.from(authError: error)
         }
     }
 
@@ -58,6 +61,17 @@ final class AuthService: AuthServicing {
             try Auth.auth().signOut()
         } catch {
             throw PingItError.signOutFailed(underlying: error)
+        }
+    }
+
+    func sendPasswordReset(email: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await Auth.auth().sendPasswordReset(withEmail: email)
+        } catch {
+            throw PingItError.passwordResetFailed(underlying: error)
         }
     }
 }

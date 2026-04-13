@@ -6,6 +6,74 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-04-13] — Production-Ready Authentication Screens
+
+### Summary
+Replaced the minimal single-screen auth UI with a full Welcome → Login / Register / ForgotPassword flow. Added client-side validation, password strength, unique username checking, and user-friendly Firebase error messages.
+
+### Added
+- `AuthenticationCoordinatorView` — `NavigationStack` with type-safe `AuthRoute` routing
+- `WelcomeView` — landing screen with Sign In / Create Account buttons
+- `RegisterView` — registration form with email, username availability, password strength, confirm password, ToS
+- `ForgotPasswordView` — password reset via Firebase, success confirmation state
+- `TermsOfServiceView` — placeholder screen (Phase 2: WebView on Firebase Hosting)
+- `AuthTextField` — shared field component with icon, validation state indicator
+- `AuthSecureField` — password field with show/hide toggle
+- `PasswordStrengthView` — 4-segment strength bar + rule checklist
+- `PasswordValidator` — pure `Sendable` struct: min 8 chars, uppercase, lowercase, digit rules
+- `RegisterViewModel` — full registration logic with debounced (500ms) Firestore username uniqueness check
+- `ForgotPasswordViewModel` — password reset request state
+- `AuthRoute` enum for type-safe navigation
+- `AuthServicing.sendPasswordReset(email:)` — Firebase password reset
+- `UserServicing.isUsernameTaken(_:)` — Firestore query on `usernameLowercase` field
+- `User.usernameLowercase` — lowercase username field for case-insensitive uniqueness queries
+- `PingItError` new cases: `emailAlreadyInUse`, `invalidEmail`, `weakPassword`, `userNotFound`, `wrongPassword`, `networkError`, `passwordResetFailed`, `passwordsDoNotMatch`, `termsNotAccepted`, `passwordTooShort`, `passwordMissingUppercase`, `passwordMissingLowercase`, `passwordMissingDigit`, `usernameAlreadyTaken`
+- `PingItError.from(authError:)` — maps `AuthErrorCode` to user-friendly errors
+- `Constants.Email.validationPattern`, `Constants.Password.minLength`, `Constants.Username.uniquenessCheckDebounceMilliseconds`
+- ~25 new unit tests: `PasswordValidatorTests`, `RegisterViewModelTests`, `ForgotPasswordViewModelTests`
+
+### Changed
+- `LoginView` — replaced entirely; now sign-in only with `AuthTextField`, `AuthSecureField`, `AuthRoute` navigation
+- `LoginViewModel` — stripped of sign-up logic; added `@MainActor`, email validation, `isPasswordVisible`
+- `LoginViewModelTests` — removed sign-up tests; added email validation tests
+- `RootView` — swapped `LoginView()` for `AuthenticationCoordinatorView()`
+- `AuthService` — error mapper applied to `signIn`/`signUp`; `sendPasswordReset` added; writes `usernameLowercase` on sign-up
+- `UserService` — `isUsernameTaken` added
+- `MockAuthService` / `MockUserService` — updated for new protocol methods
+- All existing test files using `User(username:email:)` updated to include `usernameLowercase`
+
+### Files created or significantly modified
+- `PingIt/Features/Authentication/Models/AuthRoute.swift` *(new)*
+- `PingIt/Features/Authentication/Models/PasswordValidator.swift` *(new)*
+- `PingIt/Features/Authentication/ViewModels/RegisterViewModel.swift` *(new)*
+- `PingIt/Features/Authentication/ViewModels/ForgotPasswordViewModel.swift` *(new)*
+- `PingIt/Features/Authentication/ViewModels/LoginViewModel.swift` *(modified)*
+- `PingIt/Features/Authentication/Views/AuthenticationCoordinatorView.swift` *(new)*
+- `PingIt/Features/Authentication/Views/WelcomeView.swift` *(new)*
+- `PingIt/Features/Authentication/Views/LoginView.swift` *(replaced)*
+- `PingIt/Features/Authentication/Views/RegisterView.swift` *(new)*
+- `PingIt/Features/Authentication/Views/ForgotPasswordView.swift` *(new)*
+- `PingIt/Features/Authentication/Views/TermsOfServiceView.swift` *(new)*
+- `PingIt/Features/Authentication/Views/Components/AuthTextField.swift` *(new)*
+- `PingIt/Features/Authentication/Views/Components/AuthSecureField.swift` *(new)*
+- `PingIt/Features/Authentication/Views/Components/PasswordStrengthView.swift` *(new)*
+- `PingIt/Core/Models/User.swift` *(modified — added usernameLowercase)*
+- `PingIt/Core/Utilities/Constants.swift` *(modified)*
+- `PingIt/Core/Utilities/PingItError.swift` *(modified)*
+- `PingIt/Core/Protocols/AuthServicing.swift` *(modified)*
+- `PingIt/Core/Protocols/UserServicing.swift` *(modified)*
+- `PingIt/Core/Services/AuthService.swift` *(modified)*
+- `PingIt/Core/Services/UserService.swift` *(modified)*
+- `PingIt/App/RootView.swift` *(modified)*
+- `PingItTests/Mocks/MockAuthService.swift` *(modified)*
+- `PingItTests/Mocks/MockUserService.swift` *(modified)*
+- `PingItTests/ViewModelTests/PasswordValidatorTests.swift` *(new)*
+- `PingItTests/ViewModelTests/RegisterViewModelTests.swift` *(new)*
+- `PingItTests/ViewModelTests/ForgotPasswordViewModelTests.swift` *(new)*
+- `PingItTests/ViewModelTests/LoginViewModelTests.swift` *(modified)*
+
+---
+
 ## [2026-04-13] — Testability Refactor: Protocol Abstractions + ViewModel Unit Tests
 
 ### Added

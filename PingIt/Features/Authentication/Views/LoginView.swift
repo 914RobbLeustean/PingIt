@@ -7,70 +7,74 @@ struct LoginView: View {
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        NavigationStack {
-            VStack(spacing: 20) {
-                Text("PingIt")
-                    .font(.largeTitle)
-                    .bold()
-
-                TextField("Email", text: $viewModel.email)
-                    .textContentType(.emailAddress)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-
-                if viewModel.isSignUp {
-                    TextField("Username", text: $viewModel.username)
-                        .textContentType(.username)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-
-                    if let validationMessage = viewModel.usernameValidationMessage {
-                        Text(validationMessage)
-                            .foregroundStyle(.orange)
-                            .font(.caption)
-                    }
-                }
-
-                SecureField("Password", text: $viewModel.password)
-                    .textContentType(viewModel.isSignUp ? .newPassword : .password)
+        ScrollView {
+            VStack(spacing: 24) {
+                emailSection(viewModel: viewModel)
+                passwordSection(viewModel: viewModel)
 
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
-                        .foregroundStyle(.red)
                         .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                Button(
-                    viewModel.isSignUp ? "Create Account" : "Sign In",
-                    action: handleAuthenticate
-                )
+                Button("Sign In") {
+                    Task { await viewModel.authenticate() }
+                }
                 .buttonStyle(.borderedProminent)
-                .disabled(viewModel.canSubmit == false || viewModel.isLoading)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .disabled(!viewModel.canSubmit)
 
-                Button(
-                    viewModel.isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up",
-                    action: handleToggleMode
-                )
-                .font(.footnote)
+                NavigationLink("Forgot Password?", value: AuthRoute.forgotPassword)
+                    .font(.footnote)
             }
             .padding()
-            .navigationTitle(viewModel.isSignUp ? "Sign Up" : "Sign In")
-            .task {
-                viewModel.configure(authService: authService)
+        }
+        .navigationTitle("Sign In")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            viewModel.configure(authService: authService)
+        }
+    }
+
+    // MARK: - Sections
+
+    private func emailSection(viewModel: LoginViewModel) -> some View {
+        @Bindable var viewModel = viewModel
+        return VStack(alignment: .leading, spacing: 6) {
+            AuthTextField(
+                title: "Email",
+                text: $viewModel.email,
+                icon: "envelope",
+                validationState: emailValidationState(viewModel: viewModel),
+                keyboardType: .emailAddress,
+                textContentType: .emailAddress
+            )
+            if let message = viewModel.emailValidationMessage {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 4)
             }
         }
     }
 
-    // MARK: - Actions
-
-    private func handleAuthenticate() {
-        Task {
-            await viewModel.authenticate()
-        }
+    private func passwordSection(viewModel: LoginViewModel) -> some View {
+        @Bindable var viewModel = viewModel
+        return AuthSecureField(
+            title: "Password",
+            text: $viewModel.password,
+            isVisible: $viewModel.isPasswordVisible,
+            textContentType: .password
+        )
     }
 
-    private func handleToggleMode() {
-        viewModel.toggleMode()
+    // MARK: - Validation states
+
+    private func emailValidationState(viewModel: LoginViewModel) -> ValidationState? {
+        guard !viewModel.email.isEmpty else { return nil }
+        return viewModel.isEmailValid ? .valid : .invalid
     }
 }
