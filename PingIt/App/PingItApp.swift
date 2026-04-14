@@ -12,6 +12,7 @@ struct PingItApp: App {
     @State private var locationService = LocationService()
     @State private var contentModerationService = ContentModerationService()
     @State private var blockService = BlockService()
+    @State private var reportService = ReportService()
 
     var body: some Scene {
         WindowGroup {
@@ -23,6 +24,7 @@ struct PingItApp: App {
                 .environment(locationService)
                 .environment(contentModerationService)
                 .environment(blockService)
+                .environment(reportService)
         }
     }
 }
