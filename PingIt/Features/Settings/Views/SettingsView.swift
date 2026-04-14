@@ -16,6 +16,10 @@ struct SettingsView: View {
                         }
                 }
 
+                Section("Privacy & Safety") {
+                    NavigationLink("Blocked Users", destination: BlockedUsersView())
+                }
+
                 if let errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle")
