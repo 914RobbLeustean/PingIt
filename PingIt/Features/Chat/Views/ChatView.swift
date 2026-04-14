@@ -115,12 +115,10 @@ struct ChatView: View {
                 dismiss()
             }
         }
-        .alert("Ping Unavailable", isPresented: $viewModel.pingUnavailable) {
-            Button("OK") {
+        .onChange(of: viewModel.pingUnavailable) { _, unavailable in
+            if unavailable {
                 dismiss()
             }
-        } message: {
-            Text("This ping is no longer available.")
         }
         .sheet(item: $reportTarget) { target in
             ReportView(

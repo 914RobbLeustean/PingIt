@@ -97,8 +97,9 @@ final class PingDetailViewModel {
 
         do {
             guard let pingId = ping.id else { return }
-            try await pingService.deletePingAndChat(pingId: pingId, chatId: ping.chatId)
+            // Set before Firestore delete so the snapshot listener guard catches it
             didDeletePing = true
+            try await pingService.deletePingAndChat(pingId: pingId, chatId: ping.chatId)
         } catch {
             errorMessage = error.localizedDescription
         }
