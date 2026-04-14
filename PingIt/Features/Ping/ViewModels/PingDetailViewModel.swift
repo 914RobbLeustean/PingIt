@@ -76,6 +76,8 @@ final class PingDetailViewModel {
         pingListener = pingService.observePing(id: pingId) { [weak self] updatedPing in
             guard let self else { return }
             Task { @MainActor [self] in
+                // Don't show unavailable alert if current user initiated the delete
+                guard !self.didDeletePing else { return }
                 if updatedPing == nil || updatedPing?.status != .active {
                     self.pingUnavailable = true
                 }

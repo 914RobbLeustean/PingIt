@@ -10,6 +10,7 @@ private struct ReportTarget: Identifiable {
 struct ChatView: View {
     @Environment(AuthService.self) private var authService
     @Environment(ChatService.self) private var chatService
+    @Environment(PingService.self) private var pingService
     @Environment(ContentModerationService.self) private var contentModerationService
     @Environment(BlockService.self) private var blockService
     @Environment(RateLimitService.self) private var rateLimitService
@@ -94,12 +95,14 @@ struct ChatView: View {
         .navigationTitle("Chat")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            viewModel.configure(authService: authService, chatService: chatService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService)
+            viewModel.configure(authService: authService, chatService: chatService, pingService: pingService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService)
             viewModel.startObserving()
+            viewModel.startObservingPing()
             await viewModel.joinChat()
         }
         .onDisappear {
             viewModel.stopObserving()
+            viewModel.stopObservingPing()
             Task {
                 await viewModel.leaveChat()
             }
@@ -111,6 +114,13 @@ struct ChatView: View {
             if newValue.contains(pingCreatorId) {
                 dismiss()
             }
+        }
+        .alert("Ping Unavailable", isPresented: $viewModel.pingUnavailable) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("This ping is no longer available.")
         }
         .sheet(item: $reportTarget) { target in
             ReportView(

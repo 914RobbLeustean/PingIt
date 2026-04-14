@@ -4,10 +4,12 @@ import Foundation
 final class ChatViewModel {
     private var authService: (any AuthServicing)?
     private var chatService: (any ChatServicing)?
+    private var pingService: (any PingServicing)?
     private var contentModerationService: (any ContentModeratingServicing)?
     private var blockService: (any BlockServicing)?
     private var rateLimitService: (any RateLimitServicing)?
     private var listenerRegistration: ListenerHandle?
+    private var pingListener: ListenerHandle?
     private var isConfigured = false
 
     let chatId: String
@@ -21,6 +23,7 @@ final class ChatViewModel {
     private(set) var hasJoined = false
     private var participantDocId: String?
     var messageText = ""
+    var pingUnavailable = false
 
     var canSend: Bool {
         !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending
@@ -38,6 +41,7 @@ final class ChatViewModel {
     func configure(
         authService: any AuthServicing,
         chatService: any ChatServicing,
+        pingService: (any PingServicing)? = nil,
         contentModerationService: (any ContentModeratingServicing)? = nil,
         blockService: (any BlockServicing)? = nil,
         rateLimitService: (any RateLimitServicing)? = nil
@@ -45,6 +49,7 @@ final class ChatViewModel {
         guard !isConfigured else { return }
         self.authService = authService
         self.chatService = chatService
+        self.pingService = pingService
         self.contentModerationService = contentModerationService
         self.blockService = blockService
         self.rateLimitService = rateLimitService
@@ -100,6 +105,10 @@ final class ChatViewModel {
     func sendMessage() async {
         guard let chatService, let currentUserId, canSend else { return }
 
+        guard !pingUnavailable else {
+            return
+        }
+
         guard authService?.isEmailVerified == true else {
             errorMessage = PingItError.emailNotVerified.localizedDescription
             return
@@ -140,6 +149,23 @@ final class ChatViewModel {
         }
     }
 
+    func startObservingPing() {
+        guard let pingService, pingListener == nil else { return }
+        pingListener = pingService.observePing(id: pingId) { [weak self] updatedPing in
+            guard let self else { return }
+            Task { @MainActor [self] in
+                if updatedPing == nil || updatedPing?.status != .active {
+                    self.pingUnavailable = true
+                }
+            }
+        }
+    }
+
+    func stopObservingPing() {
+        pingListener?.remove()
+        pingListener = nil
+    }
+
     func applyBlockFilter() {
         messages = allMessages.filter { message in
             !(blockService?.isBlocked(message.senderId) ?? false)
@@ -148,5 +174,6 @@ final class ChatViewModel {
 
     deinit {
         listenerRegistration?.remove()
+        pingListener?.remove()
     }
 }
