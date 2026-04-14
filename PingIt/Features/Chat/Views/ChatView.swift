@@ -11,6 +11,7 @@ struct ChatView: View {
     @Environment(AuthService.self) private var authService
     @Environment(ChatService.self) private var chatService
     @Environment(PingService.self) private var pingService
+    @Environment(UserService.self) private var userService
     @Environment(ContentModerationService.self) private var contentModerationService
     @Environment(BlockService.self) private var blockService
     @Environment(RateLimitService.self) private var rateLimitService
@@ -37,6 +38,8 @@ struct ChatView: View {
                         MessageBubbleView(
                             message: message,
                             isCurrentUser: message.senderId == viewModel.currentUserId,
+                            sender: viewModel.userCache[message.senderId],
+                            showSenderInfo: viewModel.isFirstInGroup(message),
                             onReport: {
                                 if let id = message.id {
                                     reportTarget = ReportTarget(
@@ -95,7 +98,7 @@ struct ChatView: View {
         .navigationTitle("Chat")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            viewModel.configure(authService: authService, chatService: chatService, pingService: pingService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService)
+            viewModel.configure(authService: authService, chatService: chatService, pingService: pingService, userService: userService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService)
             viewModel.startObserving()
             viewModel.startObservingPing()
             await viewModel.joinChat()

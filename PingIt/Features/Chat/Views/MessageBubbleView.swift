@@ -3,14 +3,28 @@ import SwiftUI
 struct MessageBubbleView: View {
     let message: ChatMessage
     let isCurrentUser: Bool
+    let sender: User?
+    let showSenderInfo: Bool
     let onReport: () -> Void
     let onBlock: () -> Void
 
     var body: some View {
-        HStack {
-            if isCurrentUser { Spacer() }
+        HStack(alignment: .bottom, spacing: 8) {
+            if isCurrentUser {
+                Spacer(minLength: 48)
+            } else {
+                avatarView
+            }
 
-            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
+            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 2) {
+                if showSenderInfo && !isCurrentUser {
+                    Text(sender?.username ?? "Unknown")
+                        .font(.caption)
+                        .bold()
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                }
+
                 Text(message.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -35,7 +49,47 @@ struct MessageBubbleView: View {
                 }
             }
 
-            if isCurrentUser == false { Spacer() }
+            if isCurrentUser {
+                // No avatar on right side for current user — matches iMessage/WhatsApp
+            } else {
+                Spacer(minLength: 48)
+            }
         }
+    }
+
+    @ViewBuilder
+    private var avatarView: some View {
+        if showSenderInfo {
+            AsyncImage(url: sender?.profileImageUrl.flatMap { URL(string: $0) }) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                case .failure:
+                    senderInitialView
+                default:
+                    senderInitialView
+                }
+            }
+            .frame(width: 28, height: 28)
+            .clipShape(.circle)
+        } else {
+            // Invisible spacer to keep alignment with messages that have avatars
+            Color.clear
+                .frame(width: 28, height: 28)
+        }
+    }
+
+    private var senderInitialView: some View {
+        Circle()
+            .fill(Color(.systemGray4))
+            .frame(width: 28, height: 28)
+            .overlay {
+                Text(String((sender?.username ?? "?").prefix(1)).uppercased())
+                    .font(.caption2)
+                    .bold()
+                    .foregroundStyle(.secondary)
+            }
     }
 }

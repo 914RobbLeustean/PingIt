@@ -5,6 +5,7 @@ final class ChatViewModel {
     private var authService: (any AuthServicing)?
     private var chatService: (any ChatServicing)?
     private var pingService: (any PingServicing)?
+    private var userService: (any UserServicing)?
     private var contentModerationService: (any ContentModeratingServicing)?
     private var blockService: (any BlockServicing)?
     private var rateLimitService: (any RateLimitServicing)?
@@ -24,6 +25,7 @@ final class ChatViewModel {
     private var participantDocId: String?
     var messageText = ""
     var pingUnavailable = false
+    private(set) var userCache: [String: User] = [:]
 
     var canSend: Bool {
         !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending
@@ -42,6 +44,7 @@ final class ChatViewModel {
         authService: any AuthServicing,
         chatService: any ChatServicing,
         pingService: (any PingServicing)? = nil,
+        userService: (any UserServicing)? = nil,
         contentModerationService: (any ContentModeratingServicing)? = nil,
         blockService: (any BlockServicing)? = nil,
         rateLimitService: (any RateLimitServicing)? = nil
@@ -50,6 +53,7 @@ final class ChatViewModel {
         self.authService = authService
         self.chatService = chatService
         self.pingService = pingService
+        self.userService = userService
         self.contentModerationService = contentModerationService
         self.blockService = blockService
         self.rateLimitService = rateLimitService
@@ -170,6 +174,24 @@ final class ChatViewModel {
         messages = allMessages.filter { message in
             !(blockService?.isBlocked(message.senderId) ?? false)
         }
+        Task { await fetchMissingUsers() }
+    }
+
+    private func fetchMissingUsers() async {
+        guard let userService else { return }
+        let senderIds = Set(messages.map(\.senderId))
+        let missing = senderIds.subtracting(userCache.keys)
+        for senderId in missing {
+            if let user = try? await userService.fetchUser(id: senderId) {
+                userCache[senderId] = user
+            }
+        }
+    }
+
+    func isFirstInGroup(_ message: ChatMessage) -> Bool {
+        guard let index = messages.firstIndex(where: { $0.id == message.id }) else { return true }
+        if index == 0 { return true }
+        return messages[index - 1].senderId != message.senderId
     }
 
     deinit {
