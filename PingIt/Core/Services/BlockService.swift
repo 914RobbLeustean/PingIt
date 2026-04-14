@@ -7,36 +7,67 @@ import FirebaseFirestore
 final class BlockService: BlockServicing {
     private(set) var blockedUserIds: Set<String> = []
     private let db = Firestore.firestore()
+    private var blockerListener: ListenerRegistration?
+    private var blockedListener: ListenerRegistration?
+
+    /// IDs of users I blocked (from blockerListener)
+    private var blockedByMe: Set<String> = []
+    /// IDs of users who blocked me (from blockedListener)
+    private var blockedMe: Set<String> = []
 
     var currentUserId: String? {
         Auth.auth().currentUser?.uid
     }
 
-    func loadBlockedUsers() async throws {
+    func startObserving() {
         guard let currentUserId else { return }
+        guard blockerListener == nil, blockedListener == nil else { return }
 
-        let asBlocker = try await db
+        // Listener 1: blocks where I am the blocker
+        blockerListener = db
             .collection(Constants.Firestore.blocksCollection)
             .whereField("blockerId", isEqualTo: currentUserId)
-            .getDocuments()
+            .addSnapshotListener { [weak self] snapshot, _ in
+                guard let self, let snapshot else { return }
+                Task { @MainActor [self] in
+                    self.blockedByMe = Set(
+                        snapshot.documents.compactMap { doc in
+                            (try? doc.data(as: Block.self))?.blockedUserId
+                        }
+                    )
+                    self.mergeBlockedIds()
+                }
+            }
 
-        let asBlocked = try await db
+        // Listener 2: blocks where I am the blocked user
+        blockedListener = db
             .collection(Constants.Firestore.blocksCollection)
             .whereField("blockedUserId", isEqualTo: currentUserId)
-            .getDocuments()
+            .addSnapshotListener { [weak self] snapshot, _ in
+                guard let self, let snapshot else { return }
+                Task { @MainActor [self] in
+                    self.blockedMe = Set(
+                        snapshot.documents.compactMap { doc in
+                            (try? doc.data(as: Block.self))?.blockerId
+                        }
+                    )
+                    self.mergeBlockedIds()
+                }
+            }
+    }
 
-        var ids = Set<String>()
-        for doc in asBlocker.documents {
-            if let block = try? doc.data(as: Block.self) {
-                ids.insert(block.blockedUserId)
-            }
-        }
-        for doc in asBlocked.documents {
-            if let block = try? doc.data(as: Block.self) {
-                ids.insert(block.blockerId)
-            }
-        }
-        blockedUserIds = ids
+    func stopObserving() {
+        blockerListener?.remove()
+        blockerListener = nil
+        blockedListener?.remove()
+        blockedListener = nil
+        blockedByMe = []
+        blockedMe = []
+        blockedUserIds = []
+    }
+
+    private func mergeBlockedIds() {
+        blockedUserIds = blockedByMe.union(blockedMe)
     }
 
     func blockUser(_ userId: String) async throws {
@@ -51,7 +82,9 @@ final class BlockService: BlockServicing {
             try db.collection(Constants.Firestore.blocksCollection)
                 .addDocument(from: block)
 
-            blockedUserIds.insert(userId)
+            // Optimistic local update — listener will confirm
+            blockedByMe.insert(userId)
+            mergeBlockedIds()
 
             try await db.collection(Constants.Firestore.usersCollection)
                 .document(currentUserId)
@@ -79,7 +112,9 @@ final class BlockService: BlockServicing {
                 try await doc.reference.delete()
             }
 
-            blockedUserIds.remove(userId)
+            // Optimistic local update — listener will confirm
+            blockedByMe.remove(userId)
+            mergeBlockedIds()
 
             try await db.collection(Constants.Firestore.usersCollection)
                 .document(currentUserId)
@@ -106,5 +141,10 @@ final class BlockService: BlockServicing {
 
     func isBlocked(_ userId: String) -> Bool {
         blockedUserIds.contains(userId)
+    }
+
+    isolated deinit {
+        blockerListener?.remove()
+        blockedListener?.remove()
     }
 }

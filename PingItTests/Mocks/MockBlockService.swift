@@ -9,7 +9,8 @@ final class MockBlockService: BlockServicing {
     var blockUserCalled = false
     var unblockUserCalled = false
     var fetchBlockedUsersCalled = false
-    var loadBlockedUsersCalled = false
+    var startObservingCalled = false
+    var stopObservingCalled = false
     var blocksToReturn: [Block] = []
     var lastBlockedUserId: String?
     var lastUnblockedUserId: String?
@@ -38,8 +39,11 @@ final class MockBlockService: BlockServicing {
         blockedUserIds.contains(userId)
     }
 
-    func loadBlockedUsers() async throws {
-        loadBlockedUsersCalled = true
-        if let error = errorToThrow { throw error }
+    func startObserving() {
+        startObservingCalled = true
+    }
+
+    func stopObserving() {
+        stopObservingCalled = true
     }
 }

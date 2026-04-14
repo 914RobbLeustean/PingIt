@@ -17,7 +17,7 @@ struct MainTabView: View {
         }
         .task(id: blockService.currentUserId) {
             guard blockService.currentUserId != nil else { return }
-            try? await blockService.loadBlockedUsers()
+            blockService.startObserving()
         }
     }
 }
