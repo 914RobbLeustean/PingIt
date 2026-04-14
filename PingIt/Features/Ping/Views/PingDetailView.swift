@@ -124,6 +124,7 @@ struct PingDetailView: View {
         }
         .onChange(of: blockService.blockedUserIds) { _, newValue in
             if newValue.contains(viewModel.ping.creatorId) {
+                navigateToChat = false
                 dismiss()
             }
         }
