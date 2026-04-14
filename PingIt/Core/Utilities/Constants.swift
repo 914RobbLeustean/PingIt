@@ -26,10 +26,19 @@ enum Constants {
         static let maxMessagesPerTenSeconds = 6
     }
 
+    enum Email {
+        static let validationPattern = "^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$"
+    }
+
+    enum Password {
+        static let minLength = 8
+    }
+
     enum Username {
         static let minLength = 3
         static let maxLength = 20
         static let allowedCharacterPattern = "^[a-zA-Z0-9_]+$"
+        static let uniquenessCheckDebounceMilliseconds: UInt64 = 500
     }
 
     enum Storage {

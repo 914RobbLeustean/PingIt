@@ -8,7 +8,7 @@ struct RootView: View {
             if authService.currentUser != nil {
                 MainTabView()
             } else {
-                LoginView()
+                AuthenticationCoordinatorView()
             }
         }
         .animation(.default, value: authService.currentUser != nil)

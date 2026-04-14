@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseAuth
 
 enum PingItError: LocalizedError {
     // Auth
@@ -6,12 +7,27 @@ enum PingItError: LocalizedError {
     case signUpFailed(underlying: Error)
     case signInFailed(underlying: Error)
     case signOutFailed(underlying: Error)
+    case passwordResetFailed(underlying: Error)
+
+    // Auth — user-friendly Firebase mappings
+    case emailAlreadyInUse
+    case invalidEmail
+    case weakPassword
+    case userNotFound
+    case wrongPassword
+    case networkError
 
     // Validation
     case pingTextTooLong
     case pingTextEmpty
     case locationOutsideBoundary
     case invalidExpiration
+    case passwordsDoNotMatch
+    case termsNotAccepted
+    case passwordTooShort
+    case passwordMissingUppercase
+    case passwordMissingLowercase
+    case passwordMissingDigit
 
     // Network / Firestore
     case firestoreReadFailed(underlying: Error)
@@ -30,6 +46,7 @@ enum PingItError: LocalizedError {
     case usernameTooShort
     case usernameTooLong
     case usernameInvalidCharacters
+    case usernameAlreadyTaken
     case profileImageTooLarge
     case profileImageUploadFailed(underlying: Error)
     case profileUpdateFailed(underlying: Error)
@@ -44,6 +61,20 @@ enum PingItError: LocalizedError {
             "Sign in failed: \(error.localizedDescription)"
         case .signOutFailed(let error):
             "Sign out failed: \(error.localizedDescription)"
+        case .passwordResetFailed(let error):
+            "Failed to send password reset: \(error.localizedDescription)"
+        case .emailAlreadyInUse:
+            "An account with this email already exists."
+        case .invalidEmail:
+            "Please enter a valid email address."
+        case .weakPassword:
+            "Password is too weak. Please choose a stronger password."
+        case .userNotFound:
+            "No account found with this email."
+        case .wrongPassword:
+            "Incorrect email or password. Please try again."
+        case .networkError:
+            "A network error occurred. Please check your connection and try again."
         case .pingTextTooLong:
             "Ping text cannot exceed \(Constants.Ping.maxTextLength) characters."
         case .pingTextEmpty:
@@ -52,6 +83,18 @@ enum PingItError: LocalizedError {
             "Pings can only be created within Cluj-Napoca."
         case .invalidExpiration:
             "Invalid expiration time selected."
+        case .passwordsDoNotMatch:
+            "Passwords do not match."
+        case .termsNotAccepted:
+            "You must accept the Terms of Service to create an account."
+        case .passwordTooShort:
+            "Password must be at least \(Constants.Password.minLength) characters."
+        case .passwordMissingUppercase:
+            "Password must contain at least one uppercase letter."
+        case .passwordMissingLowercase:
+            "Password must contain at least one lowercase letter."
+        case .passwordMissingDigit:
+            "Password must contain at least one number."
         case .firestoreReadFailed(let error):
             "Failed to load data: \(error.localizedDescription)"
         case .firestoreWriteFailed(let error):
@@ -72,12 +115,43 @@ enum PingItError: LocalizedError {
             "Username cannot exceed \(Constants.Username.maxLength) characters."
         case .usernameInvalidCharacters:
             "Username can only contain letters, numbers, and underscores."
+        case .usernameAlreadyTaken:
+            "This username is already taken. Please choose another."
         case .profileImageTooLarge:
             "Profile image must be under 5 MB."
         case .profileImageUploadFailed(let error):
             "Failed to upload profile image: \(error.localizedDescription)"
         case .profileUpdateFailed(let error):
             "Failed to update profile: \(error.localizedDescription)"
+        }
+    }
+
+    /// Maps a Firebase Auth error to a user-friendly PingItError.
+    static func from(authError: Error) -> PingItError {
+        let nsError = authError as NSError
+        guard let code = AuthErrorCode(rawValue: nsError.code) else {
+            return .signInFailed(underlying: authError)
+        }
+        switch code {
+        case .emailAlreadyInUse:
+            return .emailAlreadyInUse
+        case .invalidEmail:
+            return .invalidEmail
+        case .weakPassword:
+            return .weakPassword
+        case .userNotFound:
+            return .userNotFound
+        case .wrongPassword:
+            return .wrongPassword
+        case .networkError:
+            return .networkError
+        case .invalidCredential:
+            // Returned when email+password combination is incorrect
+            return .wrongPassword
+        case .tooManyRequests:
+            return .networkError
+        default:
+            return .signInFailed(underlying: authError)
         }
     }
 }

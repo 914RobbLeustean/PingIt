@@ -27,7 +27,7 @@ struct ProfileViewModelTests {
     @Test func loadProfileFetchesUser() async {
         let auth = authenticatedAuth()
         let user = MockUserService()
-        user.userToReturn = User(username: "testuser", email: "test@test.com")
+        user.userToReturn = User(username: "testuser", email: "test@test.com", usernameLowercase: "testuser")
         let vm = makeVM(authService: auth, userService: user)
 
         await vm.loadProfile()
@@ -66,7 +66,7 @@ struct ProfileViewModelTests {
     @Test func saveUsernameUpdatesUser() async {
         let auth = authenticatedAuth()
         let user = MockUserService()
-        user.userToReturn = User(username: "oldname", email: "test@test.com")
+        user.userToReturn = User(username: "oldname", email: "test@test.com", usernameLowercase: "oldname")
         let vm = makeVM(authService: auth, userService: user)
         await vm.loadProfile()
 
@@ -107,7 +107,7 @@ struct ProfileViewModelTests {
     @Test func canSaveUsernameFalseWhenNoChanges() async {
         let auth = authenticatedAuth()
         let user = MockUserService()
-        user.userToReturn = User(username: "sameuser", email: "test@test.com")
+        user.userToReturn = User(username: "sameuser", email: "test@test.com", usernameLowercase: "sameuser")
         let vm = makeVM(authService: auth, userService: user)
         await vm.loadProfile()
 
@@ -118,7 +118,7 @@ struct ProfileViewModelTests {
     @Test func canSaveUsernameTrueWhenValidChange() async {
         let auth = authenticatedAuth()
         let user = MockUserService()
-        user.userToReturn = User(username: "oldname", email: "test@test.com")
+        user.userToReturn = User(username: "oldname", email: "test@test.com", usernameLowercase: "oldname")
         let vm = makeVM(authService: auth, userService: user)
         await vm.loadProfile()
 

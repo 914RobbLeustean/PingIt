@@ -1,9 +1,9 @@
 import Testing
 @testable import PingIt
 
-@Suite("LoginViewModel — service interaction")
+@Suite("LoginViewModel")
 @MainActor
-struct LoginViewModelServiceTests {
+struct LoginViewModelTests {
 
     // MARK: - Helpers
 
@@ -13,14 +13,63 @@ struct LoginViewModelServiceTests {
         return vm
     }
 
+    // MARK: - canSubmit
+
+    @Test func canSubmitFalseWhenEmailEmpty() {
+        let vm = makeVM()
+        vm.email = ""
+        vm.password = "Password1"
+        #expect(vm.canSubmit == false)
+    }
+
+    @Test func canSubmitFalseWhenPasswordEmpty() {
+        let vm = makeVM()
+        vm.email = "user@test.com"
+        vm.password = ""
+        #expect(vm.canSubmit == false)
+    }
+
+    @Test func canSubmitFalseWhenEmailInvalid() {
+        let vm = makeVM()
+        vm.email = "notanemail"
+        vm.password = "Password1"
+        #expect(vm.canSubmit == false)
+    }
+
+    @Test func canSubmitTrueWithValidCredentials() {
+        let vm = makeVM()
+        vm.email = "user@test.com"
+        vm.password = "Password1"
+        #expect(vm.canSubmit)
+    }
+
+    // MARK: - emailValidationMessage
+
+    @Test func emailValidationMessageNilWhenEmpty() {
+        let vm = makeVM()
+        vm.email = ""
+        #expect(vm.emailValidationMessage == nil)
+    }
+
+    @Test func emailValidationMessageNilWhenValid() {
+        let vm = makeVM()
+        vm.email = "user@test.com"
+        #expect(vm.emailValidationMessage == nil)
+    }
+
+    @Test func emailValidationMessageSetWhenInvalid() {
+        let vm = makeVM()
+        vm.email = "notanemail"
+        #expect(vm.emailValidationMessage != nil)
+    }
+
     // MARK: - authenticate — sign in
 
-    @Test func authenticateCallsSignInWhenNotSignUp() async {
+    @Test func authenticateCallsSignIn() async {
         let auth = MockAuthService()
         let vm = makeVM(authService: auth)
         vm.email = "user@test.com"
-        vm.password = "pass123"
-        vm.isSignUp = false
+        vm.password = "Password1"
 
         await vm.authenticate()
 
@@ -29,66 +78,15 @@ struct LoginViewModelServiceTests {
         #expect(vm.errorMessage == nil)
     }
 
-    // MARK: - authenticate — sign up
-
-    @Test func authenticateCallsSignUpWhenSignUp() async {
+    @Test func authenticateSetsErrorMessageOnFailure() async {
         let auth = MockAuthService()
+        auth.errorToThrow = PingItError.wrongPassword
         let vm = makeVM(authService: auth)
         vm.email = "user@test.com"
-        vm.password = "pass123"
-        vm.username = "validuser"
-        vm.isSignUp = true
-
-        await vm.authenticate()
-
-        #expect(auth.signUpCalled)
-        #expect(auth.signInCalled == false)
-        #expect(vm.errorMessage == nil)
-    }
-
-    // MARK: - authenticate — error propagation
-
-    @Test func authenticateSetsErrorMessageOnSignInFailure() async {
-        let auth = MockAuthService()
-        auth.errorToThrow = PingItError.signInFailed(underlying: URLError(.userAuthenticationRequired))
-        let vm = makeVM(authService: auth)
-        vm.email = "user@test.com"
-        vm.password = "wrong"
-        vm.isSignUp = false
+        vm.password = "wrongpass"
 
         await vm.authenticate()
 
         #expect(vm.errorMessage != nil)
-    }
-
-    @Test func authenticateSetsErrorMessageOnSignUpFailure() async {
-        let auth = MockAuthService()
-        auth.errorToThrow = PingItError.signUpFailed(underlying: URLError(.userAuthenticationRequired))
-        let vm = makeVM(authService: auth)
-        vm.email = "taken@test.com"
-        vm.password = "pass123"
-        vm.username = "takenuser"
-        vm.isSignUp = true
-
-        await vm.authenticate()
-
-        #expect(vm.errorMessage != nil)
-    }
-
-    // MARK: - toggleMode
-
-    @Test func toggleModeClearsErrorMessage() async {
-        let auth = MockAuthService()
-        auth.errorToThrow = PingItError.signInFailed(underlying: URLError(.userAuthenticationRequired))
-        let vm = makeVM(authService: auth)
-        vm.email = "user@test.com"
-        vm.password = "bad"
-        vm.isSignUp = false
-
-        await vm.authenticate()
-        #expect(vm.errorMessage != nil)
-
-        vm.toggleMode()
-        #expect(vm.errorMessage == nil)
     }
 }

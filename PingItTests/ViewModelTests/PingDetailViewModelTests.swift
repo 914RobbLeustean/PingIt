@@ -71,7 +71,7 @@ struct PingDetailViewModelTests {
 
     @Test func loadCreatorFetchesUser() async {
         let user = MockUserService()
-        user.userToReturn = User(username: "testuser", email: "test@test.com")
+        user.userToReturn = User(username: "testuser", email: "test@test.com", usernameLowercase: "testuser")
         let vm = makeVM(userService: user)
 
         await vm.loadCreator()

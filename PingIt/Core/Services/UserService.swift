@@ -35,4 +35,16 @@ final class UserService: UserServicing {
             throw PingItError.firestoreWriteFailed(underlying: error)
         }
     }
+
+    func isUsernameTaken(_ username: String) async throws -> Bool {
+        do {
+            let snapshot = try await db.collection(Constants.Firestore.usersCollection)
+                .whereField("usernameLowercase", isEqualTo: username.lowercased())
+                .limit(to: 1)
+                .getDocuments()
+            return !snapshot.documents.isEmpty
+        } catch {
+            throw PingItError.firestoreReadFailed(underlying: error)
+        }
+    }
 }
