@@ -47,6 +47,15 @@ enum PingItError: LocalizedError {
     // Content Moderation
     case contentModerated(reason: String)
 
+    // Blocking
+    case blockFailed(underlying: Error)
+    case unblockFailed(underlying: Error)
+    case cannotBlockSelf
+
+    // Reporting
+    case reportFailed(underlying: Error)
+    case reportAlreadySubmitted
+
     // Profile
     case usernameTooShort
     case usernameTooLong
@@ -134,6 +143,16 @@ enum PingItError: LocalizedError {
             "Failed to update profile: \(error.localizedDescription)"
         case .contentModerated(let reason):
             reason
+        case .blockFailed:
+            "Failed to block user. Please try again."
+        case .unblockFailed:
+            "Failed to unblock user. Please try again."
+        case .cannotBlockSelf:
+            "You cannot block yourself."
+        case .reportFailed:
+            "Failed to submit report. Please try again."
+        case .reportAlreadySubmitted:
+            "You have already reported this content."
         }
     }
 
