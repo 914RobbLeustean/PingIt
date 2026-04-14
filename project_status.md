@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 0 — MVP** — 14/14 features complete. All core features implemented.
+**Phase 1 — Safety & Discovery** — Sprint 1 complete (6/16 features). Client-side safety layer implemented.
 
 ## Completed
 - Project specification and documentation setup
@@ -41,12 +41,21 @@
 ## Completed (Polish — Production Auth Screens)
 - **Auth screens production-ready (2026-04-13):** Welcome + Login + Register + ForgotPassword screens with full navigation (AuthRoute + NavigationStack). Password strength indicator (PasswordValidator), client-side email & password validation, unique username check (debounced Firestore query), confirm password, ToS checkbox, show/hide password, Firebase error mapping to user-friendly messages. Shared components: AuthTextField, AuthSecureField, PasswordStrengthView. New VMs: RegisterViewModel, ForgotPasswordViewModel. ~25 new ViewModel + validator unit tests.
 
+## Completed (Phase 1 — Sprint 1: Client-Side Safety)
+- **Phase 1 Sprint 1 (2026-04-14):** Full client-side safety layer without Cloud Functions.
+  - **Email Verification:** `AuthServicing` extended with `isEmailVerified`, `sendEmailVerification()`, `reloadUser()`. CreatePingViewModel and ChatViewModel gate actions behind email verification. MapView shows dismissable `EmailVerificationBannerView` for unverified users with resend action.
+  - **Text Content Moderation:** `ContentModerationService` with bundle-loaded wordlist (`moderation_wordlist.txt`), `localizedStandardContains()` matching. Blocks ping creation and message sending.
+  - **User Blocking:** `BlockService` with bidirectional Firestore blocking (blocker + blocked both filtered), `blockedUserIds: Set<String>` loaded on launch. MapViewModel filters blocked creators' pings. ChatViewModel filters blocked senders' messages. `BlockedUsersView` + `BlockedUsersViewModel` in Settings.
+  - **User Reporting:** `ReportService` writes to Firestore `reports` collection. `ReportView` + `ReportViewModel` with reason picker, details field, block offer after success. Accessible from PingDetailView (ping report) and ChatView message context menu (message report).
+  - **Spam Detection (Client-Side):** `RateLimitService` with UserDefaults-backed hourly (5/hr) + daily (10/day) ping limits, per-10-seconds (6) message limit. `#if DEBUG` bypass for testing.
+  - **Expired Ping Filtering:** MapViewModel filters pings where `expiresAt <= Date.now` client-side.
+
 ## In Progress
 _Nothing actively in progress._
 
 ## Up Next (choose one or more)
-- **Polish MVP (UI/UX refinements):** Empty states, error states, loading skeletons, visual polish
-- **Phase 1: Safety & Discovery** (16 features): Content moderation, user reporting, blocking, boost pings, hot pings algorithm, push notifications, GDPR account deletion, email verification, spam detection, notification/privacy preferences
+- **Phase 1 Sprint 2:** Boost Ping, Hot Pings Algorithm, Nearby Ping Notifications, GDPR Account Deletion
+- **Phase 1 Sprint 3:** Notification Preferences, Privacy Settings, Content Review Queue, Emergency Content Removal
 - **Phase 2: Polish & Launch** (10 features): Custom ping duration, onboarding flow, empty/error states, performance optimization, analytics, crash reporting, app icon/splash, privacy policy, beta testing
 
 ## Known Technical Debt
@@ -78,21 +87,22 @@ _Nothing actively in progress._
 
 ### Phase 1: Safety & Discovery (16 features)
 - [ ] Automated Image/Video Filtering
-- [ ] Text Content Moderation
-- [ ] User Report System
+- [ ] Automated Image/Video Filtering
+- [x] Text Content Moderation
+- [x] User Report System
 - [ ] Content Review Queue
 - [ ] Emergency Content Removal
 - [ ] Boost Ping
 - [ ] Hot Pings Algorithm
 - [ ] Nearby Ping Notifications
 - [ ] Hot Ping Notifications
-- [ ] User Blocking
+- [x] User Blocking
 - [ ] Account Deletion (GDPR)
-- [ ] Email Verification
-- [ ] Spam Detection
+- [x] Email Verification
+- [x] Spam Detection
 - [ ] Notification Preferences
 - [ ] Privacy Settings
-- [ ] Blocked Users Management
+- [x] Blocked Users Management
 
 ### Phase 2: Polish & Launch (10 features)
 - [ ] Custom Ping Duration

@@ -63,7 +63,7 @@ PingIt/
 
 **Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
 
-### Actual File Listing (as of 2026-04-13)
+### Actual File Listing (as of 2026-04-14)
 
 ```
 PingIt/
@@ -77,26 +77,36 @@ PingIt/
 │   │   ├── Ping.swift               Firestore: pings collection (+ PingStatus enum)
 │   │   ├── Chat.swift               Firestore: chats collection
 │   │   ├── ChatMessage.swift        Firestore: chatMessages collection
-│   │   └── ChatParticipant.swift    Firestore: chatParticipants collection
+│   │   ├── ChatParticipant.swift    Firestore: chatParticipants collection
+│   │   ├── Block.swift              Firestore: blocks collection
+│   │   └── Report.swift             Firestore: reports collection (+ ReportTargetType, ReportReason, ReportStatus enums)
 │   ├── Protocols/
 │   │   ├── ListenerRemovable.swift                      ListenerHandle wrapping ListenerRegistration
-│   │   ├── AuthUserRepresentable.swift                  Minimal user identity (uid)
+│   │   ├── AuthUserRepresentable.swift                  Minimal user identity (uid, isEmailVerified)
 │   │   ├── FirebaseUser+AuthUserRepresentable.swift     Firebase conformance
-│   │   ├── AuthServicing.swift                          Auth service contract
+│   │   ├── AuthServicing.swift                          Auth service contract (+ isEmailVerified, sendEmailVerification, reloadUser)
 │   │   ├── PingServicing.swift                          Ping service contract
 │   │   ├── ChatServicing.swift                          Chat service contract
 │   │   ├── UserServicing.swift                          User service contract
-│   │   └── LocationServicing.swift                      Location service contract
+│   │   ├── LocationServicing.swift                      Location service contract
+│   │   ├── BlockServicing.swift                         Block/unblock, bidirectional filtering
+│   │   ├── ContentModeratingServicing.swift             Text moderation (check → .allowed/.blocked)
+│   │   ├── RateLimitServicing.swift                     Ping + message rate limiting
+│   │   └── ReportServicing.swift                        Submit report to Firestore
 │   ├── Services/
-│   │   ├── AuthService.swift        Firebase Auth wrapper, auth state listener
-│   │   ├── PingService.swift        Ping CRUD, real-time snapshot listener
-│   │   ├── ChatService.swift        Messages, participants, snapshot listener
-│   │   ├── UserService.swift        User profile CRUD
-│   │   └── LocationService.swift    CLLocationManager, GeoJSON boundary check
+│   │   ├── AuthService.swift            Firebase Auth wrapper, auth state listener, email verification
+│   │   ├── PingService.swift            Ping CRUD, real-time snapshot listener
+│   │   ├── ChatService.swift            Messages, participants, snapshot listener
+│   │   ├── UserService.swift            User profile CRUD
+│   │   ├── LocationService.swift        CLLocationManager, GeoJSON boundary check
+│   │   ├── BlockService.swift           @Observable @MainActor; bidirectional Firestore blocking
+│   │   ├── ContentModerationService.swift  Bundle wordlist, localizedStandardContains matching
+│   │   ├── RateLimitService.swift       UserDefaults-backed limits; #if DEBUG bypass
+│   │   └── ReportService.swift          Writes Report documents to Firestore
 │   └── Utilities/
-│       ├── Constants.swift          Cluj coords, limits, Firestore collection names
-│       ├── PingItError.swift        Typed error enum
-│       ├── Date+Extensions.swift    Countdown, relative formatting
+│       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts)
+│       ├── PingItError.swift            Typed error enum (+ emailNotVerified, contentModerated, blockFailed, reportFailed, rateLimited, etc.)
+│       ├── Date+Extensions.swift        Countdown, relative formatting
 │       └── GeoJSONBoundaryValidator.swift  Ray casting point-in-polygon
 ├── Features/
 │   ├── Authentication/
@@ -120,27 +130,33 @@ PingIt/
 │   │           └── PasswordStrengthView.swift   Segmented strength bar + rule checklist
 │   ├── Map/
 │   │   ├── ViewModels/
-│   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state
+│   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state; filters expired + blocked
 │   │   └── Views/
-│   │       ├── MapView.swift        MapKit map with annotations
-│   │       └── PingAnnotationView.swift  Custom ping marker
+│   │       ├── MapView.swift              MapKit map with annotations, email verification banner
+│   │       ├── PingAnnotationView.swift   Custom ping marker
+│   │       └── EmailVerificationBannerView.swift  Dismissable banner for unverified users
 │   ├── Ping/
 │   │   ├── ViewModels/
-│   │   │   ├── CreatePingViewModel.swift   Validation, location, Firestore write
+│   │   │   ├── CreatePingViewModel.swift   Validation, moderation, rate limit, location, Firestore write
 │   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete
 │   │   └── Views/
 │   │       ├── CreatePingView.swift        Form: text, location picker, expiration
-│   │       ├── PingDetailView.swift        Detail with creator, countdown, actions
+│   │       ├── PingDetailView.swift        Detail with creator, countdown, actions, report/block buttons
 │   │       ├── LocationPickerView.swift    GPS / search / map pin selection
 │   │       ├── MapPinPickerView.swift      Drag-pin-on-map picker
 │   │       ├── PingDetailCreatorSection.swift  Creator info + profile picture
 │   │       └── PingDetailActionSection.swift   Join chat + delete buttons
 │   ├── Chat/
 │   │   ├── ViewModels/
-│   │   │   └── ChatViewModel.swift         Message listener, send, join
+│   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked
 │   │   └── Views/
-│   │       ├── ChatView.swift              Real-time message list + input
-│   │       └── MessageBubbleView.swift     Sender-aligned message bubble
+│   │       ├── ChatView.swift              Real-time message list + input, report sheet
+│   │       └── MessageBubbleView.swift     Sender-aligned message bubble with report/block context menu
+│   ├── Report/
+│   │   ├── ViewModels/
+│   │   │   └── ReportViewModel.swift       Reason selection, submit, block offer after success
+│   │   └── Views/
+│   │       └── ReportView.swift            Form: reason picker, details text field, block offer
 │   ├── Profile/
 │   │   ├── ViewModels/
 │   │   │   └── ProfileViewModel.swift      Profile CRUD, Storage upload
@@ -148,30 +164,42 @@ PingIt/
 │   │       ├── ProfileView.swift           Username edit, photo management
 │   │       ├── ProfileImageSection.swift   AsyncImage + PhotosPicker + camera
 │   │       └── CameraPickerView.swift      UIKit camera wrapper
-│   └── Settings/Views/
-│       └── SettingsPlaceholderView.swift    Sign out with confirmation
+│   └── Settings/
+│       ├── ViewModels/
+│       │   └── BlockedUsersViewModel.swift  Loads blocked users with profiles, unblock action
+│       └── Views/
+│           ├── SettingsView.swift           Sign out + Privacy & Safety navigation
+│           └── BlockedUsersView.swift       List of blocked users with unblock confirmation
+
 └── Resources/
-    └── ClujNapoca.geojson           Cluj-Napoca admin boundary (OSM)
+    ├── ClujNapoca.geojson           Cluj-Napoca admin boundary (OSM)
+    └── moderation_wordlist.txt      Client-side profanity filter wordlist (one word per line)
 
 PingItTests/
 ├── Mocks/
-│   ├── MockAuthUser.swift           Stub AuthUserRepresentable
-│   ├── MockAuthService.swift        @Observable @MainActor mock
-│   ├── MockPingService.swift        Stores activePingsCallback, simulates updates
-│   ├── MockChatService.swift        Stores messagesCallback, simulates updates
-│   ├── MockUserService.swift        Returns preset User, tracks calls
-│   └── MockLocationService.swift    Settable location/auth/boundary result
+│   ├── MockAuthUser.swift                    Stub AuthUserRepresentable (+ isEmailVerified)
+│   ├── MockAuthService.swift                 @Observable @MainActor mock (+ isEmailVerified, sendEmailVerification, reloadUser)
+│   ├── MockPingService.swift                 Stores activePingsCallback, simulates updates
+│   ├── MockChatService.swift                 Stores messagesCallback, simulates updates
+│   ├── MockUserService.swift                 Returns preset User, tracks calls
+│   ├── MockLocationService.swift             Settable location/auth/boundary result
+│   ├── MockBlockService.swift                Settable blockedUserIds, tracks blockUser/unblockUser calls
+│   ├── MockContentModerationService.swift    Settable result (.allowed/.blocked), tracks check calls
+│   ├── MockRateLimitService.swift            Settable ping/message results, tracks record calls
+│   └── MockReportService.swift               Tracks submitReport calls, injectable error
 ├── ViewModelTests/
-│   ├── CreatePingViewModelTests.swift
-│   ├── ChatViewModelTests.swift
+│   ├── CreatePingViewModelTests.swift        (+ email verification, moderation, rate limit tests)
+│   ├── ChatViewModelTests.swift              (+ email verification, blocking, moderation tests)
+│   ├── MapViewModelTests.swift               (+ expired ping filter, blocked creator filter tests)
+│   ├── BlockedUsersViewModelTests.swift
+│   ├── ReportViewModelTests.swift
 │   ├── PingDetailViewModelTests.swift
 │   ├── LoginViewModelTests.swift
 │   ├── RegisterViewModelTests.swift
 │   ├── ForgotPasswordViewModelTests.swift
 │   ├── PasswordValidatorTests.swift
-│   ├── MapViewModelTests.swift
 │   └── ProfileViewModelTests.swift
-└── PingItTests.swift                Existing: boundary, dates, constants, models
+└── PingItTests.swift                         Boundary, dates, constants, models
 ```
 
 ---
@@ -249,14 +277,27 @@ New ping created in Firestore
 ```
 MapView ──observes──▶ MapViewModel ──calls──▶ PingService ──reads──▶ Firestore (pings)
                                               LocationService ──reads──▶ CLLocationManager
+                                              BlockService (filters blocked creators + expired pings)
 
 PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ PingService
                                                             ChatService
+             └─ report/block buttons ──▶ ReportView / BlockService
 
 ChatView ──observes──▶ ChatViewModel ──calls──▶ ChatService ──listens──▶ Firestore (chatMessages)
+                                               ContentModerationService (outbound text check)
+                                               RateLimitService (outbound message throttle)
+                                               BlockService (filters incoming messages)
+         └─ message context menu ──▶ ReportView / BlockService
+
+CreatePingView ──observes──▶ CreatePingViewModel ──calls──▶ PingService
+                                                            ContentModerationService
+                                                            RateLimitService
+                                                            LocationService
 
 ProfileView ──observes──▶ ProfileViewModel ──calls──▶ UserService ──reads/writes──▶ Firestore (users)
                                                       AuthService ──calls──▶ Firebase Auth
+
+SettingsView ──▶ BlockedUsersView ──observes──▶ BlockedUsersViewModel ──calls──▶ BlockService + UserService
 
 AuthenticationCoordinatorView ──routes──▶ LoginView / RegisterView / ForgotPasswordView
 LoginView ──observes──▶ LoginViewModel ──calls──▶ AuthService ──calls──▶ Firebase Auth
@@ -270,12 +311,16 @@ ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls�
 
 | Service | Responsibility | Status |
 |---------|---------------|--------|
-| **AuthService** | Sign up, sign in, sign out, password reset, session state | Implemented |
-| **PingService** | Ping CRUD, geospatial queries, real-time listener | Implemented (stub) |
-| **ChatService** | Messages, snapshot listeners, participant tracking | Implemented (stub) |
-| **UserService** | Profile read/write | Implemented (stub) |
-| **LocationService** | CLLocationManager wrapper, boundary check | Implemented (stub) |
-| **NotificationService** | FCM token registration, notification handling | Not yet created (Phase 1+) |
+| **AuthService** | Sign up, sign in, sign out, password reset, session state, email verification | Implemented |
+| **PingService** | Ping CRUD, geospatial queries, real-time listener | Implemented |
+| **ChatService** | Messages, snapshot listeners, participant tracking | Implemented |
+| **UserService** | Profile read/write | Implemented |
+| **LocationService** | CLLocationManager wrapper, boundary check | Implemented |
+| **BlockService** | Bidirectional user blocking, Firestore CRUD, in-memory filtered set | Implemented |
+| **ContentModerationService** | Bundle wordlist check, returns `.allowed`/`.blocked(reason:)` | Implemented |
+| **RateLimitService** | UserDefaults-backed ping + message rate limiting, `#if DEBUG` bypass | Implemented |
+| **ReportService** | Writes `Report` documents to Firestore `reports` collection | Implemented |
+| **NotificationService** | FCM token registration, notification handling | Not yet created (Phase 1 Sprint 2+) |
 
 ### Service Injection Pattern
 
