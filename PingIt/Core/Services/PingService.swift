@@ -70,6 +70,22 @@ final class PingService: PingServicing {
         }
     }
 
+    func observePing(
+        id: String,
+        onUpdate: @escaping @Sendable (Ping?) -> Void
+    ) -> ListenerHandle {
+        let registration = db.collection(Constants.Firestore.pingsCollection)
+            .document(id)
+            .addSnapshotListener { snapshot, _ in
+                guard let snapshot, snapshot.exists else {
+                    onUpdate(nil)
+                    return
+                }
+                onUpdate(try? snapshot.data(as: Ping.self))
+            }
+        return ListenerHandle(registration)
+    }
+
     func observeActivePings(
         onUpdate: @escaping @Sendable (Result<[Ping], Error>) -> Void
     ) -> ListenerHandle {

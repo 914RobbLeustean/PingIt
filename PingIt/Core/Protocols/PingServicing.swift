@@ -8,4 +8,8 @@ protocol PingServicing {
     func observeActivePings(
         onUpdate: @escaping @Sendable (Result<[Ping], Error>) -> Void
     ) -> ListenerHandle
+    func observePing(
+        id: String,
+        onUpdate: @escaping @Sendable (Ping?) -> Void
+    ) -> ListenerHandle
 }

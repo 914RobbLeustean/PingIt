@@ -14,8 +14,10 @@ final class PingDetailViewModel {
     private(set) var didDeletePing = false
     private(set) var errorMessage: String?
     private(set) var countdownText: String
+    var pingUnavailable = false
 
     private var countdownTask: Task<Void, Never>?
+    private var pingListener: ListenerHandle?
 
     var isCreator: Bool {
         authService?.currentUser?.uid == ping.creatorId
@@ -56,6 +58,10 @@ final class PingDetailViewModel {
                 try? await Task.sleep(for: .seconds(30))
                 guard let self else { return }
                 self.countdownText = self.ping.expiresAt.countdownDescription
+                if self.ping.expiresAt.timeIntervalSince(ServerTime.now) <= 0 {
+                    self.pingUnavailable = true
+                    return
+                }
             }
         }
     }
@@ -63,6 +69,23 @@ final class PingDetailViewModel {
     func stopCountdownTimer() {
         countdownTask?.cancel()
         countdownTask = nil
+    }
+
+    func startObservingPing() {
+        guard let pingService, let pingId = ping.id, pingListener == nil else { return }
+        pingListener = pingService.observePing(id: pingId) { [weak self] updatedPing in
+            guard let self else { return }
+            Task { @MainActor [self] in
+                if updatedPing == nil || updatedPing?.status != .active {
+                    self.pingUnavailable = true
+                }
+            }
+        }
+    }
+
+    func stopObservingPing() {
+        pingListener?.remove()
+        pingListener = nil
     }
 
     func deletePing() async {
@@ -81,5 +104,6 @@ final class PingDetailViewModel {
 
     deinit {
         countdownTask?.cancel()
+        pingListener?.remove()
     }
 }

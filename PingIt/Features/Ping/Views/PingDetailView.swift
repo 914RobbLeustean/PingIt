@@ -19,6 +19,8 @@ struct PingDetailView: View {
     }
 
     var body: some View {
+        @Bindable var viewModel = viewModel
+
         ScrollView {
             VStack(alignment: .leading) {
                 PingDetailCreatorSection(
@@ -106,6 +108,14 @@ struct PingDetailView: View {
                 )
             }
         }
+        .alert("Ping Unavailable", isPresented: $viewModel.pingUnavailable) {
+            Button("OK") {
+                navigateToChat = false
+                dismiss()
+            }
+        } message: {
+            Text("This ping is no longer available.")
+        }
         .task {
             viewModel.configure(
                 authService: authService,
@@ -115,6 +125,7 @@ struct PingDetailView: View {
             )
             await viewModel.loadCreator()
             viewModel.startCountdownTimer()
+            viewModel.startObservingPing()
         }
         .onDisappear(perform: handleDisappear)
         .onChange(of: viewModel.didDeletePing) { _, didDelete in
@@ -134,6 +145,7 @@ struct PingDetailView: View {
 
     private func handleDisappear() {
         viewModel.stopCountdownTimer()
+        viewModel.stopObservingPing()
     }
 
     private func handleJoinChat() {

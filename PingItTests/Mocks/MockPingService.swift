@@ -57,6 +57,13 @@ final class MockPingService: PingServicing {
         }
     }
 
+    func observePing(
+        id: String,
+        onUpdate: @escaping @Sendable (Ping?) -> Void
+    ) -> ListenerHandle {
+        ListenerHandle { }
+    }
+
     /// Simulates a Firestore snapshot arriving with the given pings.
     func simulateUpdate(pings: [Ping]) {
         activePingsCallback?(.success(pings))
