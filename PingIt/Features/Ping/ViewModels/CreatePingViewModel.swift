@@ -72,6 +72,10 @@ final class CreatePingViewModel {
                 throw PingItError.notAuthenticated
             }
 
+            guard authService.isEmailVerified else {
+                throw PingItError.emailNotVerified
+            }
+
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else {
                 throw PingItError.pingTextEmpty

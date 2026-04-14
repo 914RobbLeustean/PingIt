@@ -27,7 +27,8 @@ struct CreatePingViewModelTests {
 
     private func authenticatedAuth(uid: String = "user1") -> MockAuthService {
         let auth = MockAuthService()
-        auth.currentUser = MockAuthUser(uid: uid)
+        auth.currentUser = MockAuthUser(uid: uid, isEmailVerified: true)
+        auth.isEmailVerified = true
         return auth
     }
 
@@ -102,6 +103,30 @@ struct CreatePingViewModelTests {
         #expect(vm.didCreatePing)
         #expect(ping.createPingWithChatCalled)
         #expect(vm.errorMessage == nil)
+    }
+
+    // MARK: - Email verification gate
+
+    @Test("Unverified email prevents ping creation")
+    func unverifiedEmailCannotCreatePing() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: false)
+        mockAuth.isEmailVerified = false
+        let mockPing = MockPingService()
+        let mockChat = MockChatService()
+        let mockLocation = MockLocationService()
+        mockLocation.boundaryResult = true
+
+        let vm = CreatePingViewModel()
+        vm.configure(authService: mockAuth, pingService: mockPing, chatService: mockChat, locationService: mockLocation)
+        vm.text = "Test ping"
+        vm.selectedLocation = Constants.Cluj.center
+
+        await vm.createPing()
+
+        #expect(vm.didCreatePing == false)
+        #expect(vm.errorMessage != nil)
+        #expect(mockPing.createPingWithChatCalled == false)
     }
 
     // MARK: - createPing failures

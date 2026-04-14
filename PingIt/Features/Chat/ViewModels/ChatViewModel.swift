@@ -86,6 +86,11 @@ final class ChatViewModel {
     func sendMessage() async {
         guard let chatService, let currentUserId, canSend else { return }
 
+        guard authService?.isEmailVerified == true else {
+            errorMessage = PingItError.emailNotVerified.localizedDescription
+            return
+        }
+
         let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         isSending = true
         defer { isSending = false }

@@ -20,7 +20,8 @@ struct ChatViewModelTests {
 
     private func authenticatedAuth(uid: String = "user1") -> MockAuthService {
         let auth = MockAuthService()
-        auth.currentUser = MockAuthUser(uid: uid)
+        auth.currentUser = MockAuthUser(uid: uid, isEmailVerified: true)
+        auth.isEmailVerified = true
         return auth
     }
 
@@ -125,6 +126,25 @@ struct ChatViewModelTests {
 
         #expect(vm.hasJoined == false)
         #expect(chat.leaveChatCalled)
+    }
+
+    // MARK: - Email verification gate
+
+    @Test("Unverified email prevents sending messages")
+    func unverifiedEmailCannotSendMessage() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: false)
+        mockAuth.isEmailVerified = false
+        let mockChat = MockChatService()
+
+        let vm = ChatViewModel(chatId: "chat1", pingId: "ping1")
+        vm.configure(authService: mockAuth, chatService: mockChat)
+        vm.messageText = "Hello"
+
+        await vm.sendMessage()
+
+        #expect(vm.errorMessage != nil)
+        #expect(mockChat.sendMessageCalled == false)
     }
 
     // MARK: - sendMessage
