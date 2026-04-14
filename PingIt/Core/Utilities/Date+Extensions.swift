@@ -20,6 +20,6 @@ extension Date {
 
     /// Returns a relative description like "5 minutes ago"
     var relativeDescription: String {
-        formatted(.relative(presentation: .named))
+        formatted(.relative(presentation: .named, unitsStyle: .wide))
     }
 }

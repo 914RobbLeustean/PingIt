@@ -8,7 +8,7 @@ final class BlockService: BlockServicing {
     private(set) var blockedUserIds: Set<String> = []
     private let db = Firestore.firestore()
 
-    private var currentUserId: String? {
+    var currentUserId: String? {
         Auth.auth().currentUser?.uid
     }
 
@@ -42,6 +42,9 @@ final class BlockService: BlockServicing {
     func blockUser(_ userId: String) async throws {
         guard let currentUserId else { throw PingItError.notAuthenticated }
         guard userId != currentUserId else { throw PingItError.cannotBlockSelf }
+
+        // Idempotency: skip write if already blocked
+        guard !blockedUserIds.contains(userId) else { return }
 
         do {
             let block = Block(blockerId: currentUserId, blockedUserId: userId)

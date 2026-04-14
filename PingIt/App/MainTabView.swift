@@ -15,7 +15,8 @@ struct MainTabView: View {
                 SettingsView()
             }
         }
-        .task {
+        .task(id: blockService.currentUserId) {
+            guard blockService.currentUserId != nil else { return }
             try? await blockService.loadBlockedUsers()
         }
     }

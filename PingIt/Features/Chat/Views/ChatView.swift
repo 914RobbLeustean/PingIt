@@ -6,6 +6,7 @@ struct ChatView: View {
     @Environment(ContentModerationService.self) private var contentModerationService
     @Environment(BlockService.self) private var blockService
     @Environment(RateLimitService.self) private var rateLimitService
+    @Environment(ReportService.self) private var reportService
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
     @State private var reportTargetType: Report.ReportTargetType?
@@ -36,7 +37,10 @@ struct ChatView: View {
                                 }
                             },
                             onBlock: {
-                                Task { try? await blockService.blockUser(message.senderId) }
+                                Task {
+                                    try? await blockService.blockUser(message.senderId)
+                                    viewModel.applyBlockFilter()
+                                }
                             }
                         )
                     }
@@ -96,7 +100,13 @@ struct ChatView: View {
         }
         .sheet(isPresented: $showReportSheet) {
             if let type = reportTargetType, let id = reportTargetId, let ownerId = reportTargetOwnerId {
-                ReportView(targetType: type, targetId: id, targetOwnerId: ownerId)
+                ReportView(
+                    targetType: type,
+                    targetId: id,
+                    targetOwnerId: ownerId,
+                    reportService: reportService,
+                    blockService: blockService
+                )
             }
         }
     }

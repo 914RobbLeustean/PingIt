@@ -14,7 +14,8 @@ struct CreatePingViewModelTests {
         pingService: MockPingService = MockPingService(),
         chatService: MockChatService = MockChatService(),
         locationService: MockLocationService = MockLocationService(),
-        contentModerationService: MockContentModerationService = MockContentModerationService()
+        contentModerationService: MockContentModerationService = MockContentModerationService(),
+        rateLimitService: MockRateLimitService = MockRateLimitService()
     ) -> CreatePingViewModel {
         let vm = CreatePingViewModel()
         vm.configure(
@@ -22,7 +23,8 @@ struct CreatePingViewModelTests {
             pingService: pingService,
             chatService: chatService,
             locationService: locationService,
-            contentModerationService: contentModerationService
+            contentModerationService: contentModerationService,
+            rateLimitService: rateLimitService
         )
         return vm
     }
@@ -120,7 +122,7 @@ struct CreatePingViewModelTests {
         mockLocation.boundaryResult = true
 
         let vm = CreatePingViewModel()
-        vm.configure(authService: mockAuth, pingService: mockPing, chatService: mockChat, locationService: mockLocation, contentModerationService: MockContentModerationService())
+        vm.configure(authService: mockAuth, pingService: mockPing, chatService: mockChat, locationService: mockLocation, contentModerationService: MockContentModerationService(), rateLimitService: MockRateLimitService())
         vm.text = "Test ping"
         vm.selectedLocation = Constants.Cluj.center
 
@@ -224,7 +226,8 @@ struct CreatePingViewModelTests {
             pingService: mockPing,
             chatService: mockChat,
             locationService: mockLocation,
-            contentModerationService: mockModeration
+            contentModerationService: mockModeration,
+            rateLimitService: MockRateLimitService()
         )
         vm.text = "Bad content"
         vm.selectedLocation = Constants.Cluj.center
@@ -234,6 +237,40 @@ struct CreatePingViewModelTests {
         #expect(vm.didCreatePing == false)
         #expect(vm.errorMessage != nil)
         #expect(mockModeration.checkCalled == true)
+        #expect(mockPing.createPingWithChatCalled == false)
+    }
+
+    // MARK: - Rate Limiting
+
+    @Test("Rate limited user cannot create ping")
+    func rateLimitedCannotCreatePing() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: true)
+        mockAuth.isEmailVerified = true
+        let mockPing = MockPingService()
+        let mockChat = MockChatService()
+        let mockLocation = MockLocationService()
+        mockLocation.boundaryResult = true
+        let mockModeration = MockContentModerationService()
+        let mockRateLimit = MockRateLimitService()
+        mockRateLimit.pingResult = .limited(retryAfter: 300)
+
+        let vm = CreatePingViewModel()
+        vm.configure(
+            authService: mockAuth,
+            pingService: mockPing,
+            chatService: mockChat,
+            locationService: mockLocation,
+            contentModerationService: mockModeration,
+            rateLimitService: mockRateLimit
+        )
+        vm.text = "Test"
+        vm.selectedLocation = Constants.Cluj.center
+
+        await vm.createPing()
+
+        #expect(vm.didCreatePing == false)
+        #expect(vm.errorMessage != nil)
         #expect(mockPing.createPingWithChatCalled == false)
     }
 }

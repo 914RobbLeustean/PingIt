@@ -1,17 +1,29 @@
 import SwiftUI
 
 struct ReportView: View {
-    @Environment(ReportService.self) private var reportService
-    @Environment(BlockService.self) private var blockService
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ReportViewModel
+    private let reportService: any ReportServicing
+    private let blockService: BlockService
 
-    init(targetType: Report.ReportTargetType, targetId: String, targetOwnerId: String) {
+    var onDidBlock: (() -> Void)?
+
+    init(
+        targetType: Report.ReportTargetType,
+        targetId: String,
+        targetOwnerId: String,
+        reportService: any ReportServicing,
+        blockService: BlockService,
+        onDidBlock: (() -> Void)? = nil
+    ) {
         self._viewModel = State(initialValue: ReportViewModel(
             targetType: targetType,
             targetId: targetId,
             targetOwnerId: targetOwnerId
         ))
+        self.reportService = reportService
+        self.blockService = blockService
+        self.onDidBlock = onDidBlock
     }
 
     var body: some View {
@@ -102,8 +114,10 @@ struct ReportView: View {
                     Task {
                         try? await blockService.blockUser(viewModel.targetOwnerId)
                         dismiss()
+                        onDidBlock?()
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Button("No thanks") {
                     dismiss()

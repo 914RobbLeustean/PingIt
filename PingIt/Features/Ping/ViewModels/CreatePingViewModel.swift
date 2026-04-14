@@ -9,6 +9,7 @@ final class CreatePingViewModel {
     private var chatService: (any ChatServicing)?
     private var locationService: (any LocationServicing)?
     private var contentModerationService: (any ContentModeratingServicing)?
+    private var rateLimitService: (any RateLimitServicing)?
     private var isConfigured = false
 
     var text = ""
@@ -52,7 +53,8 @@ final class CreatePingViewModel {
         pingService: any PingServicing,
         chatService: any ChatServicing,
         locationService: any LocationServicing,
-        contentModerationService: any ContentModeratingServicing
+        contentModerationService: any ContentModeratingServicing,
+        rateLimitService: any RateLimitServicing
     ) {
         guard !isConfigured else { return }
         self.authService = authService
@@ -60,6 +62,7 @@ final class CreatePingViewModel {
         self.chatService = chatService
         self.locationService = locationService
         self.contentModerationService = contentModerationService
+        self.rateLimitService = rateLimitService
         isConfigured = true
     }
 
@@ -77,6 +80,14 @@ final class CreatePingViewModel {
 
             guard authService.isEmailVerified else {
                 throw PingItError.emailNotVerified
+            }
+
+            if let rateLimitService {
+                let result = rateLimitService.canCreatePing()
+                if case .limited(let retryAfter) = result {
+                    let minutes = Int(ceil(retryAfter / 60))
+                    throw PingItError.rateLimited(retryAfterMinutes: minutes)
+                }
             }
 
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -116,6 +127,7 @@ final class CreatePingViewModel {
 
             try await pingService.createPingWithChat(ping)
             didCreatePing = true
+            rateLimitService?.recordPingCreation()
         } catch {
             errorMessage = error.localizedDescription
         }

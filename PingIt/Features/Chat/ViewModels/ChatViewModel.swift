@@ -6,12 +6,14 @@ final class ChatViewModel {
     private var chatService: (any ChatServicing)?
     private var contentModerationService: (any ContentModeratingServicing)?
     private var blockService: (any BlockServicing)?
+    private var rateLimitService: (any RateLimitServicing)?
     private var listenerRegistration: ListenerHandle?
     private var isConfigured = false
 
     let chatId: String
     let pingId: String
 
+    private var allMessages: [ChatMessage] = []
     private(set) var messages: [ChatMessage] = []
     private(set) var isLoading = false
     private(set) var isSending = false
@@ -37,13 +39,15 @@ final class ChatViewModel {
         authService: any AuthServicing,
         chatService: any ChatServicing,
         contentModerationService: (any ContentModeratingServicing)? = nil,
-        blockService: (any BlockServicing)? = nil
+        blockService: (any BlockServicing)? = nil,
+        rateLimitService: (any RateLimitServicing)? = nil
     ) {
         guard !isConfigured else { return }
         self.authService = authService
         self.chatService = chatService
         self.contentModerationService = contentModerationService
         self.blockService = blockService
+        self.rateLimitService = rateLimitService
         isConfigured = true
     }
 
@@ -56,9 +60,8 @@ final class ChatViewModel {
             Task { @MainActor [self] in
                 switch result {
                 case .success(let messages):
-                    self.messages = messages.filter { message in
-                        !(self.blockService?.isBlocked(message.senderId) ?? false)
-                    }
+                    self.allMessages = messages
+                    self.applyBlockFilter()
                     self.errorMessage = nil
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
@@ -110,6 +113,14 @@ final class ChatViewModel {
             }
         }
 
+        if let rateLimitService {
+            let result = rateLimitService.canSendMessage()
+            if case .limited = result {
+                errorMessage = "You're sending messages too quickly. Please wait a moment."
+                return
+            }
+        }
+
         let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         isSending = true
         defer { isSending = false }
@@ -123,8 +134,15 @@ final class ChatViewModel {
         do {
             try await chatService.sendMessage(message)
             messageText = ""
+            rateLimitService?.recordMessageSent()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    func applyBlockFilter() {
+        messages = allMessages.filter { message in
+            !(blockService?.isBlocked(message.senderId) ?? false)
         }
     }
 

@@ -18,6 +18,18 @@ final class ReportService: ReportServicing {
             throw PingItError.notAuthenticated
         }
 
+        // Prevent duplicate reports from the same user on the same target
+        let existing = try await db
+            .collection(Constants.Firestore.reportsCollection)
+            .whereField("reporterId", isEqualTo: currentUserId)
+            .whereField("targetId", isEqualTo: targetId)
+            .limit(to: 1)
+            .getDocuments()
+
+        guard existing.documents.isEmpty else {
+            throw PingItError.reportAlreadySubmitted
+        }
+
         let report = Report(
             reporterId: currentUserId,
             targetType: targetType,

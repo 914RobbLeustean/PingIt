@@ -71,6 +71,15 @@ struct MapView: View {
                         Spacer()
                     }
                     .padding(.top)
+                    .task {
+                        while !Task.isCancelled {
+                            try? await Task.sleep(for: .seconds(5))
+                            try? await authService.reloadUser()
+                            if authService.isEmailVerified {
+                                break
+                            }
+                        }
+                    }
                 }
             }
             .navigationTitle("Map")
