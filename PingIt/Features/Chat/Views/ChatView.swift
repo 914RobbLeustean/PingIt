@@ -7,6 +7,10 @@ struct ChatView: View {
     @Environment(BlockService.self) private var blockService
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
+    @State private var reportTargetType: Report.ReportTargetType?
+    @State private var reportTargetId: String?
+    @State private var reportTargetOwnerId: String?
+    @State private var showReportSheet = false
 
     init(chatId: String, pingId: String) {
         self._viewModel = State(initialValue: ChatViewModel(chatId: chatId, pingId: pingId))
@@ -21,7 +25,18 @@ struct ChatView: View {
                     ForEach(viewModel.messages) { message in
                         MessageBubbleView(
                             message: message,
-                            isCurrentUser: message.senderId == viewModel.currentUserId
+                            isCurrentUser: message.senderId == viewModel.currentUserId,
+                            onReport: {
+                                if let id = message.id {
+                                    reportTargetType = .message
+                                    reportTargetId = id
+                                    reportTargetOwnerId = message.senderId
+                                    showReportSheet = true
+                                }
+                            },
+                            onBlock: {
+                                Task { try? await blockService.blockUser(message.senderId) }
+                            }
                         )
                     }
                 }
@@ -77,6 +92,11 @@ struct ChatView: View {
         }
         .onChange(of: viewModel.messages.count) { _, _ in
             scrollToBottom()
+        }
+        .sheet(isPresented: $showReportSheet) {
+            if let type = reportTargetType, let id = reportTargetId, let ownerId = reportTargetOwnerId {
+                ReportView(targetType: type, targetId: id, targetOwnerId: ownerId)
+            }
         }
     }
 

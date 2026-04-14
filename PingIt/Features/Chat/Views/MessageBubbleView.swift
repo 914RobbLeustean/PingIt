@@ -3,6 +3,8 @@ import SwiftUI
 struct MessageBubbleView: View {
     let message: ChatMessage
     let isCurrentUser: Bool
+    let onReport: () -> Void
+    let onBlock: () -> Void
 
     var body: some View {
         HStack {
@@ -15,6 +17,16 @@ struct MessageBubbleView: View {
                     .background(isCurrentUser ? Color.accentColor : Color(.systemGray5))
                     .foregroundStyle(isCurrentUser ? .white : .primary)
                     .clipShape(.rect(cornerRadius: 16))
+                    .contextMenu {
+                        if !isCurrentUser {
+                            Button("Report Message", systemImage: "exclamationmark.bubble") {
+                                onReport()
+                            }
+                            Button("Block User", systemImage: "hand.raised", role: .destructive) {
+                                onBlock()
+                            }
+                        }
+                    }
 
                 if let createdAt = message.createdAt {
                     Text(createdAt.formatted(date: .omitted, time: .shortened))
