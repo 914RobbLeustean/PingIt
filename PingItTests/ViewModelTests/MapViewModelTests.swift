@@ -81,6 +81,43 @@ struct MapViewModelTests {
         #expect(ping.activePingsCallback != nil)
     }
 
+    // MARK: - Blocking filter
+
+    @Test("Blocked user pings are filtered from map")
+    func blockedUserPingsFiltered() async {
+        let mockPingService = MockPingService()
+        let mockLocationService = MockLocationService()
+        let mockBlockService = MockBlockService()
+        mockBlockService.blockedUserIds = ["blocked_user"]
+
+        let vm = MapViewModel()
+        vm.configure(pingService: mockPingService, locationService: mockLocationService, blockService: mockBlockService)
+        vm.startObserving()
+
+        let normalPing = Ping(
+            creatorId: "user1",
+            text: "Visible ping",
+            location: .init(latitude: 46.77, longitude: 23.62),
+            geohash: "",
+            expiresAt: Date.now.addingTimeInterval(3600),
+            status: .active
+        )
+        let blockedPing = Ping(
+            creatorId: "blocked_user",
+            text: "Blocked user ping",
+            location: .init(latitude: 46.78, longitude: 23.63),
+            geohash: "",
+            expiresAt: Date.now.addingTimeInterval(3600),
+            status: .active
+        )
+
+        mockPingService.simulateUpdate(pings: [normalPing, blockedPing])
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.pings.count == 1)
+        #expect(vm.pings.first?.text == "Visible ping")
+    }
+
     // MARK: - Ping filtering
 
     @Test("Expired pings are filtered out from map display")

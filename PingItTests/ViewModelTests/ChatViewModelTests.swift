@@ -175,6 +175,31 @@ struct ChatViewModelTests {
         #expect(vm.errorMessage != nil)
     }
 
+    // MARK: - Blocking filter
+
+    @Test("Blocked user messages are filtered from chat")
+    func blockedUserMessagesFiltered() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: true)
+        mockAuth.isEmailVerified = true
+        let mockChat = MockChatService()
+        let mockBlockService = MockBlockService()
+        mockBlockService.blockedUserIds = ["blocked_user"]
+
+        let vm = ChatViewModel(chatId: "chat1", pingId: "ping1")
+        vm.configure(authService: mockAuth, chatService: mockChat, contentModerationService: MockContentModerationService(), blockService: mockBlockService)
+        vm.startObserving()
+
+        let normalMessage = ChatMessage(chatId: "chat1", senderId: "user2", text: "Hi")
+        let blockedMessage = ChatMessage(chatId: "chat1", senderId: "blocked_user", text: "You cant see me")
+
+        mockChat.simulateUpdate(messages: [normalMessage, blockedMessage])
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.messages.count == 1)
+        #expect(vm.messages.first?.text == "Hi")
+    }
+
     // MARK: - Content Moderation
 
     @Test("Moderated text prevents sending message")

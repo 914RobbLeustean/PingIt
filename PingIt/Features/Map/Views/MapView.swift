@@ -6,6 +6,7 @@ struct MapView: View {
     @Environment(PingService.self) private var pingService
     @Environment(LocationService.self) private var locationService
     @Environment(AuthService.self) private var authService
+    @Environment(BlockService.self) private var blockService
     @State private var viewModel = MapViewModel()
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
@@ -85,7 +86,7 @@ struct MapView: View {
                 CreatePingView(createdPingLocation: $createdPingLocation)
             }
             .task {
-                viewModel.configure(pingService: pingService, locationService: locationService)
+                viewModel.configure(pingService: pingService, locationService: locationService, blockService: blockService)
                 handleAppear()
             }
             .onAppear(perform: handleReappear)

@@ -5,6 +5,7 @@ final class ChatViewModel {
     private var authService: (any AuthServicing)?
     private var chatService: (any ChatServicing)?
     private var contentModerationService: (any ContentModeratingServicing)?
+    private var blockService: (any BlockServicing)?
     private var listenerRegistration: ListenerHandle?
     private var isConfigured = false
 
@@ -35,12 +36,14 @@ final class ChatViewModel {
     func configure(
         authService: any AuthServicing,
         chatService: any ChatServicing,
-        contentModerationService: (any ContentModeratingServicing)? = nil
+        contentModerationService: (any ContentModeratingServicing)? = nil,
+        blockService: (any BlockServicing)? = nil
     ) {
         guard !isConfigured else { return }
         self.authService = authService
         self.chatService = chatService
         self.contentModerationService = contentModerationService
+        self.blockService = blockService
         isConfigured = true
     }
 
@@ -53,7 +56,9 @@ final class ChatViewModel {
             Task { @MainActor [self] in
                 switch result {
                 case .success(let messages):
-                    self.messages = messages
+                    self.messages = messages.filter { message in
+                        !(self.blockService?.isBlocked(message.senderId) ?? false)
+                    }
                     self.errorMessage = nil
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
