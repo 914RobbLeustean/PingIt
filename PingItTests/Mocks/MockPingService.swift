@@ -1,3 +1,5 @@
+import Foundation
+import FirebaseFirestore
 import Observation
 @testable import PingIt
 

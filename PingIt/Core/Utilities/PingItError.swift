@@ -8,6 +8,8 @@ enum PingItError: LocalizedError {
     case signInFailed(underlying: Error)
     case signOutFailed(underlying: Error)
     case passwordResetFailed(underlying: Error)
+    case emailVerificationFailed(underlying: Error)
+    case emailNotVerified
 
     // Auth — user-friendly Firebase mappings
     case emailAlreadyInUse
@@ -63,6 +65,10 @@ enum PingItError: LocalizedError {
             "Sign out failed: \(error.localizedDescription)"
         case .passwordResetFailed(let error):
             "Failed to send password reset: \(error.localizedDescription)"
+        case .emailVerificationFailed:
+            "Failed to send verification email. Please try again."
+        case .emailNotVerified:
+            "Please verify your email before creating pings."
         case .emailAlreadyInUse:
             "An account with this email already exists."
         case .invalidEmail:
