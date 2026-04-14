@@ -122,6 +122,11 @@ struct PingDetailView: View {
                 dismiss()
             }
         }
+        .onChange(of: blockService.blockedUserIds) { _, newValue in
+            if newValue.contains(viewModel.ping.creatorId) {
+                dismiss()
+            }
+        }
     }
 
     // MARK: - Actions
