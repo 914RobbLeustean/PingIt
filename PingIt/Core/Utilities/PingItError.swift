@@ -39,6 +39,7 @@ enum PingItError: LocalizedError {
     // Rate Limiting
     case pingRateLimitExceeded
     case messageRateLimitExceeded
+    case rateLimited(retryAfterMinutes: Int)
 
     // Location
     case locationPermissionDenied
@@ -123,6 +124,8 @@ enum PingItError: LocalizedError {
             "You've reached the ping creation limit. Please try again later."
         case .messageRateLimitExceeded:
             "You're sending messages too quickly. Please slow down."
+        case .rateLimited(let minutes):
+            "You're creating pings too quickly. Try again in \(minutes) minute\(minutes == 1 ? "" : "s")."
         case .locationPermissionDenied:
             "Location access is required. Please enable it in Settings."
         case .locationUnavailable:

@@ -13,6 +13,7 @@ struct PingItApp: App {
     @State private var contentModerationService = ContentModerationService()
     @State private var blockService = BlockService()
     @State private var reportService = ReportService()
+    @State private var rateLimitService = RateLimitService()
 
     var body: some Scene {
         WindowGroup {
@@ -25,6 +26,7 @@ struct PingItApp: App {
                 .environment(contentModerationService)
                 .environment(blockService)
                 .environment(reportService)
+                .environment(rateLimitService)
         }
     }
 }
