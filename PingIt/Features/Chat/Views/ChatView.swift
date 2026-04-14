@@ -1,5 +1,12 @@
 import SwiftUI
 
+private struct ReportTarget: Identifiable {
+    let id = UUID()
+    let type: Report.ReportTargetType
+    let targetId: String
+    let ownerId: String
+}
+
 struct ChatView: View {
     @Environment(AuthService.self) private var authService
     @Environment(ChatService.self) private var chatService
@@ -9,10 +16,7 @@ struct ChatView: View {
     @Environment(ReportService.self) private var reportService
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
-    @State private var reportTargetType: Report.ReportTargetType?
-    @State private var reportTargetId: String?
-    @State private var reportTargetOwnerId: String?
-    @State private var showReportSheet = false
+    @State private var reportTarget: ReportTarget?
 
     init(chatId: String, pingId: String) {
         self._viewModel = State(initialValue: ChatViewModel(chatId: chatId, pingId: pingId))
@@ -30,10 +34,11 @@ struct ChatView: View {
                             isCurrentUser: message.senderId == viewModel.currentUserId,
                             onReport: {
                                 if let id = message.id {
-                                    reportTargetType = .message
-                                    reportTargetId = id
-                                    reportTargetOwnerId = message.senderId
-                                    showReportSheet = true
+                                    reportTarget = ReportTarget(
+                                        type: .message,
+                                        targetId: id,
+                                        ownerId: message.senderId
+                                    )
                                 }
                             },
                             onBlock: {
@@ -98,16 +103,14 @@ struct ChatView: View {
         .onChange(of: viewModel.messages.count) { _, _ in
             scrollToBottom()
         }
-        .sheet(isPresented: $showReportSheet) {
-            if let type = reportTargetType, let id = reportTargetId, let ownerId = reportTargetOwnerId {
-                ReportView(
-                    targetType: type,
-                    targetId: id,
-                    targetOwnerId: ownerId,
-                    reportService: reportService,
-                    blockService: blockService
-                )
-            }
+        .sheet(item: $reportTarget) { target in
+            ReportView(
+                targetType: target.type,
+                targetId: target.targetId,
+                targetOwnerId: target.ownerId,
+                reportService: reportService,
+                blockService: blockService
+            )
         }
     }
 
