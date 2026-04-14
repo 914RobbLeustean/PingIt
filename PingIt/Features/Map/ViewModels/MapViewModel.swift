@@ -9,6 +9,7 @@ final class MapViewModel {
     private var listenerRegistration: ListenerHandle?
     private var isConfigured = false
 
+    private var allPings: [Ping] = []
     private(set) var pings: [Ping] = []
     private(set) var isLoading = false
     var errorMessage: String?
@@ -37,16 +38,21 @@ final class MapViewModel {
             Task { @MainActor [self] in
                 switch result {
                 case .success(let pings):
-                    self.pings = pings.filter { ping in
-                        ping.expiresAt > Date.now
-                        && !(self.blockService?.isBlocked(ping.creatorId) ?? false)
-                    }
+                    self.allPings = pings
+                    self.applyBlockFilter()
                     self.errorMessage = nil
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
                 self.isLoading = false
             }
+        }
+    }
+
+    func applyBlockFilter() {
+        pings = allPings.filter { ping in
+            ping.expiresAt > Date.now
+            && !(blockService?.isBlocked(ping.creatorId) ?? false)
         }
     }
 

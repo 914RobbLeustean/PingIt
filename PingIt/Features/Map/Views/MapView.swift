@@ -100,6 +100,9 @@ struct MapView: View {
             }
             .onAppear(perform: handleReappear)
             .onDisappear(perform: handleDisappear)
+            .onChange(of: blockService.blockedUserIds) { _, _ in
+                viewModel.applyBlockFilter()
+            }
             .onChange(of: viewModel.userLocation?.coordinate.latitude) { _, _ in
                 moveToUserLocation(viewModel.userLocation)
             }
