@@ -68,10 +68,7 @@ final class AuthService: AuthServicing {
         isLoading = true
         defer { isLoading = false }
 
-        do {
-            try await Auth.auth().sendPasswordReset(withEmail: email)
-        } catch {
-            throw PingItError.passwordResetFailed(underlying: error)
-        }
+        // Suppress errors to avoid email enumeration — always show success
+        try? await Auth.auth().sendPasswordReset(withEmail: email)
     }
 }

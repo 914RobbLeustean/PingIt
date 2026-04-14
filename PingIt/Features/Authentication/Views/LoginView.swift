@@ -32,6 +32,7 @@ struct LoginView: View {
             }
             .padding()
         }
+        .scrollDismissesKeyboard(.immediately)
         .navigationTitle("Sign In")
         .navigationBarTitleDisplayMode(.inline)
         .task {

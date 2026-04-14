@@ -6,6 +6,30 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-04-14] — Auth Screen Bug Fixes & Polish
+
+### Fixed
+- **Firebase error mapping:** Added `AuthErrorCode.invalidCredential` (code 17995) mapping to `.wrongPassword` and `.tooManyRequests` to `.networkError` in `PingItError.from(authError:)`. Updated `.wrongPassword` message to "Incorrect email or password." to cover both wrong password and invalid credential cases.
+- **Forgot password error suppression:** `AuthService.sendPasswordReset` now silently suppresses all errors (uses `try?`) to prevent email enumeration — success state is always shown. Message updated to "If an account exists for **[email]**, a reset link has been sent." so users can spot typos.
+- **Terms of Service link:** Replaced invisible `EmptyView` overlay with `NavigationLink("Terms of Service", value: AuthRoute.termsOfService)` in an `HStack` — the link is now actually tappable.
+- **`ForgotPasswordViewModel`:** Added missing `emailValidationMessage` computed property.
+- **`PingItTests.swift`:** Removed stale `UsernameValidationTests` struct referencing removed `LoginViewModel` properties (`username`, `isSignUp`, `isUsernameValid`).
+
+### Changed
+- **Scroll-to-dismiss keyboard:** Added `.scrollDismissesKeyboard(.immediately)` to `LoginView`, `RegisterView`, and `ForgotPasswordView` — consistent with `ChatView`, `ProfileView`, and `CreatePingView`.
+- **Email enumeration protection disabled** in Firebase console — `userNotFound` now returns a distinct error code, enabling the "No account found with this email." message on login.
+
+### Files modified
+- `PingIt/Core/Utilities/PingItError.swift`
+- `PingIt/Core/Services/AuthService.swift`
+- `PingIt/Features/Authentication/ViewModels/ForgotPasswordViewModel.swift`
+- `PingIt/Features/Authentication/Views/LoginView.swift`
+- `PingIt/Features/Authentication/Views/RegisterView.swift`
+- `PingIt/Features/Authentication/Views/ForgotPasswordView.swift`
+- `PingItTests/PingItTests.swift`
+
+---
+
 ## [2026-04-13] — Production-Ready Authentication Screens
 
 ### Summary

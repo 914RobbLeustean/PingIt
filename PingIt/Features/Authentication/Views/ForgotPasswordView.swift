@@ -24,72 +24,58 @@ struct ForgotPasswordView: View {
                 .padding(.top)
 
                 if viewModel.didSendReset {
-                    successView
+                    VStack(spacing: 16) {
+                        Image(systemName: "envelope.badge")
+                            .font(.largeTitle)
+                            .foregroundStyle(.green)
+                        Text("If an account exists for **\(self.viewModel.email)**, a reset link has been sent.")
+                            .font(.body)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
                 } else {
-                    resetForm(viewModel: viewModel)
+                    VStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            AuthTextField(
+                                title: "Email",
+                                text: $viewModel.email,
+                                icon: "envelope",
+                                validationState: viewModel.email.isEmpty ? nil : viewModel.isEmailValid ? .valid : .invalid,
+                                keyboardType: .emailAddress,
+                                textContentType: .emailAddress
+                            )
+                            if let message = self.viewModel.emailValidationMessage {
+                                Text(message)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                    .padding(.horizontal, 4)
+                            }
+                        }
+
+                        if let errorMessage = viewModel.errorMessage {
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        Button("Send Reset Link") {
+                            Task { await viewModel.sendReset() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .frame(maxWidth: .infinity)
+                        .disabled(!viewModel.canSubmit)
+                    }
                 }
             }
             .padding()
         }
+        .scrollDismissesKeyboard(.immediately)
         .navigationTitle("Forgot Password")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             viewModel.configure(authService: authService)
         }
-    }
-
-    private var successView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "envelope.badge.checkmark")
-                .font(.largeTitle)
-                .foregroundStyle(.green)
-            Text("Check your email for a reset link.")
-                .font(.body)
-                .multilineTextAlignment(.center)
-        }
-        .padding()
-    }
-
-    private func resetForm(viewModel: ForgotPasswordViewModel) -> some View {
-        @Bindable var viewModel = viewModel
-
-        return VStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                AuthTextField(
-                    title: "Email",
-                    text: $viewModel.email,
-                    icon: "envelope",
-                    validationState: emailValidationState(viewModel: viewModel),
-                    keyboardType: .emailAddress,
-                    textContentType: .emailAddress
-                )
-                if let message = viewModel.emailValidationMessage {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .padding(.horizontal, 4)
-                }
-            }
-
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Button("Send Reset Link") {
-                Task { await viewModel.sendReset() }
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .frame(maxWidth: .infinity)
-            .disabled(!viewModel.canSubmit)
-        }
-    }
-
-    private func emailValidationState(viewModel: ForgotPasswordViewModel) -> ValidationState? {
-        guard !viewModel.email.isEmpty else { return nil }
-        return viewModel.isEmailValid ? .valid : .invalid
     }
 }

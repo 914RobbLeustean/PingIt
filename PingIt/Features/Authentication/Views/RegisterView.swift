@@ -33,6 +33,7 @@ struct RegisterView: View {
             }
             .padding()
         }
+        .scrollDismissesKeyboard(.immediately)
         .navigationTitle("Create Account")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -142,16 +143,15 @@ struct RegisterView: View {
                 viewModel.hasAcceptedTerms.toggle()
             }
             .labelStyle(.iconOnly)
-            .foregroundStyle(viewModel.hasAcceptedTerms ? .accentColor : .secondary)
+            .foregroundStyle(viewModel.hasAcceptedTerms ? Color.accentColor : .secondary)
 
-            (Text("I agree to the ") + Text("Terms of Service").underline().foregroundStyle(.accentColor))
-                .font(.subheadline)
-                .overlay {
-                    NavigationLink(value: AuthRoute.termsOfService) {
-                        EmptyView()
-                    }
-                    .opacity(0)
-                }
+            HStack(spacing: 4) {
+                Text("I agree to the")
+                    .font(.subheadline)
+                NavigationLink("Terms of Service", value: AuthRoute.termsOfService)
+                    .font(.subheadline)
+                    .underline()
+            }
         }
     }
 

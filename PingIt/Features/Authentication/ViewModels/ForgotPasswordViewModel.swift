@@ -15,6 +15,11 @@ final class ForgotPasswordViewModel {
         !email.isEmpty && email.range(of: Constants.Email.validationPattern, options: .regularExpression) != nil
     }
 
+    var emailValidationMessage: String? {
+        guard !email.isEmpty else { return nil }
+        return isEmailValid ? nil : "Enter a valid email address"
+    }
+
     var canSubmit: Bool {
         isEmailValid && !isLoading
     }

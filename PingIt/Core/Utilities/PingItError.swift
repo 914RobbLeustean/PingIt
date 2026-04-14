@@ -72,7 +72,7 @@ enum PingItError: LocalizedError {
         case .userNotFound:
             "No account found with this email."
         case .wrongPassword:
-            "Incorrect password. Please try again."
+            "Incorrect email or password. Please try again."
         case .networkError:
             "A network error occurred. Please check your connection and try again."
         case .pingTextTooLong:
@@ -144,6 +144,11 @@ enum PingItError: LocalizedError {
         case .wrongPassword:
             return .wrongPassword
         case .networkError:
+            return .networkError
+        case .invalidCredential:
+            // Returned when email+password combination is incorrect
+            return .wrongPassword
+        case .tooManyRequests:
             return .networkError
         default:
             return .signInFailed(underlying: authError)
