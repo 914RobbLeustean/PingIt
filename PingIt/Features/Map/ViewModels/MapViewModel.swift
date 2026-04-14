@@ -31,7 +31,7 @@ final class MapViewModel {
             Task { @MainActor [self] in
                 switch result {
                 case .success(let pings):
-                    self.pings = pings
+                    self.pings = pings.filter { $0.expiresAt > Date.now }
                     self.errorMessage = nil
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
