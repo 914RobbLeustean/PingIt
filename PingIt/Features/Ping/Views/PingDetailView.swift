@@ -74,7 +74,7 @@ struct PingDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $navigateToChat) {
             if let chatId = viewModel.ping.chatId {
-                ChatView(chatId: chatId, pingId: viewModel.ping.id ?? "")
+                ChatView(chatId: chatId, pingId: viewModel.ping.id ?? "", pingCreatorId: viewModel.ping.creatorId)
             }
         }
         .alert("Delete this ping?", isPresented: $showDeleteConfirmation) {

@@ -14,11 +14,15 @@ struct ChatView: View {
     @Environment(BlockService.self) private var blockService
     @Environment(RateLimitService.self) private var rateLimitService
     @Environment(ReportService.self) private var reportService
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
     @State private var reportTarget: ReportTarget?
 
-    init(chatId: String, pingId: String) {
+    let pingCreatorId: String
+
+    init(chatId: String, pingId: String, pingCreatorId: String) {
+        self.pingCreatorId = pingCreatorId
         self._viewModel = State(initialValue: ChatViewModel(chatId: chatId, pingId: pingId))
     }
 
@@ -102,6 +106,11 @@ struct ChatView: View {
         }
         .onChange(of: viewModel.messages.count) { _, _ in
             scrollToBottom()
+        }
+        .onChange(of: blockService.blockedUserIds) { _, newValue in
+            if newValue.contains(pingCreatorId) {
+                dismiss()
+            }
         }
         .sheet(item: $reportTarget) { target in
             ReportView(
