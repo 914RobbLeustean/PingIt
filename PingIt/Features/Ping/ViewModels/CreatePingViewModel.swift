@@ -8,6 +8,7 @@ final class CreatePingViewModel {
     private var pingService: (any PingServicing)?
     private var chatService: (any ChatServicing)?
     private var locationService: (any LocationServicing)?
+    private var contentModerationService: (any ContentModeratingServicing)?
     private var isConfigured = false
 
     var text = ""
@@ -50,13 +51,15 @@ final class CreatePingViewModel {
         authService: any AuthServicing,
         pingService: any PingServicing,
         chatService: any ChatServicing,
-        locationService: any LocationServicing
+        locationService: any LocationServicing,
+        contentModerationService: any ContentModeratingServicing
     ) {
         guard !isConfigured else { return }
         self.authService = authService
         self.pingService = pingService
         self.chatService = chatService
         self.locationService = locationService
+        self.contentModerationService = contentModerationService
         isConfigured = true
     }
 
@@ -82,6 +85,13 @@ final class CreatePingViewModel {
             }
             guard trimmed.count <= Constants.Ping.maxTextLength else {
                 throw PingItError.pingTextTooLong
+            }
+
+            if let moderationService = contentModerationService {
+                let result = moderationService.check(trimmed)
+                if case .blocked(let reason) = result {
+                    throw PingItError.contentModerated(reason: reason)
+                }
             }
 
             guard let coordinate = selectedLocation else {

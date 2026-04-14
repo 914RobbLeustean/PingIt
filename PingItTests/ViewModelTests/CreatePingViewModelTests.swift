@@ -13,14 +13,16 @@ struct CreatePingViewModelTests {
         authService: MockAuthService = MockAuthService(),
         pingService: MockPingService = MockPingService(),
         chatService: MockChatService = MockChatService(),
-        locationService: MockLocationService = MockLocationService()
+        locationService: MockLocationService = MockLocationService(),
+        contentModerationService: MockContentModerationService = MockContentModerationService()
     ) -> CreatePingViewModel {
         let vm = CreatePingViewModel()
         vm.configure(
             authService: authService,
             pingService: pingService,
             chatService: chatService,
-            locationService: locationService
+            locationService: locationService,
+            contentModerationService: contentModerationService
         )
         return vm
     }
@@ -118,7 +120,7 @@ struct CreatePingViewModelTests {
         mockLocation.boundaryResult = true
 
         let vm = CreatePingViewModel()
-        vm.configure(authService: mockAuth, pingService: mockPing, chatService: mockChat, locationService: mockLocation)
+        vm.configure(authService: mockAuth, pingService: mockPing, chatService: mockChat, locationService: mockLocation, contentModerationService: MockContentModerationService())
         vm.text = "Test ping"
         vm.selectedLocation = Constants.Cluj.center
 
@@ -200,5 +202,38 @@ struct CreatePingViewModelTests {
 
         #expect(vm.didCreatePing == false)
         #expect(vm.errorMessage != nil)
+    }
+
+    // MARK: - Content Moderation
+
+    @Test("Moderated text prevents ping creation")
+    func moderatedTextBlocksPingCreation() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: true)
+        mockAuth.isEmailVerified = true
+        let mockPing = MockPingService()
+        let mockChat = MockChatService()
+        let mockLocation = MockLocationService()
+        mockLocation.boundaryResult = true
+        let mockModeration = MockContentModerationService()
+        mockModeration.resultToReturn = .blocked(reason: "Violates community guidelines.")
+
+        let vm = CreatePingViewModel()
+        vm.configure(
+            authService: mockAuth,
+            pingService: mockPing,
+            chatService: mockChat,
+            locationService: mockLocation,
+            contentModerationService: mockModeration
+        )
+        vm.text = "Bad content"
+        vm.selectedLocation = Constants.Cluj.center
+
+        await vm.createPing()
+
+        #expect(vm.didCreatePing == false)
+        #expect(vm.errorMessage != nil)
+        #expect(mockModeration.checkCalled == true)
+        #expect(mockPing.createPingWithChatCalled == false)
     }
 }

@@ -10,11 +10,12 @@ struct ChatViewModelTests {
     private func makeVM(
         authService: MockAuthService = MockAuthService(),
         chatService: MockChatService = MockChatService(),
+        contentModerationService: MockContentModerationService = MockContentModerationService(),
         chatId: String = "chat-1",
         pingId: String = "ping-1"
     ) -> ChatViewModel {
         let vm = ChatViewModel(chatId: chatId, pingId: pingId)
-        vm.configure(authService: authService, chatService: chatService)
+        vm.configure(authService: authService, chatService: chatService, contentModerationService: contentModerationService)
         return vm
     }
 
@@ -138,7 +139,7 @@ struct ChatViewModelTests {
         let mockChat = MockChatService()
 
         let vm = ChatViewModel(chatId: "chat1", pingId: "ping1")
-        vm.configure(authService: mockAuth, chatService: mockChat)
+        vm.configure(authService: mockAuth, chatService: mockChat, contentModerationService: MockContentModerationService())
         vm.messageText = "Hello"
 
         await vm.sendMessage()
@@ -172,5 +173,27 @@ struct ChatViewModelTests {
         await vm.sendMessage()
 
         #expect(vm.errorMessage != nil)
+    }
+
+    // MARK: - Content Moderation
+
+    @Test("Moderated text prevents sending message")
+    func moderatedTextBlocksMessageSending() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: true)
+        mockAuth.isEmailVerified = true
+        let mockChat = MockChatService()
+        let mockModeration = MockContentModerationService()
+        mockModeration.resultToReturn = .blocked(reason: "Violates community guidelines.")
+
+        let vm = ChatViewModel(chatId: "chat1", pingId: "ping1")
+        vm.configure(authService: mockAuth, chatService: mockChat, contentModerationService: mockModeration)
+        vm.messageText = "Bad word"
+
+        await vm.sendMessage()
+
+        #expect(vm.errorMessage != nil)
+        #expect(mockModeration.checkCalled == true)
+        #expect(mockChat.sendMessageCalled == false)
     }
 }

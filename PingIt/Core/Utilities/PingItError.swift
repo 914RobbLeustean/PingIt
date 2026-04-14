@@ -44,6 +44,9 @@ enum PingItError: LocalizedError {
     case locationPermissionDenied
     case locationUnavailable
 
+    // Content Moderation
+    case contentModerated(reason: String)
+
     // Profile
     case usernameTooShort
     case usernameTooLong
@@ -129,6 +132,8 @@ enum PingItError: LocalizedError {
             "Failed to upload profile image: \(error.localizedDescription)"
         case .profileUpdateFailed(let error):
             "Failed to update profile: \(error.localizedDescription)"
+        case .contentModerated(let reason):
+            reason
         }
     }
 

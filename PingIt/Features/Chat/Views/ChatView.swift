@@ -3,6 +3,7 @@ import SwiftUI
 struct ChatView: View {
     @Environment(AuthService.self) private var authService
     @Environment(ChatService.self) private var chatService
+    @Environment(ContentModerationService.self) private var contentModerationService
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
 
@@ -63,7 +64,7 @@ struct ChatView: View {
         .navigationTitle("Chat")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            viewModel.configure(authService: authService, chatService: chatService)
+            viewModel.configure(authService: authService, chatService: chatService, contentModerationService: contentModerationService)
             viewModel.startObserving()
             await viewModel.joinChat()
         }

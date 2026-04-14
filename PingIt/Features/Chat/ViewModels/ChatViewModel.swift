@@ -4,6 +4,7 @@ import Foundation
 final class ChatViewModel {
     private var authService: (any AuthServicing)?
     private var chatService: (any ChatServicing)?
+    private var contentModerationService: (any ContentModeratingServicing)?
     private var listenerRegistration: ListenerHandle?
     private var isConfigured = false
 
@@ -31,10 +32,15 @@ final class ChatViewModel {
         self.pingId = pingId
     }
 
-    func configure(authService: any AuthServicing, chatService: any ChatServicing) {
+    func configure(
+        authService: any AuthServicing,
+        chatService: any ChatServicing,
+        contentModerationService: (any ContentModeratingServicing)? = nil
+    ) {
         guard !isConfigured else { return }
         self.authService = authService
         self.chatService = chatService
+        self.contentModerationService = contentModerationService
         isConfigured = true
     }
 
@@ -89,6 +95,14 @@ final class ChatViewModel {
         guard authService?.isEmailVerified == true else {
             errorMessage = PingItError.emailNotVerified.localizedDescription
             return
+        }
+
+        if let moderationService = contentModerationService {
+            let result = moderationService.check(messageText.trimmingCharacters(in: .whitespacesAndNewlines))
+            if case .blocked(let reason) = result {
+                errorMessage = reason
+                return
+            }
         }
 
         let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
