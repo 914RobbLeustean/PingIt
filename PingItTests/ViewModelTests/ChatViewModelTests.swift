@@ -11,11 +11,12 @@ struct ChatViewModelTests {
         authService: MockAuthService = MockAuthService(),
         chatService: MockChatService = MockChatService(),
         contentModerationService: MockContentModerationService = MockContentModerationService(),
+        rateLimitService: MockRateLimitService = MockRateLimitService(),
         chatId: String = "chat-1",
         pingId: String = "ping-1"
     ) -> ChatViewModel {
         let vm = ChatViewModel(chatId: chatId, pingId: pingId)
-        vm.configure(authService: authService, chatService: chatService, contentModerationService: contentModerationService)
+        vm.configure(authService: authService, chatService: chatService, contentModerationService: contentModerationService, rateLimitService: rateLimitService)
         return vm
     }
 

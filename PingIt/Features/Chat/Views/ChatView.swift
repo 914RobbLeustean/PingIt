@@ -5,6 +5,7 @@ struct ChatView: View {
     @Environment(ChatService.self) private var chatService
     @Environment(ContentModerationService.self) private var contentModerationService
     @Environment(BlockService.self) private var blockService
+    @Environment(RateLimitService.self) private var rateLimitService
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
     @State private var reportTargetType: Report.ReportTargetType?
@@ -80,7 +81,7 @@ struct ChatView: View {
         .navigationTitle("Chat")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            viewModel.configure(authService: authService, chatService: chatService, contentModerationService: contentModerationService, blockService: blockService)
+            viewModel.configure(authService: authService, chatService: chatService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService)
             viewModel.startObserving()
             await viewModel.joinChat()
         }
