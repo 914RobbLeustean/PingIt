@@ -121,7 +121,7 @@ final class CreatePingViewModel {
                     longitude: coordinate.longitude
                 ),
                 geohash: "",
-                expiresAt: Date.now.addingTimeInterval(selectedExpiration),
+                expiresAt: ServerTime.now.addingTimeInterval(selectedExpiration),
                 status: .active
             )
 

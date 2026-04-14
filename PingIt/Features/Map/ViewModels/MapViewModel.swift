@@ -51,7 +51,7 @@ final class MapViewModel {
 
     func applyBlockFilter() {
         pings = allPings.filter { ping in
-            ping.expiresAt > Date.now
+            ping.expiresAt > ServerTime.now
             && !(blockService?.isBlocked(ping.creatorId) ?? false)
         }
     }

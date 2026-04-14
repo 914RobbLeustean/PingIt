@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3AD4E8702F8EE9C500BBD1D9 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 3AD4E86F2F8EE9C500BBD1D9 /* FirebaseDatabase */; };
 		3AD97F362F78A0B600C56A39 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 3AD97F352F78A0B600C56A39 /* FirebaseAuth */; };
 		3AD97F382F78A0B600C56A39 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3AD97F372F78A0B600C56A39 /* FirebaseFirestore */; };
 		3AD97F3A2F78A0B600C56A39 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 3AD97F392F78A0B600C56A39 /* FirebaseStorage */; };
@@ -73,6 +74,7 @@
 			files = (
 				3AD97F362F78A0B600C56A39 /* FirebaseAuth in Frameworks */,
 				3AD97F382F78A0B600C56A39 /* FirebaseFirestore in Frameworks */,
+				3AD4E8702F8EE9C500BBD1D9 /* FirebaseDatabase in Frameworks */,
 				3AD97F3A2F78A0B600C56A39 /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -100,6 +102,7 @@
 				3A1E75C12F787EB400A2237A /* PingIt */,
 				3A1E75CF2F787EB500A2237A /* PingItTests */,
 				3A1E75D92F787EB500A2237A /* PingItUITests */,
+				3AD4E86A2F8EE8B000BBD1D9 /* Frameworks */,
 				3A1E75C02F787EB400A2237A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -112,6 +115,13 @@
 				3A1E75D62F787EB500A2237A /* PingItUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		3AD4E86A2F8EE8B000BBD1D9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -137,6 +147,7 @@
 				3AD97F352F78A0B600C56A39 /* FirebaseAuth */,
 				3AD97F372F78A0B600C56A39 /* FirebaseFirestore */,
 				3AD97F392F78A0B600C56A39 /* FirebaseStorage */,
+				3AD4E86F2F8EE9C500BBD1D9 /* FirebaseDatabase */,
 			);
 			productName = PingIt;
 			productReference = 3A1E75BF2F787EB400A2237A /* PingIt.app */;
@@ -625,6 +636,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		3AD4E86F2F8EE9C500BBD1D9 /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
 		3AD97F352F78A0B600C56A39 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

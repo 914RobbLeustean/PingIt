@@ -43,12 +43,7 @@ struct ProfileView: View {
                             LabeledContent("Email", value: viewModel.user?.email ?? "")
 
                             if let createdAt = viewModel.user?.createdAt {
-                                LabeledContent("Member since", value: createdAt.formatted(
-                                    Date.FormatStyle(timeZone: TimeZone(identifier: "Europe/Bucharest") ?? .current)
-                                        .day()
-                                        .month(.abbreviated)
-                                        .year()
-                                ))
+                                LabeledContent("Member since", value: createdAt.formatted(date: .abbreviated, time: .omitted))
                             }
                         }
 

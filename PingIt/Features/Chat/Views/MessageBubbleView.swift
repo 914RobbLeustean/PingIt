@@ -29,10 +29,7 @@ struct MessageBubbleView: View {
                     }
 
                 if let createdAt = message.createdAt {
-                    let style = Date.FormatStyle(timeZone: TimeZone(identifier: "Europe/Bucharest") ?? .current)
-                        .hour()
-                        .minute()
-                    Text(createdAt.formatted(style))
+                    Text(createdAt.formatted(date: .omitted, time: .shortened))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

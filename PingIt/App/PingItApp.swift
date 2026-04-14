@@ -3,7 +3,10 @@ import FirebaseCore
 
 @main
 struct PingItApp: App {
-    static let configuredFirebase: Void = { FirebaseApp.configure() }()
+    static let configuredFirebase: Void = {
+        FirebaseApp.configure()
+        ServerTime.startObserving()
+    }()
 
     @State private var authService = { _ = PingItApp.configuredFirebase; return AuthService() }()
     @State private var pingService = PingService()
