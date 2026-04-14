@@ -5,12 +5,15 @@ import FirebaseFirestore
 struct MapView: View {
     @Environment(PingService.self) private var pingService
     @Environment(LocationService.self) private var locationService
+    @Environment(AuthService.self) private var authService
     @State private var viewModel = MapViewModel()
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
     @State private var showCreatePing = false
     @State private var selectedPing: Ping?
     @State private var createdPingLocation: CLLocationCoordinate2D?
+    @State private var showVerificationBanner = true
+    @State private var isResendingVerification = false
 
     private static let clujRegion = MKCoordinateRegion(
         center: Constants.Cluj.center,
@@ -57,6 +60,17 @@ struct MapView: View {
                 } else if viewModel.isLoading {
                     ProgressView()
                 }
+
+                if !authService.isEmailVerified && showVerificationBanner {
+                    VStack {
+                        EmailVerificationBannerView(
+                            onResend: handleResendVerification,
+                            onDismiss: { showVerificationBanner = false }
+                        )
+                        Spacer()
+                    }
+                    .padding(.top)
+                }
             }
             .navigationTitle("Map")
             .toolbar {
@@ -86,6 +100,14 @@ struct MapView: View {
     }
 
     // MARK: - Actions
+
+    private func handleResendVerification() {
+        Task {
+            isResendingVerification = true
+            defer { isResendingVerification = false }
+            try? await authService.sendEmailVerification()
+        }
+    }
 
     private func handleCreatePingTap() {
         showCreatePing = true
