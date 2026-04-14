@@ -63,7 +63,7 @@ PingIt/
 
 **Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
 
-### Actual File Listing (as of 2026-04-14)
+### Actual File Listing (as of 2026-04-15)
 
 ```
 PingIt/
@@ -85,11 +85,11 @@ PingIt/
 │   │   ├── AuthUserRepresentable.swift                  Minimal user identity (uid, isEmailVerified)
 │   │   ├── FirebaseUser+AuthUserRepresentable.swift     Firebase conformance
 │   │   ├── AuthServicing.swift                          Auth service contract (+ isEmailVerified, sendEmailVerification, reloadUser)
-│   │   ├── PingServicing.swift                          Ping service contract
+│   │   ├── PingServicing.swift                          Ping service contract (+ observePing for single-doc listener)
 │   │   ├── ChatServicing.swift                          Chat service contract
 │   │   ├── UserServicing.swift                          User service contract
 │   │   ├── LocationServicing.swift                      Location service contract
-│   │   ├── BlockServicing.swift                         Block/unblock, bidirectional filtering
+│   │   ├── BlockServicing.swift                         Block/unblock, real-time bidirectional listeners
 │   │   ├── ContentModeratingServicing.swift             Text moderation (check → .allowed/.blocked)
 │   │   ├── RateLimitServicing.swift                     Ping + message rate limiting
 │   │   └── ReportServicing.swift                        Submit report to Firestore
@@ -99,14 +99,15 @@ PingIt/
 │   │   ├── ChatService.swift            Messages, participants, snapshot listener
 │   │   ├── UserService.swift            User profile CRUD
 │   │   ├── LocationService.swift        CLLocationManager, GeoJSON boundary check
-│   │   ├── BlockService.swift           @Observable @MainActor; bidirectional Firestore blocking
+│   │   ├── BlockService.swift           @Observable @MainActor; two Firestore snapshot listeners for real-time bidirectional blocking
 │   │   ├── ContentModerationService.swift  Bundle wordlist, localizedStandardContains matching
 │   │   ├── RateLimitService.swift       UserDefaults-backed limits; #if DEBUG bypass
 │   │   └── ReportService.swift          Writes Report documents to Firestore
 │   └── Utilities/
 │       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts)
 │       ├── PingItError.swift            Typed error enum (+ emailNotVerified, contentModerated, blockFailed, reportFailed, rateLimited, etc.)
-│       ├── Date+Extensions.swift        Countdown, relative formatting
+│       ├── Date+Extensions.swift        Countdown (ServerTime-corrected), relative formatting
+│       ├── ServerTime.swift             Firebase RTDB .info/serverTimeOffset for clock sync
 │       └── GeoJSONBoundaryValidator.swift  Ray casting point-in-polygon
 ├── Features/
 │   ├── Authentication/
@@ -138,7 +139,7 @@ PingIt/
 │   ├── Ping/
 │   │   ├── ViewModels/
 │   │   │   ├── CreatePingViewModel.swift   Validation, moderation, rate limit, location, Firestore write
-│   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete
+│   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete, ping document listener
 │   │   └── Views/
 │   │       ├── CreatePingView.swift        Form: text, location picker, expiration
 │   │       ├── PingDetailView.swift        Detail with creator, countdown, actions, report/block buttons
@@ -148,10 +149,10 @@ PingIt/
 │   │       └── PingDetailActionSection.swift   Join chat + delete buttons
 │   ├── Chat/
 │   │   ├── ViewModels/
-│   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked
+│   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked; ping doc listener; user profile cache
 │   │   └── Views/
-│   │       ├── ChatView.swift              Real-time message list + input, report sheet
-│   │       └── MessageBubbleView.swift     Sender-aligned message bubble with report/block context menu
+│   │       ├── ChatView.swift              Real-time message list + input, report sheet, ping unavailable dismiss
+│   │       └── MessageBubbleView.swift     Sender avatar + username, grouped bubbles, report/block context menu
 │   ├── Report/
 │   │   ├── ViewModels/
 │   │   │   └── ReportViewModel.swift       Reason selection, submit, block offer after success
@@ -312,14 +313,15 @@ ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls�
 | Service | Responsibility | Status |
 |---------|---------------|--------|
 | **AuthService** | Sign up, sign in, sign out, password reset, session state, email verification | Implemented |
-| **PingService** | Ping CRUD, geospatial queries, real-time listener | Implemented |
+| **PingService** | Ping CRUD, geospatial queries, real-time listener, single-doc observer | Implemented |
 | **ChatService** | Messages, snapshot listeners, participant tracking | Implemented |
 | **UserService** | Profile read/write | Implemented |
 | **LocationService** | CLLocationManager wrapper, boundary check | Implemented |
-| **BlockService** | Bidirectional user blocking, Firestore CRUD, in-memory filtered set | Implemented |
+| **BlockService** | Real-time bidirectional blocking via two Firestore snapshot listeners, optimistic local updates | Implemented |
 | **ContentModerationService** | Bundle wordlist check, returns `.allowed`/`.blocked(reason:)` | Implemented |
 | **RateLimitService** | UserDefaults-backed ping + message rate limiting, `#if DEBUG` bypass | Implemented |
 | **ReportService** | Writes `Report` documents to Firestore `reports` collection | Implemented |
+| **ServerTime** | Firebase RTDB `.info/serverTimeOffset` for clock-skew correction; `ServerTime.now` | Implemented (utility enum) |
 | **NotificationService** | FCM token registration, notification handling | Not yet created (Phase 1 Sprint 2+) |
 
 ### Service Injection Pattern

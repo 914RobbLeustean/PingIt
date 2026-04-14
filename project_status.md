@@ -42,13 +42,16 @@
 - **Auth screens production-ready (2026-04-13):** Welcome + Login + Register + ForgotPassword screens with full navigation (AuthRoute + NavigationStack). Password strength indicator (PasswordValidator), client-side email & password validation, unique username check (debounced Firestore query), confirm password, ToS checkbox, show/hide password, Firebase error mapping to user-friendly messages. Shared components: AuthTextField, AuthSecureField, PasswordStrengthView. New VMs: RegisterViewModel, ForgotPasswordViewModel. ~25 new ViewModel + validator unit tests.
 
 ## Completed (Phase 1 — Sprint 1: Client-Side Safety)
-- **Phase 1 Sprint 1 (2026-04-14):** Full client-side safety layer without Cloud Functions.
-  - **Email Verification:** `AuthServicing` extended with `isEmailVerified`, `sendEmailVerification()`, `reloadUser()`. CreatePingViewModel and ChatViewModel gate actions behind email verification. MapView shows dismissable `EmailVerificationBannerView` for unverified users with resend action.
+- **Phase 1 Sprint 1 (2026-04-14 to 2026-04-15):** Full client-side safety layer without Cloud Functions.
+  - **Email Verification:** `AuthServicing` extended with `isEmailVerified`, `sendEmailVerification()`, `reloadUser()`. CreatePingViewModel and ChatViewModel gate actions behind email verification. MapView shows dismissable `EmailVerificationBannerView` for unverified users with resend action. Banner polls `reloadUser()` every 5s and auto-hides when verified.
   - **Text Content Moderation:** `ContentModerationService` with bundle-loaded wordlist (`moderation_wordlist.txt`), `localizedStandardContains()` matching. Blocks ping creation and message sending.
-  - **User Blocking:** `BlockService` with bidirectional Firestore blocking (blocker + blocked both filtered), `blockedUserIds: Set<String>` loaded on launch. MapViewModel filters blocked creators' pings. ChatViewModel filters blocked senders' messages. `BlockedUsersView` + `BlockedUsersViewModel` in Settings.
-  - **User Reporting:** `ReportService` writes to Firestore `reports` collection. `ReportView` + `ReportViewModel` with reason picker, details field, block offer after success. Accessible from PingDetailView (ping report) and ChatView message context menu (message report).
+  - **User Blocking:** `BlockService` with real-time bidirectional Firestore listeners (two snapshot listeners: `blockerId == me` and `blockedUserId == me`). Enforcement is instant — when UserA blocks UserB, UserB's listener fires and UserA's pings/messages disappear within seconds. MapViewModel and ChatViewModel re-filter reactively via `onChange(of: blockedUserIds)`. Blocking from chat auto-dismisses ChatView + PingDetailView back to map. Duplicate blocks prevented (idempotent). `BlockedUsersView` + `BlockedUsersViewModel` in Settings.
+  - **User Reporting:** `ReportService` writes to Firestore `reports` collection with duplicate prevention (queries before writing, throws `reportAlreadySubmitted`). `ReportView` accepts services via init (not @Environment — fixes blank sheet in navigation stacks). `ReportViewModel` with reason picker, details field, block offer after success. `onDidBlock` callback auto-dismisses parent views.
   - **Spam Detection (Client-Side):** `RateLimitService` with UserDefaults-backed hourly (5/hr) + daily (10/day) ping limits, per-10-seconds (6) message limit. `#if DEBUG` bypass for testing.
-  - **Expired Ping Filtering:** MapViewModel filters pings where `expiresAt <= Date.now` client-side.
+  - **Expired Ping Filtering:** MapViewModel filters pings where `expiresAt <= ServerTime.now` client-side.
+  - **Server Time Sync:** `ServerTime` utility using Firebase Realtime Database `.info/serverTimeOffset` for consistent cross-device clocks. All countdown, expiration, and ping creation logic uses `ServerTime.now`.
+  - **Ping Lifecycle Awareness:** PingDetailView and ChatView observe the ping document via Firestore listener. Deleted or expired pings show "Ping Unavailable" alert and dismiss viewers back to map. Creator's own deletes skip the alert.
+  - **Chat Sender Identity:** MessageBubbleView shows sender avatar (AsyncImage + initial-letter fallback) and username. Consecutive messages from same sender grouped (avatar/name on first only). ChatViewModel caches User profiles per sender ID.
 
 ## In Progress
 _Nothing actively in progress._
@@ -86,7 +89,6 @@ _Nothing actively in progress._
 - [x] Real-Time Message Updates
 
 ### Phase 1: Safety & Discovery (16 features)
-- [ ] Automated Image/Video Filtering
 - [ ] Automated Image/Video Filtering
 - [x] Text Content Moderation
 - [x] User Report System

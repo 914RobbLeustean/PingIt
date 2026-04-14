@@ -6,6 +6,68 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-04-15] — Sprint 1 Bugfixes, Polish & Chat Sender Identity
+
+### Summary
+Comprehensive bugfix pass on all Sprint 1 safety features after device testing. Added Firebase RTDB server time sync, real-time bidirectional block enforcement, ping lifecycle awareness (deleted/expired ping detection), and chat sender identity (avatar + username on messages).
+
+### Fixed
+- **Email verification banner** now polls `reloadUser()` every 5s and auto-hides when email is verified (no sign-out/in needed)
+- **Block persistence across relaunch**: MapViewModel stores `allPings` and re-filters reactively via `onChange(of: blockService.blockedUserIds)` — no longer depends on load ordering
+- **Duplicate block entries**: `blockUser()` is idempotent (skips write if already in `blockedUserIds`)
+- **Chat block instant update**: ChatViewModel stores `allMessages` + `applyBlockFilter()` called after blocking
+- **Chat block auto-dismiss**: ChatView observes `blockedUserIds` and dismisses when ping creator is blocked; PingDetailView also observes and pops via `navigateToChat = false` + `dismiss()`
+- **ReportView blank white screen**: Refactored to accept `reportService` + `blockService` via init (not `@Environment` which doesn't propagate into `.sheet`). ChatView uses `sheet(item:)` with single `ReportTarget` struct instead of three optional `@State` vars
+- **Auto-dismiss PingDetailView after report+block**: `ReportView` accepts `onDidBlock` callback
+- **Duplicate reports prevented**: `ReportService` queries Firestore before writing, throws `reportAlreadySubmitted`
+- **Server time consistency**: Added `ServerTime` utility using Firebase RTDB `.info/serverTimeOffset`. All countdowns, expiration filters, and ping creation use `ServerTime.now` instead of `Date.now`
+- **Ping deletion — creator no longer sees "unavailable" alert**: `didDeletePing` set before Firestore delete to avoid race with snapshot listener
+- **Ping deletion — chat participant alerted**: ChatViewModel observes ping document; shows "Ping Unavailable" alert in ChatView, silently dismisses to PingDetailView which shows single alert then pops to map
+
+### Added
+- **`ServerTime.swift`** — Firebase RTDB `.info/serverTimeOffset` observer; `ServerTime.now` corrected current time
+- **`PingServicing.observePing(id:onUpdate:)`** — Single-document Firestore snapshot listener
+- **Real-time bidirectional block enforcement** — BlockService uses two Firestore snapshot listeners (`blockerId == me`, `blockedUserId == me`). When UserA blocks UserB, UserB's listener fires immediately.
+- **Ping lifecycle observation** — PingDetailViewModel and ChatViewModel observe the ping document; detect deletion/expiration in real-time
+- **Chat sender identity** — MessageBubbleView shows circular avatar (AsyncImage + initial-letter fallback) and bold username for other users. Consecutive same-sender messages grouped (avatar/name on first only). ChatViewModel caches User profiles per sender ID.
+
+### Changed
+- **`BlockService`** — Replaced one-time `loadBlockedUsers()` with `startObserving()`/`stopObserving()` using two Firestore snapshot listeners; `isolated deinit` for Swift 6.2 compatibility
+- **`BlockServicing` protocol** — `loadBlockedUsers()` → `startObserving()`/`stopObserving()`
+- **`MainTabView`** — Calls `blockService.startObserving()` instead of `loadBlockedUsers()`
+- **`ChatViewModel`** — Added `pingService`, `userService`, `pingListener`, `userCache`, `pingUnavailable`, `isFirstInGroup()`, `fetchMissingUsers()`
+- **`ChatView`** — Accepts `pingCreatorId`; observes `blockedUserIds` and `pingUnavailable` for auto-dismiss
+- **`PingDetailView`** — Observes `blockedUserIds` (pops on block) and `pingUnavailable` (alert + dismiss); uses `@Bindable`
+- **`PingDetailViewModel`** — Added `pingListener`, `pingUnavailable`, `startObservingPing()`, `stopObservingPing()`
+- **`MapViewModel`** — Stores `allPings`, derives `pings` via `applyBlockFilter()`; `onChange` in MapView triggers re-filter
+- **`MessageBubbleView`** — Complete rewrite: sender avatar, username, grouped messages, alignment with invisible spacers
+- **`PingItApp`** — Calls `ServerTime.startObserving()` at launch; added `FirebaseDatabase` SPM dependency
+- **`Date+Extensions`** — `countdownDescription` uses `ServerTime.now`; `relativeDescription` corrects for clock offset
+
+### Files created
+- `PingIt/Core/Utilities/ServerTime.swift`
+
+### Files significantly modified
+- `PingIt/Core/Services/BlockService.swift` (rewritten: snapshot listeners)
+- `PingIt/Core/Protocols/BlockServicing.swift`
+- `PingIt/Core/Services/ReportService.swift` (duplicate prevention)
+- `PingIt/Core/Services/PingService.swift` (+ observePing)
+- `PingIt/Core/Protocols/PingServicing.swift`
+- `PingIt/Features/Chat/Views/ChatView.swift`
+- `PingIt/Features/Chat/Views/MessageBubbleView.swift` (rewritten)
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift`
+- `PingIt/Features/Ping/Views/PingDetailView.swift`
+- `PingIt/Features/Ping/ViewModels/PingDetailViewModel.swift`
+- `PingIt/Features/Map/Views/MapView.swift`
+- `PingIt/Features/Map/ViewModels/MapViewModel.swift`
+- `PingIt/Features/Report/Views/ReportView.swift`
+- `PingIt/App/PingItApp.swift`
+- `PingIt/App/MainTabView.swift`
+- `PingItTests/Mocks/MockBlockService.swift`
+- `PingItTests/Mocks/MockPingService.swift`
+
+---
+
 ## [2026-04-14] — Phase 1 Sprint 1: Client-Side Safety Layer
 
 ### Summary
