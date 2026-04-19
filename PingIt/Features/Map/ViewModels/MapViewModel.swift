@@ -1,5 +1,7 @@
 import Foundation
 import CoreLocation
+import FirebaseFirestore
+import MapKit
 
 @Observable
 final class MapViewModel {
@@ -11,8 +13,11 @@ final class MapViewModel {
 
     private var allPings: [Ping] = []
     private(set) var pings: [Ping] = []
+    private(set) var clusters: [PingCluster] = []
+    private(set) var unclusteredPings: [Ping] = []
     private(set) var isLoading = false
     var errorMessage: String?
+    var visibleRegion: MKCoordinateRegion?
 
     var hotPingIds: Set<String> {
         let sorted = pings.sorted { $0.hotScore > $1.hotScore }
@@ -61,6 +66,47 @@ final class MapViewModel {
             ping.expiresAt > ServerTime.now
             && !(blockService?.isBlocked(ping.creatorId) ?? false)
         }
+        updateClusters()
+    }
+
+    func updateClusters() {
+        guard let region = visibleRegion else {
+            unclusteredPings = pings
+            clusters = []
+            return
+        }
+
+        let clusterThreshold = region.span.latitudeDelta * 0.08
+        var assigned = Set<String>()
+        var newClusters: [PingCluster] = []
+        var singles: [Ping] = []
+        let hotIds = hotPingIds
+
+        for ping in pings {
+            guard let pingId = ping.id, !assigned.contains(pingId) else { continue }
+
+            var group = [ping]
+            assigned.insert(pingId)
+
+            for other in pings {
+                guard let otherId = other.id, !assigned.contains(otherId) else { continue }
+                let latDiff = abs(ping.location.latitude - other.location.latitude)
+                let lonDiff = abs(ping.location.longitude - other.location.longitude)
+                if latDiff < clusterThreshold && lonDiff < clusterThreshold {
+                    group.append(other)
+                    assigned.insert(otherId)
+                }
+            }
+
+            if group.count >= 2 {
+                newClusters.append(PingCluster(pings: group, hotPingIds: hotIds))
+            } else {
+                singles.append(ping)
+            }
+        }
+
+        clusters = newClusters
+        unclusteredPings = singles
     }
 
     func stopObserving() {

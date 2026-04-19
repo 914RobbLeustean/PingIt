@@ -27,7 +27,7 @@ struct MapView: View {
                 Map(position: $cameraPosition) {
                     UserAnnotation()
 
-                    ForEach(viewModel.pings) { ping in
+                    ForEach(viewModel.unclusteredPings) { ping in
                         Annotation(
                             ping.text,
                             coordinate: CLLocationCoordinate2D(
@@ -44,7 +44,20 @@ struct MapView: View {
                             }
                         }
                         .annotationTitles(.hidden)
-                        .tag(ping.id)
+                    }
+
+                    ForEach(viewModel.clusters) { cluster in
+                        Annotation(
+                            "\(cluster.count) pings",
+                            coordinate: cluster.center
+                        ) {
+                            PingClusterAnnotationView(
+                                count: cluster.count,
+                                containsHotPing: cluster.containsHotPing
+                            )
+                            .onTapGesture(perform: { zoomToCluster(cluster) })
+                        }
+                        .annotationTitles(.hidden)
                     }
                 }
                 .mapControls {
@@ -53,6 +66,10 @@ struct MapView: View {
                     MapScaleView()
                 }
                 .mapStyle(.standard)
+                .onMapCameraChange(frequency: .onEnd) { context in
+                    viewModel.visibleRegion = context.region
+                    viewModel.updateClusters()
+                }
 
                 if let errorMessage = viewModel.errorMessage {
                     VStack {
@@ -169,6 +186,28 @@ struct MapView: View {
     }
 
     // MARK: - Camera
+
+    private func zoomToCluster(_ cluster: PingCluster) {
+        let lats = cluster.pings.map(\.location.latitude)
+        let lons = cluster.pings.map(\.location.longitude)
+        guard let minLat = lats.min(), let maxLat = lats.max(),
+              let minLon = lons.min(), let maxLon = lons.max() else { return }
+
+        let latPadding = max((maxLat - minLat) * 0.3, 0.002)
+        let lonPadding = max((maxLon - minLon) * 0.3, 0.002)
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+        let span = MKCoordinateSpan(
+            latitudeDelta: (maxLat - minLat) + latPadding,
+            longitudeDelta: (maxLon - minLon) + lonPadding
+        )
+
+        withAnimation {
+            cameraPosition = .region(MKCoordinateRegion(center: center, span: span))
+        }
+    }
 
     private func moveToUserLocation(_ location: CLLocation?) {
         guard !hasMovedToUserLocation, let location else { return }
