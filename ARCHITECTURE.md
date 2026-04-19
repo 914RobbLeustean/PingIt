@@ -63,7 +63,7 @@ PingIt/
 
 **Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
 
-### Actual File Listing (as of 2026-04-15)
+### Actual File Listing (as of 2026-04-19)
 
 ```
 PingIt/
@@ -79,13 +79,14 @@ PingIt/
 │   │   ├── ChatMessage.swift        Firestore: chatMessages collection
 │   │   ├── ChatParticipant.swift    Firestore: chatParticipants collection
 │   │   ├── Block.swift              Firestore: blocks collection
+│   │   ├── Boost.swift             Firestore: boosts collection
 │   │   └── Report.swift             Firestore: reports collection (+ ReportTargetType, ReportReason, ReportStatus enums)
 │   ├── Protocols/
 │   │   ├── ListenerRemovable.swift                      ListenerHandle wrapping ListenerRegistration
 │   │   ├── AuthUserRepresentable.swift                  Minimal user identity (uid, isEmailVerified)
 │   │   ├── FirebaseUser+AuthUserRepresentable.swift     Firebase conformance
 │   │   ├── AuthServicing.swift                          Auth service contract (+ isEmailVerified, sendEmailVerification, reloadUser)
-│   │   ├── PingServicing.swift                          Ping service contract (+ observePing for single-doc listener)
+│   │   ├── PingServicing.swift                          Ping service contract (+ observePing, boostPing, hasUserBoostedPing)
 │   │   ├── ChatServicing.swift                          Chat service contract
 │   │   ├── UserServicing.swift                          User service contract
 │   │   ├── LocationServicing.swift                      Location service contract
@@ -131,15 +132,16 @@ PingIt/
 │   │           └── PasswordStrengthView.swift   Segmented strength bar + rule checklist
 │   ├── Map/
 │   │   ├── ViewModels/
-│   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state; filters expired + blocked
+│   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state; filters expired + blocked; hotPingIds computed
 │   │   └── Views/
 │   │       ├── MapView.swift              MapKit map with annotations, email verification banner
-│   │       ├── PingAnnotationView.swift   Custom ping marker
+│   │       ├── PingAnnotationView.swift   Custom ping marker with hot ping visual treatment
+│   │       ├── PingClusterAnnotationView.swift  Cluster annotation with count and hot-ping indicator
 │   │       └── EmailVerificationBannerView.swift  Dismissable banner for unverified users
 │   ├── Ping/
 │   │   ├── ViewModels/
 │   │   │   ├── CreatePingViewModel.swift   Validation, moderation, rate limit, location, Firestore write
-│   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete, ping document listener
+│   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete, ping document listener, boost
 │   │   └── Views/
 │   │       ├── CreatePingView.swift        Form: text, location picker, expiration
 │   │       ├── PingDetailView.swift        Detail with creator, countdown, actions, report/block buttons
@@ -169,7 +171,7 @@ PingIt/
 │       ├── ViewModels/
 │       │   └── BlockedUsersViewModel.swift  Loads blocked users with profiles, unblock action
 │       └── Views/
-│           ├── SettingsView.swift           Sign out + Privacy & Safety navigation
+│           ├── SettingsView.swift           Sign out, notifications + privacy toggles, Privacy & Safety
 │           └── BlockedUsersView.swift       List of blocked users with unblock confirmation
 
 └── Resources/
@@ -180,7 +182,7 @@ PingItTests/
 ├── Mocks/
 │   ├── MockAuthUser.swift                    Stub AuthUserRepresentable (+ isEmailVerified)
 │   ├── MockAuthService.swift                 @Observable @MainActor mock (+ isEmailVerified, sendEmailVerification, reloadUser)
-│   ├── MockPingService.swift                 Stores activePingsCallback, simulates updates
+│   ├── MockPingService.swift                 Stores activePingsCallback, simulates updates, boost tracking
 │   ├── MockChatService.swift                 Stores messagesCallback, simulates updates
 │   ├── MockUserService.swift                 Returns preset User, tracks calls
 │   ├── MockLocationService.swift             Settable location/auth/boundary result
@@ -280,9 +282,12 @@ MapView ──observes──▶ MapViewModel ──calls──▶ PingService �
                                               LocationService ──reads──▶ CLLocationManager
                                               BlockService (filters blocked creators + expired pings)
 
-PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ PingService
+PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ PingService (delete, boost, boost check)
                                                             ChatService
              └─ report/block buttons ──▶ ReportView / BlockService
+
+SettingsView ──calls──▶ UserService (fetch + update preferences)
+             └─ loads isPrivateProfile, notifyNearbyPings, notifyHotPings from Firestore
 
 ChatView ──observes──▶ ChatViewModel ──calls──▶ ChatService ──listens──▶ Firestore (chatMessages)
                                                ContentModerationService (outbound text check)

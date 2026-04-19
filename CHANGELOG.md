@@ -6,6 +6,53 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-04-19] — Phase 1 Sprint 2: Engagement + Map Polish
+
+### Summary
+Implemented engagement features (boost, hot pings algorithm, ping clustering) and settings toggles (privacy, notification preferences) to make the map more compelling.
+
+### Added
+- **`Boost.swift`** — `Boost` model for `boosts` Firestore collection (pingId, userId, createdAt)
+- **`PingClusterAnnotationView.swift`** — Cluster annotation showing count badge with hot-ping awareness (red vs orange gradient)
+- **Boost button** in PingDetailView — non-creators can boost once; shows "Boosted" filled state with orange tint
+- **Hot pings visual treatment** — flame icon (`flame.circle.fill`) with red glow for top-10 pings with hotScore ≥ 5.0
+- **Notification preferences** — "Nearby Pings" and "Hot Pings" toggles in SettingsView, persisted to Firestore
+- **Privacy settings** — "Private Profile" toggle in SettingsView, persisted to Firestore
+- **Boost tests** — `boostPingSucceeds` and `cannotBoostOwnPing` in PingDetailViewModelTests
+
+### Changed
+- **`Ping.swift`** — Added `boostCount: Int`, `participantCount: Int`, computed `hotScore: Double` and `isHot: Bool`
+- **`PingServicing.swift`** — Added `boostPing(pingId:)` and `hasUserBoostedPing(pingId:userId:)` methods
+- **`PingService.swift`** — Implemented boost with batched write (boost doc + increment denormalized count)
+- **`PingDetailViewModel.swift`** — Added `hasUserBoosted`, `isBoosting`, `canBoost`, `checkBoostStatus()`, `boostPing()`
+- **`PingDetailView.swift`** — Added boost button section, `checkBoostStatus()` in `.task`
+- **`MapViewModel.swift`** — Added `hotPingIds` computed property (top-10 by hotScore ≥ 5.0)
+- **`PingAnnotationView.swift`** — Added `isHot` parameter; flame icon, red gradient, shadow for hot pings
+- **`MapView.swift`** — Passes `isHot` to annotations; `.annotationTitles(.hidden)` and `.tag` for clustering
+- **`User.swift`** — Added `isPrivateProfile`, `notifyNearbyPings`, `notifyHotPings` preference fields
+- **`SettingsView.swift`** — Added UserService environment, notification/privacy toggle sections, Firestore persistence
+- **`MockPingService.swift`** — Added boost tracking properties and methods
+
+### Files created
+- `PingIt/Core/Models/Boost.swift`
+- `PingIt/Features/Map/Views/PingClusterAnnotationView.swift`
+
+### Files significantly modified
+- `PingIt/Core/Models/Ping.swift`
+- `PingIt/Core/Models/User.swift`
+- `PingIt/Core/Protocols/PingServicing.swift`
+- `PingIt/Core/Services/PingService.swift`
+- `PingIt/Features/Ping/ViewModels/PingDetailViewModel.swift`
+- `PingIt/Features/Ping/Views/PingDetailView.swift`
+- `PingIt/Features/Map/ViewModels/MapViewModel.swift`
+- `PingIt/Features/Map/Views/PingAnnotationView.swift`
+- `PingIt/Features/Map/Views/MapView.swift`
+- `PingIt/Features/Settings/Views/SettingsView.swift`
+- `PingItTests/Mocks/MockPingService.swift`
+- `PingItTests/ViewModelTests/PingDetailViewModelTests.swift`
+
+---
+
 ## [2026-04-15] — Sprint 1 Bugfixes, Polish & Chat Sender Identity
 
 ### Summary
