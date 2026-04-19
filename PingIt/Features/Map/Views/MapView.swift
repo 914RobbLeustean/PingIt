@@ -30,10 +30,11 @@ struct MapView: View {
                     ForEach(viewModel.unclusteredPings) { ping in
                         Annotation(
                             ping.text,
-                            coordinate: CLLocationCoordinate2D(
-                                latitude: ping.location.latitude,
-                                longitude: ping.location.longitude
-                            ),
+                            coordinate: viewModel.displayCoordinates[ping.id ?? ""]
+                                ?? CLLocationCoordinate2D(
+                                    latitude: ping.location.latitude,
+                                    longitude: ping.location.longitude
+                                ),
                             anchor: .bottom
                         ) {
                             PingAnnotationView(

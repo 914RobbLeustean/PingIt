@@ -19,6 +19,8 @@ final class MapViewModel {
     var errorMessage: String?
     var visibleRegion: MKCoordinateRegion?
 
+    private(set) var displayCoordinates: [String: CLLocationCoordinate2D] = [:]
+
     var hotPingIds: Set<String> {
         let sorted = pings.sorted { $0.hotScore > $1.hotScore }
         let topTen = sorted.prefix(10)
@@ -66,7 +68,40 @@ final class MapViewModel {
             ping.expiresAt > ServerTime.now
             && !(blockService?.isBlocked(ping.creatorId) ?? false)
         }
+        computeDisplayCoordinates()
         updateClusters()
+    }
+
+    private func computeDisplayCoordinates() {
+        var coordinateGroups: [String: [Ping]] = [:]
+        for ping in pings {
+            let key = "\(ping.location.latitude),\(ping.location.longitude)"
+            coordinateGroups[key, default: []].append(ping)
+        }
+
+        var result: [String: CLLocationCoordinate2D] = [:]
+        let offsetDistance = 0.00015
+
+        for (_, group) in coordinateGroups {
+            if group.count == 1, let ping = group.first, let id = ping.id {
+                result[id] = CLLocationCoordinate2D(
+                    latitude: ping.location.latitude,
+                    longitude: ping.location.longitude
+                )
+            } else {
+                let angleStep = (2.0 * .pi) / Double(group.count)
+                for (index, ping) in group.enumerated() {
+                    guard let id = ping.id else { continue }
+                    let angle = angleStep * Double(index)
+                    result[id] = CLLocationCoordinate2D(
+                        latitude: ping.location.latitude + offsetDistance * cos(angle),
+                        longitude: ping.location.longitude + offsetDistance * sin(angle)
+                    )
+                }
+            }
+        }
+
+        displayCoordinates = result
     }
 
     func updateClusters() {
@@ -76,7 +111,13 @@ final class MapViewModel {
             return
         }
 
-        let clusterThreshold = region.span.latitudeDelta * 0.08
+        if region.span.latitudeDelta < 0.005 {
+            unclusteredPings = pings
+            clusters = []
+            return
+        }
+
+        let clusterThreshold = region.span.latitudeDelta * 0.03
         var assigned = Set<String>()
         var newClusters: [PingCluster] = []
         var singles: [Ping] = []
