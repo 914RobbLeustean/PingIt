@@ -2,7 +2,7 @@ import Foundation
 
 @Observable
 final class PingDetailViewModel {
-    let ping: Ping
+    private(set) var ping: Ping
     private var authService: (any AuthServicing)?
     private var pingService: (any PingServicing)?
     private var chatService: (any ChatServicing)?
@@ -16,10 +16,11 @@ final class PingDetailViewModel {
     private(set) var countdownText: String
     private(set) var hasUserBoosted = false
     private(set) var isBoosting = false
+    private(set) var isCheckingBoostStatus = true
     var pingUnavailable = false
 
     var canBoost: Bool {
-        !isCreator && !hasUserBoosted && !isBoosting
+        !isCreator && !hasUserBoosted && !isBoosting && !isCheckingBoostStatus
     }
 
     private var countdownTask: Task<Void, Never>?
@@ -99,7 +100,11 @@ final class PingDetailViewModel {
     func checkBoostStatus() async {
         guard let pingService, let authService,
               let userId = authService.currentUser?.uid,
-              let pingId = ping.id else { return }
+              let pingId = ping.id else {
+            isCheckingBoostStatus = false
+            return
+        }
+        defer { isCheckingBoostStatus = false }
         do {
             hasUserBoosted = try await pingService.hasUserBoostedPing(pingId: pingId, userId: userId)
         } catch {
@@ -115,6 +120,7 @@ final class PingDetailViewModel {
         do {
             try await pingService.boostPing(pingId: pingId)
             hasUserBoosted = true
+            ping.boostCount += 1
         } catch {
             errorMessage = error.localizedDescription
         }

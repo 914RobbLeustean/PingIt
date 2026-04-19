@@ -112,6 +112,64 @@ struct PingModelTests {
     }
 }
 
+// MARK: - Hot Score Tests
+
+import FirebaseFirestore
+
+@Suite("Ping Hot Score")
+struct PingHotScoreTests {
+
+    private func makePing(
+        boostCount: Int = 0,
+        participantCount: Int = 0,
+        expiresInHours: Double = 24
+    ) -> Ping {
+        Ping(
+            creatorId: "user1",
+            text: "Test",
+            location: GeoPoint(latitude: 46.77, longitude: 23.62),
+            geohash: "",
+            expiresAt: Date.now.addingTimeInterval(expiresInHours * 3600),
+            status: .active,
+            boostCount: boostCount,
+            participantCount: participantCount
+        )
+    }
+
+    @Test("Zero-engagement ping is never hot regardless of time remaining")
+    func zeroEngagementNotHot() {
+        let ping = makePing(boostCount: 0, expiresInHours: 48)
+        #expect(ping.isHot == false)
+    }
+
+    @Test("Single boost is not enough to be hot")
+    func singleBoostNotHot() {
+        let ping = makePing(boostCount: 1, expiresInHours: 48)
+        #expect(ping.isHot == false)
+    }
+
+    @Test("Two boosts with sufficient score is hot")
+    func twoBoostsCanBeHot() {
+        let ping = makePing(boostCount: 2, participantCount: 1, expiresInHours: 24)
+        // score = 2*2 + 1 + 24*0.1 = 4 + 1 + 2.4 = 7.4
+        #expect(ping.isHot)
+    }
+
+    @Test("Two boosts with low score is not hot")
+    func twoBoostsLowScoreNotHot() {
+        let ping = makePing(boostCount: 2, participantCount: 0, expiresInHours: 0.1)
+        // score = 2*2 + 0 + 0.1*0.1 = 4.01 (< 5.0)
+        #expect(ping.isHot == false)
+    }
+
+    @Test("Time component uses reduced weight (0.1)")
+    func timeWeightIsReduced() {
+        let ping = makePing(boostCount: 0, expiresInHours: 48)
+        // score = 0 + 0 + 48*0.1 = 4.8 (not 24.0 at old 0.5 weight)
+        #expect(ping.hotScore < 5.0)
+    }
+}
+
 // MARK: - Username Validation Tests
 
 struct UsernameValidationTests {

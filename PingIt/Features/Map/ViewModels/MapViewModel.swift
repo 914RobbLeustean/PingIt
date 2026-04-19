@@ -17,7 +17,7 @@ final class MapViewModel {
     var hotPingIds: Set<String> {
         let sorted = pings.sorted { $0.hotScore > $1.hotScore }
         let topTen = sorted.prefix(10)
-        let hotOnes = topTen.filter { $0.hotScore >= 5.0 }
+        let hotOnes = topTen.filter(\.isHot)
         return Set(hotOnes.compactMap(\.id))
     }
 

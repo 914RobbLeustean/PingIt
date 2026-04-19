@@ -24,11 +24,11 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
     @ServerTimestamp var createdAt: Date?
 
     var hotScore: Double {
-        Double(boostCount) * 2.0 + Double(participantCount) + max(0, expiresAt.timeIntervalSinceNow / 3600.0) * 0.5
+        Double(boostCount) * 2.0 + Double(participantCount) + max(0, expiresAt.timeIntervalSinceNow / 3600.0) * 0.1
     }
 
     var isHot: Bool {
-        hotScore >= 5.0
+        boostCount >= 2 && hotScore >= 5.0
     }
 
     enum PingStatus: String, Codable, Sendable {
