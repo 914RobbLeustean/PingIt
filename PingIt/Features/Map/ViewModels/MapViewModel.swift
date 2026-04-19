@@ -14,6 +14,13 @@ final class MapViewModel {
     private(set) var isLoading = false
     var errorMessage: String?
 
+    var hotPingIds: Set<String> {
+        let sorted = pings.sorted { $0.hotScore > $1.hotScore }
+        let topTen = sorted.prefix(10)
+        let hotOnes = topTen.filter { $0.hotScore >= 5.0 }
+        return Set(hotOnes.compactMap(\.id))
+    }
+
     var userLocation: CLLocation? { locationService?.currentLocation }
     var authorizationStatus: CLAuthorizationStatus { locationService?.authorizationStatus ?? .notDetermined }
 

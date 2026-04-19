@@ -35,7 +35,10 @@ struct MapView: View {
                                 longitude: ping.location.longitude
                             )
                         ) {
-                            PingAnnotationView(ping: ping) {
+                            PingAnnotationView(
+                                ping: ping,
+                                isHot: viewModel.hotPingIds.contains(ping.id ?? "")
+                            ) {
                                 selectedPing = ping
                             }
                         }
