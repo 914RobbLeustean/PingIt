@@ -14,7 +14,13 @@ final class PingDetailViewModel {
     private(set) var didDeletePing = false
     private(set) var errorMessage: String?
     private(set) var countdownText: String
+    private(set) var hasUserBoosted = false
+    private(set) var isBoosting = false
     var pingUnavailable = false
+
+    var canBoost: Bool {
+        !isCreator && !hasUserBoosted && !isBoosting
+    }
 
     private var countdownTask: Task<Void, Never>?
     private var pingListener: ListenerHandle?
@@ -88,6 +94,30 @@ final class PingDetailViewModel {
     func stopObservingPing() {
         pingListener?.remove()
         pingListener = nil
+    }
+
+    func checkBoostStatus() async {
+        guard let pingService, let authService,
+              let userId = authService.currentUser?.uid,
+              let pingId = ping.id else { return }
+        do {
+            hasUserBoosted = try await pingService.hasUserBoostedPing(pingId: pingId, userId: userId)
+        } catch {
+            // Default to not boosted
+        }
+    }
+
+    func boostPing() async {
+        guard let pingService, let pingId = ping.id, canBoost else { return }
+        isBoosting = true
+        defer { isBoosting = false }
+
+        do {
+            try await pingService.boostPing(pingId: pingId)
+            hasUserBoosted = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func deletePing() async {

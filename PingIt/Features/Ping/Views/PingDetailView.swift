@@ -49,6 +49,23 @@ struct PingDetailView: View {
                 )
 
                 if !viewModel.isCreator {
+                    HStack {
+                        Button(action: { Task { await viewModel.boostPing() } }) {
+                            Label(
+                                viewModel.hasUserBoosted ? "Boosted" : "Boost",
+                                systemImage: viewModel.hasUserBoosted ? "flame.fill" : "flame"
+                            )
+                        }
+                        .disabled(!viewModel.canBoost)
+                        .tint(viewModel.hasUserBoosted ? .orange : .primary)
+
+                        Text("\(viewModel.ping.boostCount) boost\(viewModel.ping.boostCount == 1 ? "" : "s")")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if !viewModel.isCreator {
                     VStack(alignment: .leading, spacing: 8) {
                         Divider()
 
@@ -124,6 +141,7 @@ struct PingDetailView: View {
                 userService: userService
             )
             await viewModel.loadCreator()
+            await viewModel.checkBoostStatus()
             viewModel.startCountdownTimer()
             viewModel.startObservingPing()
         }

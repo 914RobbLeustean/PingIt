@@ -115,4 +115,36 @@ struct PingDetailViewModelTests {
         #expect(vm.didDeletePing == false)
         #expect(vm.errorMessage != nil)
     }
+
+    // MARK: - Boost
+
+    @Test("Boost ping succeeds")
+    func boostPingSucceeds() async {
+        let mockPing = MockPingService()
+        mockPing.hasUserBoostedPingResult = false
+        let auth = authenticatedAuth(uid: "other-user")
+        let vm = makeVM(
+            ping: makePing(creatorId: "creator1"),
+            authService: auth,
+            pingService: mockPing
+        )
+
+        await vm.checkBoostStatus()
+        #expect(vm.hasUserBoosted == false)
+
+        await vm.boostPing()
+        #expect(mockPing.boostPingCalled)
+        #expect(vm.hasUserBoosted)
+    }
+
+    @Test("Cannot boost own ping")
+    func cannotBoostOwnPing() async {
+        let auth = authenticatedAuth(uid: "creator1")
+        let vm = makeVM(
+            ping: makePing(creatorId: "creator1"),
+            authService: auth
+        )
+
+        #expect(vm.canBoost == false)
+    }
 }
