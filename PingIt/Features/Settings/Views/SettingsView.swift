@@ -5,9 +5,10 @@ struct SettingsView: View {
     @Environment(UserService.self) private var userService
     @State private var showSignOutConfirmation = false
     @State private var errorMessage: String?
-    @State private var isPrivateProfile = false
-    @State private var notifyNearbyPings = true
-    @State private var notifyHotPings = true
+    @State private var isPrivateProfile = UserDefaults.standard.bool(forKey: "pref_isPrivateProfile")
+    @State private var notifyNearbyPings = UserDefaults.standard.object(forKey: "pref_notifyNearbyPings") as? Bool ?? true
+    @State private var notifyHotPings = UserDefaults.standard.object(forKey: "pref_notifyHotPings") as? Bool ?? true
+    @State private var hasLoadedPreferences = false
 
     var body: some View {
         NavigationStack {
@@ -25,9 +26,11 @@ struct SettingsView: View {
                     Toggle("Hot Pings", isOn: $notifyHotPings)
                 }
                 .onChange(of: notifyNearbyPings) { _, newValue in
+                    guard hasLoadedPreferences else { return }
                     savePreference("notifyNearbyPings", value: newValue)
                 }
                 .onChange(of: notifyHotPings) { _, newValue in
+                    guard hasLoadedPreferences else { return }
                     savePreference("notifyHotPings", value: newValue)
                 }
 
@@ -36,6 +39,7 @@ struct SettingsView: View {
                     NavigationLink("Blocked Users", destination: BlockedUsersView())
                 }
                 .onChange(of: isPrivateProfile) { _, newValue in
+                    guard hasLoadedPreferences else { return }
                     savePreference("isPrivateProfile", value: newValue)
                 }
 
@@ -68,18 +72,30 @@ struct SettingsView: View {
     }
 
     private func loadPreferences() async {
-        guard let userId = authService.currentUser?.uid else { return }
+        guard let userId = authService.currentUser?.uid else {
+            hasLoadedPreferences = true
+            return
+        }
         if let user = try? await userService.fetchUser(id: userId) {
             isPrivateProfile = user.isPrivateProfile
             notifyNearbyPings = user.notifyNearbyPings
             notifyHotPings = user.notifyHotPings
+            cachePreferences(user)
         }
+        hasLoadedPreferences = true
     }
 
     private func savePreference(_ key: String, value: Bool) {
+        UserDefaults.standard.set(value, forKey: "pref_\(key)")
         guard let userId = authService.currentUser?.uid else { return }
         Task {
             try? await userService.updateUser(id: userId, data: [key: value])
         }
+    }
+
+    private func cachePreferences(_ user: User) {
+        UserDefaults.standard.set(user.isPrivateProfile, forKey: "pref_isPrivateProfile")
+        UserDefaults.standard.set(user.notifyNearbyPings, forKey: "pref_notifyNearbyPings")
+        UserDefaults.standard.set(user.notifyHotPings, forKey: "pref_notifyHotPings")
     }
 }
