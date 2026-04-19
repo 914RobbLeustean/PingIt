@@ -142,31 +142,49 @@ struct PingHotScoreTests {
         #expect(ping.isHot == false)
     }
 
-    @Test("Single boost is not enough to be hot")
-    func singleBoostNotHot() {
-        let ping = makePing(boostCount: 1, expiresInHours: 48)
+    @Test("Two boosts is not enough — need at least 3")
+    func twoBoostsNotHot() {
+        let ping = makePing(boostCount: 2, participantCount: 0, expiresInHours: 48)
+        // score = 4 + 0 + 2.0 = 6.0 but boostCount < 3
         #expect(ping.isHot == false)
     }
 
-    @Test("Two boosts with sufficient score is hot")
-    func twoBoostsCanBeHot() {
-        let ping = makePing(boostCount: 2, participantCount: 1, expiresInHours: 24)
-        // score = 2*2 + 1 + 24*0.1 = 4 + 1 + 2.4 = 7.4
+    @Test("Three boosts with long expiration is hot")
+    func threeBoostsLongExpirationHot() {
+        let ping = makePing(boostCount: 3, participantCount: 0, expiresInHours: 48)
+        // score = 6 + 0 + 2.0(capped) = 8.0
         #expect(ping.isHot)
     }
 
-    @Test("Two boosts with low score is not hot")
-    func twoBoostsLowScoreNotHot() {
-        let ping = makePing(boostCount: 2, participantCount: 0, expiresInHours: 0.1)
-        // score = 2*2 + 0 + 0.1*0.1 = 4.01 (< 5.0)
+    @Test("Three boosts with short expiration and no participants is not hot")
+    func threeBoostsShortExpirationNotHot() {
+        let ping = makePing(boostCount: 3, participantCount: 0, expiresInHours: 6)
+        // score = 6 + 0 + 0.6 = 6.6 (< 8.0)
         #expect(ping.isHot == false)
     }
 
-    @Test("Time component uses reduced weight (0.1)")
-    func timeWeightIsReduced() {
-        let ping = makePing(boostCount: 0, expiresInHours: 48)
-        // score = 0 + 0 + 48*0.1 = 4.8 (not 24.0 at old 0.5 weight)
-        #expect(ping.hotScore < 5.0)
+    @Test("Three boosts with participants and short expiration is hot")
+    func threeBoostsWithParticipantsHot() {
+        let ping = makePing(boostCount: 3, participantCount: 2, expiresInHours: 6)
+        // score = 6 + 2 + 0.6 = 8.6
+        #expect(ping.isHot)
+    }
+
+    @Test("Time contribution capped at 2.0")
+    func timeContributionCapped() {
+        let shortPing = makePing(boostCount: 0, expiresInHours: 6)
+        let longPing = makePing(boostCount: 0, expiresInHours: 48)
+        // 6h: 0 + 0 + 0.6 = 0.6
+        // 48h: 0 + 0 + 2.0(capped) = 2.0
+        #expect(shortPing.hotScore < 1.0)
+        #expect(longPing.hotScore == 2.0)
+    }
+
+    @Test("Four boosts on a dying ping is hot")
+    func fourBoostsDyingPingHot() {
+        let ping = makePing(boostCount: 4, participantCount: 0, expiresInHours: 1)
+        // score = 8 + 0 + 0.1 = 8.1
+        #expect(ping.isHot)
     }
 }
 
