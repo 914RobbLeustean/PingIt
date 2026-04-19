@@ -33,7 +33,8 @@ struct MapView: View {
                             coordinate: CLLocationCoordinate2D(
                                 latitude: ping.location.latitude,
                                 longitude: ping.location.longitude
-                            )
+                            ),
+                            anchor: .bottom
                         ) {
                             PingAnnotationView(
                                 ping: ping,
@@ -42,6 +43,8 @@ struct MapView: View {
                                 selectedPing = ping
                             }
                         }
+                        .annotationTitles(.hidden)
+                        .tag(ping.id)
                     }
                 }
                 .mapControls {
