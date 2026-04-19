@@ -48,8 +48,8 @@ struct PingDetailView: View {
                     onDelete: handleDeleteTap
                 )
 
-                if !viewModel.isCreator {
-                    HStack {
+                HStack {
+                    if !viewModel.isCreator {
                         Button(action: { Task { await viewModel.boostPing() } }) {
                             Label(
                                 viewModel.hasUserBoosted ? "Boosted" : "Boost",
@@ -58,11 +58,14 @@ struct PingDetailView: View {
                         }
                         .disabled(!viewModel.canBoost)
                         .tint(viewModel.hasUserBoosted ? .orange : .primary)
-
-                        Text("\(viewModel.ping.boostCount) boost\(viewModel.ping.boostCount == 1 ? "" : "s")")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
                     }
+
+                    Label(
+                        "\(viewModel.ping.boostCount) boost\(viewModel.ping.boostCount == 1 ? "" : "s")",
+                        systemImage: "flame"
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 }
 
                 if !viewModel.isCreator {
