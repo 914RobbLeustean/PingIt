@@ -38,6 +38,8 @@ final class AuthService: AuthServicing {
                 .collection(Constants.Firestore.usersCollection)
                 .document(result.user.uid)
                 .setData(from: user)
+
+            try? await result.user.sendEmailVerification()
         } catch let error as PingItError {
             throw error
         } catch {
@@ -64,11 +66,39 @@ final class AuthService: AuthServicing {
         }
     }
 
+    var isEmailVerified: Bool {
+        guard let firebaseUser = Auth.auth().currentUser else { return false }
+        return firebaseUser.isEmailVerified
+    }
+
     func sendPasswordReset(email: String) async throws {
         isLoading = true
         defer { isLoading = false }
 
         // Suppress errors to avoid email enumeration — always show success
         try? await Auth.auth().sendPasswordReset(withEmail: email)
+    }
+
+    func sendEmailVerification() async throws {
+        guard let user = Auth.auth().currentUser else {
+            throw PingItError.notAuthenticated
+        }
+        do {
+            try await user.sendEmailVerification()
+        } catch {
+            throw PingItError.emailVerificationFailed(underlying: error)
+        }
+    }
+
+    func reloadUser() async throws {
+        guard let user = Auth.auth().currentUser else {
+            throw PingItError.notAuthenticated
+        }
+        do {
+            try await user.reload()
+            self.currentUser = Auth.auth().currentUser
+        } catch {
+            throw PingItError.firestoreReadFailed(underlying: error)
+        }
     }
 }

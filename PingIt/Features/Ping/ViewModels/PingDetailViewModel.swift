@@ -14,8 +14,10 @@ final class PingDetailViewModel {
     private(set) var didDeletePing = false
     private(set) var errorMessage: String?
     private(set) var countdownText: String
+    var pingUnavailable = false
 
     private var countdownTask: Task<Void, Never>?
+    private var pingListener: ListenerHandle?
 
     var isCreator: Bool {
         authService?.currentUser?.uid == ping.creatorId
@@ -56,6 +58,10 @@ final class PingDetailViewModel {
                 try? await Task.sleep(for: .seconds(30))
                 guard let self else { return }
                 self.countdownText = self.ping.expiresAt.countdownDescription
+                if self.ping.expiresAt.timeIntervalSince(ServerTime.now) <= 0 {
+                    self.pingUnavailable = true
+                    return
+                }
             }
         }
     }
@@ -65,6 +71,25 @@ final class PingDetailViewModel {
         countdownTask = nil
     }
 
+    func startObservingPing() {
+        guard let pingService, let pingId = ping.id, pingListener == nil else { return }
+        pingListener = pingService.observePing(id: pingId) { [weak self] updatedPing in
+            guard let self else { return }
+            Task { @MainActor [self] in
+                // Don't show unavailable alert if current user initiated the delete
+                guard !self.didDeletePing else { return }
+                if updatedPing == nil || updatedPing?.status != .active {
+                    self.pingUnavailable = true
+                }
+            }
+        }
+    }
+
+    func stopObservingPing() {
+        pingListener?.remove()
+        pingListener = nil
+    }
+
     func deletePing() async {
         guard let pingService else { return }
         isDeleting = true
@@ -72,8 +97,9 @@ final class PingDetailViewModel {
 
         do {
             guard let pingId = ping.id else { return }
-            try await pingService.deletePingAndChat(pingId: pingId, chatId: ping.chatId)
+            // Set before Firestore delete so the snapshot listener guard catches it
             didDeletePing = true
+            try await pingService.deletePingAndChat(pingId: pingId, chatId: ping.chatId)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -81,5 +107,6 @@ final class PingDetailViewModel {
 
     deinit {
         countdownTask?.cancel()
+        pingListener?.remove()
     }
 }

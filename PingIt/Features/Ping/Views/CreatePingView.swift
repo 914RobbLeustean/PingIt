@@ -6,6 +6,8 @@ struct CreatePingView: View {
     @Environment(PingService.self) private var pingService
     @Environment(ChatService.self) private var chatService
     @Environment(LocationService.self) private var locationService
+    @Environment(ContentModerationService.self) private var contentModerationService
+    @Environment(RateLimitService.self) private var rateLimitService
     @Environment(\.dismiss) private var dismiss
     @Binding var createdPingLocation: CLLocationCoordinate2D?
     @State private var viewModel = CreatePingViewModel()
@@ -77,7 +79,9 @@ struct CreatePingView: View {
                     authService: authService,
                     pingService: pingService,
                     chatService: chatService,
-                    locationService: locationService
+                    locationService: locationService,
+                    contentModerationService: contentModerationService,
+                    rateLimitService: rateLimitService
                 )
             }
             .onChange(of: viewModel.didCreatePing) { _, didCreate in

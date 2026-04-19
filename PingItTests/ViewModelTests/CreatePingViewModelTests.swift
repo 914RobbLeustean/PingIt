@@ -13,21 +13,26 @@ struct CreatePingViewModelTests {
         authService: MockAuthService = MockAuthService(),
         pingService: MockPingService = MockPingService(),
         chatService: MockChatService = MockChatService(),
-        locationService: MockLocationService = MockLocationService()
+        locationService: MockLocationService = MockLocationService(),
+        contentModerationService: MockContentModerationService = MockContentModerationService(),
+        rateLimitService: MockRateLimitService = MockRateLimitService()
     ) -> CreatePingViewModel {
         let vm = CreatePingViewModel()
         vm.configure(
             authService: authService,
             pingService: pingService,
             chatService: chatService,
-            locationService: locationService
+            locationService: locationService,
+            contentModerationService: contentModerationService,
+            rateLimitService: rateLimitService
         )
         return vm
     }
 
     private func authenticatedAuth(uid: String = "user1") -> MockAuthService {
         let auth = MockAuthService()
-        auth.currentUser = MockAuthUser(uid: uid)
+        auth.currentUser = MockAuthUser(uid: uid, isEmailVerified: true)
+        auth.isEmailVerified = true
         return auth
     }
 
@@ -104,6 +109,30 @@ struct CreatePingViewModelTests {
         #expect(vm.errorMessage == nil)
     }
 
+    // MARK: - Email verification gate
+
+    @Test("Unverified email prevents ping creation")
+    func unverifiedEmailCannotCreatePing() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: false)
+        mockAuth.isEmailVerified = false
+        let mockPing = MockPingService()
+        let mockChat = MockChatService()
+        let mockLocation = MockLocationService()
+        mockLocation.boundaryResult = true
+
+        let vm = CreatePingViewModel()
+        vm.configure(authService: mockAuth, pingService: mockPing, chatService: mockChat, locationService: mockLocation, contentModerationService: MockContentModerationService(), rateLimitService: MockRateLimitService())
+        vm.text = "Test ping"
+        vm.selectedLocation = Constants.Cluj.center
+
+        await vm.createPing()
+
+        #expect(vm.didCreatePing == false)
+        #expect(vm.errorMessage != nil)
+        #expect(mockPing.createPingWithChatCalled == false)
+    }
+
     // MARK: - createPing failures
 
     @Test func createPingFailsWhenNotAuthenticated() async {
@@ -175,5 +204,73 @@ struct CreatePingViewModelTests {
 
         #expect(vm.didCreatePing == false)
         #expect(vm.errorMessage != nil)
+    }
+
+    // MARK: - Content Moderation
+
+    @Test("Moderated text prevents ping creation")
+    func moderatedTextBlocksPingCreation() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: true)
+        mockAuth.isEmailVerified = true
+        let mockPing = MockPingService()
+        let mockChat = MockChatService()
+        let mockLocation = MockLocationService()
+        mockLocation.boundaryResult = true
+        let mockModeration = MockContentModerationService()
+        mockModeration.resultToReturn = .blocked(reason: "Violates community guidelines.")
+
+        let vm = CreatePingViewModel()
+        vm.configure(
+            authService: mockAuth,
+            pingService: mockPing,
+            chatService: mockChat,
+            locationService: mockLocation,
+            contentModerationService: mockModeration,
+            rateLimitService: MockRateLimitService()
+        )
+        vm.text = "Bad content"
+        vm.selectedLocation = Constants.Cluj.center
+
+        await vm.createPing()
+
+        #expect(vm.didCreatePing == false)
+        #expect(vm.errorMessage != nil)
+        #expect(mockModeration.checkCalled == true)
+        #expect(mockPing.createPingWithChatCalled == false)
+    }
+
+    // MARK: - Rate Limiting
+
+    @Test("Rate limited user cannot create ping")
+    func rateLimitedCannotCreatePing() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: true)
+        mockAuth.isEmailVerified = true
+        let mockPing = MockPingService()
+        let mockChat = MockChatService()
+        let mockLocation = MockLocationService()
+        mockLocation.boundaryResult = true
+        let mockModeration = MockContentModerationService()
+        let mockRateLimit = MockRateLimitService()
+        mockRateLimit.pingResult = .limited(retryAfter: 300)
+
+        let vm = CreatePingViewModel()
+        vm.configure(
+            authService: mockAuth,
+            pingService: mockPing,
+            chatService: mockChat,
+            locationService: mockLocation,
+            contentModerationService: mockModeration,
+            rateLimitService: mockRateLimit
+        )
+        vm.text = "Test"
+        vm.selectedLocation = Constants.Cluj.center
+
+        await vm.createPing()
+
+        #expect(vm.didCreatePing == false)
+        #expect(vm.errorMessage != nil)
+        #expect(mockPing.createPingWithChatCalled == false)
     }
 }

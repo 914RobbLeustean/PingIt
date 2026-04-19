@@ -53,5 +53,8 @@ enum Constants {
         static let chatsCollection = "chats"
         static let chatMessagesCollection = "chatMessages"
         static let chatParticipantsCollection = "chatParticipants"
+        static let blocksCollection = "blocks"
+        static let reportsCollection = "reports"
+        static let boostsCollection = "boosts"
     }
 }

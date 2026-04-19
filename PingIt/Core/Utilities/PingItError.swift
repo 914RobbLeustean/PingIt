@@ -8,6 +8,8 @@ enum PingItError: LocalizedError {
     case signInFailed(underlying: Error)
     case signOutFailed(underlying: Error)
     case passwordResetFailed(underlying: Error)
+    case emailVerificationFailed(underlying: Error)
+    case emailNotVerified
 
     // Auth — user-friendly Firebase mappings
     case emailAlreadyInUse
@@ -37,10 +39,23 @@ enum PingItError: LocalizedError {
     // Rate Limiting
     case pingRateLimitExceeded
     case messageRateLimitExceeded
+    case rateLimited(retryAfterMinutes: Int)
 
     // Location
     case locationPermissionDenied
     case locationUnavailable
+
+    // Content Moderation
+    case contentModerated(reason: String)
+
+    // Blocking
+    case blockFailed(underlying: Error)
+    case unblockFailed(underlying: Error)
+    case cannotBlockSelf
+
+    // Reporting
+    case reportFailed(underlying: Error)
+    case reportAlreadySubmitted
 
     // Profile
     case usernameTooShort
@@ -63,6 +78,10 @@ enum PingItError: LocalizedError {
             "Sign out failed: \(error.localizedDescription)"
         case .passwordResetFailed(let error):
             "Failed to send password reset: \(error.localizedDescription)"
+        case .emailVerificationFailed:
+            "Failed to send verification email. Please try again."
+        case .emailNotVerified:
+            "Please verify your email before creating pings."
         case .emailAlreadyInUse:
             "An account with this email already exists."
         case .invalidEmail:
@@ -105,6 +124,8 @@ enum PingItError: LocalizedError {
             "You've reached the ping creation limit. Please try again later."
         case .messageRateLimitExceeded:
             "You're sending messages too quickly. Please slow down."
+        case .rateLimited(let minutes):
+            "You're creating pings too quickly. Try again in \(minutes) minute\(minutes == 1 ? "" : "s")."
         case .locationPermissionDenied:
             "Location access is required. Please enable it in Settings."
         case .locationUnavailable:
@@ -123,6 +144,18 @@ enum PingItError: LocalizedError {
             "Failed to upload profile image: \(error.localizedDescription)"
         case .profileUpdateFailed(let error):
             "Failed to update profile: \(error.localizedDescription)"
+        case .contentModerated(let reason):
+            reason
+        case .blockFailed:
+            "Failed to block user. Please try again."
+        case .unblockFailed:
+            "Failed to unblock user. Please try again."
+        case .cannotBlockSelf:
+            "You cannot block yourself."
+        case .reportFailed:
+            "Failed to submit report. Please try again."
+        case .reportAlreadySubmitted:
+            "You have already reported this content."
         }
     }
 

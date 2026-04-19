@@ -6,6 +6,141 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-04-15] — Sprint 1 Bugfixes, Polish & Chat Sender Identity
+
+### Summary
+Comprehensive bugfix pass on all Sprint 1 safety features after device testing. Added Firebase RTDB server time sync, real-time bidirectional block enforcement, ping lifecycle awareness (deleted/expired ping detection), and chat sender identity (avatar + username on messages).
+
+### Fixed
+- **Email verification banner** now polls `reloadUser()` every 5s and auto-hides when email is verified (no sign-out/in needed)
+- **Block persistence across relaunch**: MapViewModel stores `allPings` and re-filters reactively via `onChange(of: blockService.blockedUserIds)` — no longer depends on load ordering
+- **Duplicate block entries**: `blockUser()` is idempotent (skips write if already in `blockedUserIds`)
+- **Chat block instant update**: ChatViewModel stores `allMessages` + `applyBlockFilter()` called after blocking
+- **Chat block auto-dismiss**: ChatView observes `blockedUserIds` and dismisses when ping creator is blocked; PingDetailView also observes and pops via `navigateToChat = false` + `dismiss()`
+- **ReportView blank white screen**: Refactored to accept `reportService` + `blockService` via init (not `@Environment` which doesn't propagate into `.sheet`). ChatView uses `sheet(item:)` with single `ReportTarget` struct instead of three optional `@State` vars
+- **Auto-dismiss PingDetailView after report+block**: `ReportView` accepts `onDidBlock` callback
+- **Duplicate reports prevented**: `ReportService` queries Firestore before writing, throws `reportAlreadySubmitted`
+- **Server time consistency**: Added `ServerTime` utility using Firebase RTDB `.info/serverTimeOffset`. All countdowns, expiration filters, and ping creation use `ServerTime.now` instead of `Date.now`
+- **Ping deletion — creator no longer sees "unavailable" alert**: `didDeletePing` set before Firestore delete to avoid race with snapshot listener
+- **Ping deletion — chat participant alerted**: ChatViewModel observes ping document; shows "Ping Unavailable" alert in ChatView, silently dismisses to PingDetailView which shows single alert then pops to map
+
+### Added
+- **`ServerTime.swift`** — Firebase RTDB `.info/serverTimeOffset` observer; `ServerTime.now` corrected current time
+- **`PingServicing.observePing(id:onUpdate:)`** — Single-document Firestore snapshot listener
+- **Real-time bidirectional block enforcement** — BlockService uses two Firestore snapshot listeners (`blockerId == me`, `blockedUserId == me`). When UserA blocks UserB, UserB's listener fires immediately.
+- **Ping lifecycle observation** — PingDetailViewModel and ChatViewModel observe the ping document; detect deletion/expiration in real-time
+- **Chat sender identity** — MessageBubbleView shows circular avatar (AsyncImage + initial-letter fallback) and bold username for other users. Consecutive same-sender messages grouped (avatar/name on first only). ChatViewModel caches User profiles per sender ID.
+
+### Changed
+- **`BlockService`** — Replaced one-time `loadBlockedUsers()` with `startObserving()`/`stopObserving()` using two Firestore snapshot listeners; `isolated deinit` for Swift 6.2 compatibility
+- **`BlockServicing` protocol** — `loadBlockedUsers()` → `startObserving()`/`stopObserving()`
+- **`MainTabView`** — Calls `blockService.startObserving()` instead of `loadBlockedUsers()`
+- **`ChatViewModel`** — Added `pingService`, `userService`, `pingListener`, `userCache`, `pingUnavailable`, `isFirstInGroup()`, `fetchMissingUsers()`
+- **`ChatView`** — Accepts `pingCreatorId`; observes `blockedUserIds` and `pingUnavailable` for auto-dismiss
+- **`PingDetailView`** — Observes `blockedUserIds` (pops on block) and `pingUnavailable` (alert + dismiss); uses `@Bindable`
+- **`PingDetailViewModel`** — Added `pingListener`, `pingUnavailable`, `startObservingPing()`, `stopObservingPing()`
+- **`MapViewModel`** — Stores `allPings`, derives `pings` via `applyBlockFilter()`; `onChange` in MapView triggers re-filter
+- **`MessageBubbleView`** — Complete rewrite: sender avatar, username, grouped messages, alignment with invisible spacers
+- **`PingItApp`** — Calls `ServerTime.startObserving()` at launch; added `FirebaseDatabase` SPM dependency
+- **`Date+Extensions`** — `countdownDescription` uses `ServerTime.now`; `relativeDescription` corrects for clock offset
+
+### Files created
+- `PingIt/Core/Utilities/ServerTime.swift`
+
+### Files significantly modified
+- `PingIt/Core/Services/BlockService.swift` (rewritten: snapshot listeners)
+- `PingIt/Core/Protocols/BlockServicing.swift`
+- `PingIt/Core/Services/ReportService.swift` (duplicate prevention)
+- `PingIt/Core/Services/PingService.swift` (+ observePing)
+- `PingIt/Core/Protocols/PingServicing.swift`
+- `PingIt/Features/Chat/Views/ChatView.swift`
+- `PingIt/Features/Chat/Views/MessageBubbleView.swift` (rewritten)
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift`
+- `PingIt/Features/Ping/Views/PingDetailView.swift`
+- `PingIt/Features/Ping/ViewModels/PingDetailViewModel.swift`
+- `PingIt/Features/Map/Views/MapView.swift`
+- `PingIt/Features/Map/ViewModels/MapViewModel.swift`
+- `PingIt/Features/Report/Views/ReportView.swift`
+- `PingIt/App/PingItApp.swift`
+- `PingIt/App/MainTabView.swift`
+- `PingItTests/Mocks/MockBlockService.swift`
+- `PingItTests/Mocks/MockPingService.swift`
+
+---
+
+## [2026-04-14] — Phase 1 Sprint 1: Client-Side Safety Layer
+
+### Summary
+Implemented all client-side safety features required for App Store submission without Cloud Functions. Covers email verification gates, text content moderation, user blocking (bidirectional), user reporting, spam detection (rate limiting), and client-side expired ping filtering.
+
+### Added
+- **`Block.swift`** — `Block` model (`blockerId`, `blockedUserId`, `@ServerTimestamp createdAt`)
+- **`Report.swift`** — `Report` model with nested `ReportTargetType` (.ping, .message), `ReportReason` (CaseIterable), `ReportStatus` enums
+- **`BlockServicing.swift`** — Protocol: `blockedUserIds`, `blockUser`, `unblockUser`, `fetchBlockedUsers`, `isBlocked`, `loadBlockedUsers`
+- **`ContentModeratingServicing.swift`** — Protocol + `ContentModerationResult` enum (.allowed / .blocked(reason:))
+- **`RateLimitServicing.swift`** — Protocol + `RateLimitResult` enum (.allowed / .limited(retryAfter:))
+- **`ReportServicing.swift`** — `submitReport(targetType:targetId:targetOwnerId:reason:details:) async throws`
+- **`BlockService.swift`** — `@Observable @MainActor`; bidirectional Firestore blocking; updates `users` blockedUsers array; in-memory `Set<String>` for O(1) lookup
+- **`ContentModerationService.swift`** — Loads `moderation_wordlist.txt` from bundle; `localizedStandardContains()` case-insensitive matching
+- **`RateLimitService.swift`** — UserDefaults-backed limits: 5 pings/hr + 10/day, 6 messages/10s; `#if DEBUG return .allowed` bypass
+- **`ReportService.swift`** — Writes `Report` to Firestore `reports` collection
+- **`moderation_wordlist.txt`** — Bundle resource: profanity wordlist (one word per line)
+- **`EmailVerificationBannerView.swift`** — Dismissable banner shown in MapView for unverified users with resend action
+- **`BlockedUsersViewModel.swift`** — `configure(blockService:userService:)`, loads blocks with user profiles, `unblockUser(userId:)`
+- **`BlockedUsersView.swift`** — Settings screen: list of blocked users with avatar/username, unblock confirmation alert
+- **`ReportViewModel.swift`** — Reason selection, submit, `showBlockOffer = true` after success
+- **`ReportView.swift`** — `NavigationStack` + `Form`: reason picker (checkmark), details field, submitted state with block offer
+- **`MockBlockService.swift`**, **`MockContentModerationService.swift`**, **`MockRateLimitService.swift`**, **`MockReportService.swift`** — Test mocks with call tracking and injectable results
+- **`BlockedUsersViewModelTests.swift`** (2 tests), **`ReportViewModelTests.swift`** (3 tests)
+- New tests in existing suites: expired ping filter, blocked creator filter (Map), email verification gate, blocked message filter, moderation gate (Chat), email verification gate, moderation gate, rate limit gate (CreatePing)
+
+### Changed
+- **`AuthServicing.swift`** — Added `isEmailVerified: Bool`, `sendEmailVerification() async throws`, `reloadUser() async throws`
+- **`AuthUserRepresentable.swift`** — Added `isEmailVerified: Bool`
+- **`AuthService.swift`** — Implemented new protocol requirements; `signUp()` now calls `sendEmailVerification()` after account creation
+- **`PingItError.swift`** — Added: `emailVerificationFailed`, `emailNotVerified`, `contentModerated(reason:)`, `blockFailed`, `unblockFailed`, `cannotBlockSelf`, `reportFailed`, `reportAlreadySubmitted`, `rateLimited(retryAfterMinutes:)`
+- **`Constants.swift`** — Added `Firestore.blocksCollection`, `Firestore.reportsCollection`, `Firestore.boostsCollection`
+- **`MapViewModel.swift`** — Added `blockService` property; filters pings where `expiresAt <= Date.now` and `blockService.isBlocked(ping.creatorId)`
+- **`CreatePingViewModel.swift`** — Added `contentModerationService` + `rateLimitService`; `createPing()` gates: email verification → rate limit → text validation → moderation → location → write → `recordPingCreation()`
+- **`ChatViewModel.swift`** — Added `contentModerationService`, `blockService`, `rateLimitService`; `startObserving()` filters blocked senders; `sendMessage()` gates: email verification → moderation → rate limit → write → `recordMessageSent()`
+- **`MapView.swift`** — Added `@Environment(BlockService.self)`, email verification banner (ZStack overlay), `handleResendVerification()`
+- **`ChatView.swift`** — Added `@Environment(BlockService.self)`, `@Environment(RateLimitService.self)`, report state vars, ReportView sheet, context menu block action
+- **`CreatePingView.swift`** — Added `@Environment(RateLimitService.self)`, passes to `viewModel.configure()`
+- **`PingDetailView.swift`** — Added block confirmation alert, report sheet; non-creator users see report/block buttons
+- **`MessageBubbleView.swift`** — Added `onReport` and `onBlock` closures; `.contextMenu` for other-user messages
+- **`SettingsView.swift`** — Added "Privacy & Safety" section with `BlockedUsersView` navigation link
+- **`PingItApp.swift`** — Added `contentModerationService`, `blockService`, `reportService`, `rateLimitService` as `@State` properties; all injected via `.environment()`
+- **`MainTabView.swift`** — Added `@Environment(BlockService.self)`; `blockService.loadBlockedUsers()` on launch
+- **`MockAuthUser.swift`** — Added `isEmailVerified: Bool = false`
+- **`MockAuthService.swift`** — Added `isEmailVerified`, `sendEmailVerificationCalled`, `reloadUserCalled`
+- **`MockPingService.swift`** — Added missing `import Foundation` and `import FirebaseFirestore`
+
+### Files created
+- `PingIt/Core/Models/Block.swift`
+- `PingIt/Core/Models/Report.swift`
+- `PingIt/Core/Protocols/BlockServicing.swift`
+- `PingIt/Core/Protocols/ContentModeratingServicing.swift`
+- `PingIt/Core/Protocols/RateLimitServicing.swift`
+- `PingIt/Core/Protocols/ReportServicing.swift`
+- `PingIt/Core/Services/BlockService.swift`
+- `PingIt/Core/Services/ContentModerationService.swift`
+- `PingIt/Core/Services/RateLimitService.swift`
+- `PingIt/Core/Services/ReportService.swift`
+- `PingIt/Resources/moderation_wordlist.txt`
+- `PingIt/Features/Map/Views/EmailVerificationBannerView.swift`
+- `PingIt/Features/Settings/ViewModels/BlockedUsersViewModel.swift`
+- `PingIt/Features/Settings/Views/BlockedUsersView.swift`
+- `PingIt/Features/Report/ViewModels/ReportViewModel.swift`
+- `PingIt/Features/Report/Views/ReportView.swift`
+- `PingItTests/Mocks/MockBlockService.swift`
+- `PingItTests/Mocks/MockContentModerationService.swift`
+- `PingItTests/Mocks/MockRateLimitService.swift`
+- `PingItTests/Mocks/MockReportService.swift`
+- `PingItTests/ViewModelTests/BlockedUsersViewModelTests.swift`
+- `PingItTests/ViewModelTests/ReportViewModelTests.swift`
+
+---
+
 ## [2026-04-14] — Auth Screen Bug Fixes & Polish
 
 ### Fixed

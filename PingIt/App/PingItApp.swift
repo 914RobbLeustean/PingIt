@@ -3,13 +3,20 @@ import FirebaseCore
 
 @main
 struct PingItApp: App {
-    static let configuredFirebase: Void = { FirebaseApp.configure() }()
+    static let configuredFirebase: Void = {
+        FirebaseApp.configure()
+        ServerTime.startObserving()
+    }()
 
     @State private var authService = { _ = PingItApp.configuredFirebase; return AuthService() }()
     @State private var pingService = PingService()
     @State private var chatService = ChatService()
     @State private var userService = UserService()
     @State private var locationService = LocationService()
+    @State private var contentModerationService = ContentModerationService()
+    @State private var blockService = BlockService()
+    @State private var reportService = ReportService()
+    @State private var rateLimitService = RateLimitService()
 
     var body: some Scene {
         WindowGroup {
@@ -19,6 +26,10 @@ struct PingItApp: App {
                 .environment(chatService)
                 .environment(userService)
                 .environment(locationService)
+                .environment(contentModerationService)
+                .environment(blockService)
+                .environment(reportService)
+                .environment(rateLimitService)
         }
     }
 }

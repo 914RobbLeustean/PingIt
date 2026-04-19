@@ -1,12 +1,30 @@
 import SwiftUI
 
+private struct ReportTarget: Identifiable {
+    let id = UUID()
+    let type: Report.ReportTargetType
+    let targetId: String
+    let ownerId: String
+}
+
 struct ChatView: View {
     @Environment(AuthService.self) private var authService
     @Environment(ChatService.self) private var chatService
+    @Environment(PingService.self) private var pingService
+    @Environment(UserService.self) private var userService
+    @Environment(ContentModerationService.self) private var contentModerationService
+    @Environment(BlockService.self) private var blockService
+    @Environment(RateLimitService.self) private var rateLimitService
+    @Environment(ReportService.self) private var reportService
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
+    @State private var reportTarget: ReportTarget?
 
-    init(chatId: String, pingId: String) {
+    let pingCreatorId: String
+
+    init(chatId: String, pingId: String, pingCreatorId: String) {
+        self.pingCreatorId = pingCreatorId
         self._viewModel = State(initialValue: ChatViewModel(chatId: chatId, pingId: pingId))
     }
 
@@ -19,7 +37,24 @@ struct ChatView: View {
                     ForEach(viewModel.messages) { message in
                         MessageBubbleView(
                             message: message,
-                            isCurrentUser: message.senderId == viewModel.currentUserId
+                            isCurrentUser: message.senderId == viewModel.currentUserId,
+                            sender: viewModel.userCache[message.senderId],
+                            showSenderInfo: viewModel.isFirstInGroup(message),
+                            onReport: {
+                                if let id = message.id {
+                                    reportTarget = ReportTarget(
+                                        type: .message,
+                                        targetId: id,
+                                        ownerId: message.senderId
+                                    )
+                                }
+                            },
+                            onBlock: {
+                                Task {
+                                    try? await blockService.blockUser(message.senderId)
+                                    viewModel.applyBlockFilter()
+                                }
+                            }
                         )
                     }
                 }
@@ -63,18 +98,39 @@ struct ChatView: View {
         .navigationTitle("Chat")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            viewModel.configure(authService: authService, chatService: chatService)
+            viewModel.configure(authService: authService, chatService: chatService, pingService: pingService, userService: userService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService)
             viewModel.startObserving()
+            viewModel.startObservingPing()
             await viewModel.joinChat()
         }
         .onDisappear {
             viewModel.stopObserving()
+            viewModel.stopObservingPing()
             Task {
                 await viewModel.leaveChat()
             }
         }
         .onChange(of: viewModel.messages.count) { _, _ in
             scrollToBottom()
+        }
+        .onChange(of: blockService.blockedUserIds) { _, newValue in
+            if newValue.contains(pingCreatorId) {
+                dismiss()
+            }
+        }
+        .onChange(of: viewModel.pingUnavailable) { _, unavailable in
+            if unavailable {
+                dismiss()
+            }
+        }
+        .sheet(item: $reportTarget) { target in
+            ReportView(
+                targetType: target.type,
+                targetId: target.targetId,
+                targetOwnerId: target.ownerId,
+                reportService: reportService,
+                blockService: blockService
+            )
         }
     }
 

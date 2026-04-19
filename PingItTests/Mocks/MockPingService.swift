@@ -1,3 +1,5 @@
+import Foundation
+import FirebaseFirestore
 import Observation
 @testable import PingIt
 
@@ -53,6 +55,13 @@ final class MockPingService: PingServicing {
         return ListenerHandle { [weak self] in
             self?.removeCalled = true
         }
+    }
+
+    func observePing(
+        id: String,
+        onUpdate: @escaping @Sendable (Ping?) -> Void
+    ) -> ListenerHandle {
+        ListenerHandle { }
     }
 
     /// Simulates a Firestore snapshot arriving with the given pings.

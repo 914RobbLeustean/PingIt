@@ -8,6 +8,8 @@ final class CreatePingViewModel {
     private var pingService: (any PingServicing)?
     private var chatService: (any ChatServicing)?
     private var locationService: (any LocationServicing)?
+    private var contentModerationService: (any ContentModeratingServicing)?
+    private var rateLimitService: (any RateLimitServicing)?
     private var isConfigured = false
 
     var text = ""
@@ -50,13 +52,17 @@ final class CreatePingViewModel {
         authService: any AuthServicing,
         pingService: any PingServicing,
         chatService: any ChatServicing,
-        locationService: any LocationServicing
+        locationService: any LocationServicing,
+        contentModerationService: any ContentModeratingServicing,
+        rateLimitService: any RateLimitServicing
     ) {
         guard !isConfigured else { return }
         self.authService = authService
         self.pingService = pingService
         self.chatService = chatService
         self.locationService = locationService
+        self.contentModerationService = contentModerationService
+        self.rateLimitService = rateLimitService
         isConfigured = true
     }
 
@@ -72,12 +78,31 @@ final class CreatePingViewModel {
                 throw PingItError.notAuthenticated
             }
 
+            guard authService.isEmailVerified else {
+                throw PingItError.emailNotVerified
+            }
+
+            if let rateLimitService {
+                let result = rateLimitService.canCreatePing()
+                if case .limited(let retryAfter) = result {
+                    let minutes = Int(ceil(retryAfter / 60))
+                    throw PingItError.rateLimited(retryAfterMinutes: minutes)
+                }
+            }
+
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else {
                 throw PingItError.pingTextEmpty
             }
             guard trimmed.count <= Constants.Ping.maxTextLength else {
                 throw PingItError.pingTextTooLong
+            }
+
+            if let moderationService = contentModerationService {
+                let result = moderationService.check(trimmed)
+                if case .blocked(let reason) = result {
+                    throw PingItError.contentModerated(reason: reason)
+                }
             }
 
             guard let coordinate = selectedLocation else {
@@ -96,12 +121,13 @@ final class CreatePingViewModel {
                     longitude: coordinate.longitude
                 ),
                 geohash: "",
-                expiresAt: Date.now.addingTimeInterval(selectedExpiration),
+                expiresAt: ServerTime.now.addingTimeInterval(selectedExpiration),
                 status: .active
             )
 
             try await pingService.createPingWithChat(ping)
             didCreatePing = true
+            rateLimitService?.recordPingCreation()
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -5,9 +5,11 @@ import CoreLocation
 final class MapViewModel {
     private var pingService: (any PingServicing)?
     private var locationService: (any LocationServicing)?
+    private var blockService: (any BlockServicing)?
     private var listenerRegistration: ListenerHandle?
     private var isConfigured = false
 
+    private var allPings: [Ping] = []
     private(set) var pings: [Ping] = []
     private(set) var isLoading = false
     var errorMessage: String?
@@ -15,10 +17,15 @@ final class MapViewModel {
     var userLocation: CLLocation? { locationService?.currentLocation }
     var authorizationStatus: CLAuthorizationStatus { locationService?.authorizationStatus ?? .notDetermined }
 
-    func configure(pingService: any PingServicing, locationService: any LocationServicing) {
+    func configure(
+        pingService: any PingServicing,
+        locationService: any LocationServicing,
+        blockService: (any BlockServicing)? = nil
+    ) {
         guard !isConfigured else { return }
         self.pingService = pingService
         self.locationService = locationService
+        self.blockService = blockService
         isConfigured = true
     }
 
@@ -31,13 +38,21 @@ final class MapViewModel {
             Task { @MainActor [self] in
                 switch result {
                 case .success(let pings):
-                    self.pings = pings
+                    self.allPings = pings
+                    self.applyBlockFilter()
                     self.errorMessage = nil
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
                 self.isLoading = false
             }
+        }
+    }
+
+    func applyBlockFilter() {
+        pings = allPings.filter { ping in
+            ping.expiresAt > ServerTime.now
+            && !(blockService?.isBlocked(ping.creatorId) ?? false)
         }
     }
 

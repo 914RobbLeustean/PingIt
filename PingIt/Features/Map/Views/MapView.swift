@@ -5,12 +5,16 @@ import FirebaseFirestore
 struct MapView: View {
     @Environment(PingService.self) private var pingService
     @Environment(LocationService.self) private var locationService
+    @Environment(AuthService.self) private var authService
+    @Environment(BlockService.self) private var blockService
     @State private var viewModel = MapViewModel()
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
     @State private var showCreatePing = false
     @State private var selectedPing: Ping?
     @State private var createdPingLocation: CLLocationCoordinate2D?
+    @State private var showVerificationBanner = true
+    @State private var isResendingVerification = false
 
     private static let clujRegion = MKCoordinateRegion(
         center: Constants.Cluj.center,
@@ -57,6 +61,26 @@ struct MapView: View {
                 } else if viewModel.isLoading {
                     ProgressView()
                 }
+
+                if !authService.isEmailVerified && showVerificationBanner {
+                    VStack {
+                        EmailVerificationBannerView(
+                            onResend: handleResendVerification,
+                            onDismiss: { showVerificationBanner = false }
+                        )
+                        Spacer()
+                    }
+                    .padding(.top)
+                    .task {
+                        while !Task.isCancelled {
+                            try? await Task.sleep(for: .seconds(5))
+                            try? await authService.reloadUser()
+                            if authService.isEmailVerified {
+                                break
+                            }
+                        }
+                    }
+                }
             }
             .navigationTitle("Map")
             .toolbar {
@@ -71,11 +95,14 @@ struct MapView: View {
                 CreatePingView(createdPingLocation: $createdPingLocation)
             }
             .task {
-                viewModel.configure(pingService: pingService, locationService: locationService)
+                viewModel.configure(pingService: pingService, locationService: locationService, blockService: blockService)
                 handleAppear()
             }
             .onAppear(perform: handleReappear)
             .onDisappear(perform: handleDisappear)
+            .onChange(of: blockService.blockedUserIds) { _, _ in
+                viewModel.applyBlockFilter()
+            }
             .onChange(of: viewModel.userLocation?.coordinate.latitude) { _, _ in
                 moveToUserLocation(viewModel.userLocation)
             }
@@ -86,6 +113,14 @@ struct MapView: View {
     }
 
     // MARK: - Actions
+
+    private func handleResendVerification() {
+        Task {
+            isResendingVerification = true
+            defer { isResendingVerification = false }
+            try? await authService.sendEmailVerification()
+        }
+    }
 
     private func handleCreatePingTap() {
         showCreatePing = true
