@@ -12,6 +12,9 @@ final class MockPingService: PingServicing {
     var createPingCalled = false
     var createPingWithChatCalled = false
     var deletePingAndChatCalled = false
+    var boostPingCalled = false
+    var hasUserBoostedPingResult = false
+    var lastBoostedPingId: String?
     private(set) var removeCalled = false
 
     private(set) var activePingsCallback: (@Sendable (Result<[Ping], Error>) -> Void)?
@@ -62,6 +65,17 @@ final class MockPingService: PingServicing {
         onUpdate: @escaping @Sendable (Ping?) -> Void
     ) -> ListenerHandle {
         ListenerHandle { }
+    }
+
+    func boostPing(pingId: String) async throws {
+        boostPingCalled = true
+        lastBoostedPingId = pingId
+        if let error = errorToThrow { throw error }
+    }
+
+    func hasUserBoostedPing(pingId: String, userId: String) async throws -> Bool {
+        if let error = errorToThrow { throw error }
+        return hasUserBoostedPingResult
     }
 
     /// Simulates a Firestore snapshot arriving with the given pings.

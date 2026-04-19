@@ -12,4 +12,6 @@ protocol PingServicing {
         id: String,
         onUpdate: @escaping @Sendable (Ping?) -> Void
     ) -> ListenerHandle
+    func boostPing(pingId: String) async throws
+    func hasUserBoostedPing(pingId: String, userId: String) async throws -> Bool
 }
