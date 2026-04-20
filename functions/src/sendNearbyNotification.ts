@@ -42,7 +42,7 @@ async function getBlockedPairs(db: FirebaseFirestore.Firestore, userId: string):
 }
 
 export const sendNearbyNotification = onDocumentCreated(
-  "pings/{pingId}",
+  { document: "pings/{pingId}", region: "europe-west3" },
   async (event) => {
     const pingData = event.data?.data();
     if (!pingData) return;

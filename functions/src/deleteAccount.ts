@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 
-export const deleteAccount = onCall(async (request) => {
+export const deleteAccount = onCall({ region: "europe-west3" }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) {
     throw new HttpsError("unauthenticated", "Must be authenticated.");

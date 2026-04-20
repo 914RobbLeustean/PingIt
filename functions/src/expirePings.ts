@@ -1,7 +1,7 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore } from "firebase-admin/firestore";
 
-export const expirePings = onSchedule("every 5 minutes", async () => {
+export const expirePings = onSchedule({ schedule: "every 5 minutes", region: "europe-west3" }, async () => {
   const db = getFirestore();
   const now = new Date();
 

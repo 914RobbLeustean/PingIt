@@ -121,7 +121,7 @@ final class AuthService: AuthServicing {
         }
 
         do {
-            let functions = Functions.functions()
+            let functions = Functions.functions(region: "europe-west3")
             let _ = try await functions.httpsCallable("deleteAccount").call()
             try? Auth.auth().signOut()
         } catch {

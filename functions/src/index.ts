@@ -3,7 +3,7 @@ import { onRequest } from "firebase-functions/v2/https";
 
 initializeApp();
 
-export const healthCheck = onRequest((req, res) => {
+export const healthCheck = onRequest({ region: "europe-west3" }, (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 

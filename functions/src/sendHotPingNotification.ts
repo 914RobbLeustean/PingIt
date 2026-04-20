@@ -146,14 +146,14 @@ async function checkAndNotifyHotPing(pingId: string | undefined): Promise<void> 
 }
 
 export const sendHotPingNotificationOnBoost = onDocumentCreated(
-  "boosts/{boostId}",
+  { document: "boosts/{boostId}", region: "europe-west3" },
   async (event) => {
     await checkAndNotifyHotPing(event.data?.data()?.pingId);
   }
 );
 
 export const sendHotPingNotificationOnJoin = onDocumentCreated(
-  "chatParticipants/{participantId}",
+  { document: "chatParticipants/{participantId}", region: "europe-west3" },
   async (event) => {
     const participantData = event.data?.data();
     if (!participantData?.chatId) return;
