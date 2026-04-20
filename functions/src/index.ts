@@ -6,3 +6,5 @@ initializeApp();
 export const healthCheck = onRequest((req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+export { expirePings } from "./expirePings";
