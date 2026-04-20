@@ -8,3 +8,4 @@ export const healthCheck = onRequest((req, res) => {
 });
 
 export { expirePings } from "./expirePings";
+export { deleteAccount } from "./deleteAccount";

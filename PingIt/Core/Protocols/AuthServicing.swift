@@ -8,4 +8,6 @@ protocol AuthServicing {
     func sendPasswordReset(email: String) async throws
     func sendEmailVerification() async throws
     func reloadUser() async throws
+    func reauthenticate(password: String) async throws
+    func deleteAccount() async throws
 }
