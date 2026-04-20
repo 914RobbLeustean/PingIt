@@ -131,8 +131,10 @@ PingIt/
 │   │           ├── AuthSecureField.swift        Password field with show/hide toggle
 │   │           └── PasswordStrengthView.swift   Segmented strength bar + rule checklist
 │   ├── Map/
+│   │   ├── Models/
+│   │   │   └── PingCluster.swift    Cluster model: grouped pings, center, containsHotPing
 │   │   ├── ViewModels/
-│   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state; filters expired + blocked; hotPingIds computed
+│   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state; filters expired + blocked; hotPingIds; manual clustering; overlapping pin offset
 │   │   └── Views/
 │   │       ├── MapView.swift              MapKit map with annotations, email verification banner
 │   │       ├── PingAnnotationView.swift   Custom ping marker with hot ping visual treatment
@@ -281,6 +283,8 @@ New ping created in Firestore
 MapView ──observes──▶ MapViewModel ──calls──▶ PingService ──reads──▶ Firestore (pings)
                                               LocationService ──reads──▶ CLLocationManager
                                               BlockService (filters blocked creators + expired pings)
+                     └─ renders unclusteredPings + clusters (manual client-side clustering)
+                     └─ uses displayCoordinates (offset for overlapping pins)
 
 PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ PingService (delete, boost, boost check)
                                                             ChatService
@@ -288,6 +292,7 @@ PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ 
 
 SettingsView ──calls──▶ UserService (fetch + update preferences)
              └─ loads isPrivateProfile, notifyNearbyPings, notifyHotPings from Firestore
+             └─ dual-write: UserDefaults cache + Firestore (eliminates toggle flash on restart)
 
 ChatView ──observes──▶ ChatViewModel ──calls──▶ ChatService ──listens──▶ Firestore (chatMessages)
                                                ContentModerationService (outbound text check)

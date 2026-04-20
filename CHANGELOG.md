@@ -6,6 +6,57 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-04-20] — Sprint 2 Device Testing Fixes
+
+### Summary
+Comprehensive bugfix pass after device testing of all Sprint 2 engagement features. Refined hot score formula, implemented manual clustering, fixed boost UX issues, and eliminated settings toggle flash.
+
+### Fixed
+- **Hot score formula too aggressive** — Original formula (0.5× time weight, threshold ≥5.0) caused pings to appear hot with zero boosts. Refined through 3 iterations to final: `boostCount × 2.0 + participantCount + min(hoursRemaining × 0.1, 2.0)`, gate `boostCount >= 3 && hotScore >= 8.0`. Time contribution capped at 2.0.
+- **Boost count not updating in UI** — `ping` was `let` in PingDetailViewModel; changed to `private(set) var` with local `ping.boostCount += 1` after successful Firestore write.
+- **Boost button race condition** — `canBoost` was momentarily `true` before async `checkBoostStatus()` completed. Added `isCheckingBoostStatus` flag defaulting to `true`; `canBoost` requires `!isCheckingBoostStatus`.
+- **Overlapping pins not tappable** — Pings at identical coordinates stacked invisibly. Added `computeDisplayCoordinates()` in MapViewModel: groups pings by coordinate, offsets them in circular pattern (~0.00015° ≈ 15m).
+- **Boost count hidden from ping creators** — Boost count label was inside `!isCreator` guard. Moved outside so creators can see how many boosts their ping received.
+- **Settings toggles flash default values on restart** — `@State` initialized with hardcoded defaults before async Firestore fetch. Fixed with UserDefaults caching: `savePreference()` writes to both UserDefaults and Firestore; initial `@State` reads from UserDefaults; `hasLoadedPreferences` flag gates `onChange` to prevent spurious writes during load.
+- **No visible clustering on map** — SwiftUI `Map` doesn't support native `MKClusterAnnotation`. Implemented manual client-side clustering algorithm in MapViewModel.
+- **Cluster threshold too aggressive** — Reduced from `0.08` to `0.03` of visible region span. Added minimum span gate (`< 0.005`) to disable clustering at close zoom.
+
+### Added
+- **`PingCluster.swift`** — `PingCluster` model under `Features/Map/Models/` with `Identifiable`, center calculation, and `containsHotPing` flag.
+- **`computeDisplayCoordinates()`** — MapViewModel method for offsetting overlapping pins in circular pattern.
+- **`displayCoordinates` dictionary** — Maps ping IDs to offset coordinates; used by MapView `Annotation` content builder.
+- **`visibleRegion` tracking** — MapViewModel stores visible region via `onMapCameraChange(frequency: .onEnd)`.
+- **`updateClusters()`** — MapViewModel method: distance-based grouping → `clusters` + `unclusteredPings` arrays.
+- **`zoomToCluster()`** — MapView method: calculates bounding rect with padding and animates camera.
+- **Boost status tests** — `cannotBoostWhileCheckingStatus`, `canBoostAfterCheckCompletes`, `cannotBoostAfterCheckConfirmsBoosted`.
+- **Hot score tests** — 7-test `PingHotScoreTests` suite covering all threshold scenarios.
+
+### Changed
+- **`Ping.swift`** — `hotScore` time weight reduced from 0.5 to 0.1, capped at 2.0. `isHot` requires `boostCount >= 3` (was no minimum).
+- **`PingDetailViewModel.swift`** — `ping` changed from `let` to `private(set) var`; added `isCheckingBoostStatus` (defaults `true`); `canBoost` gated on `!isCheckingBoostStatus`.
+- **`PingDetailView.swift`** — Boost count label moved outside `!isCreator` guard.
+- **`MapViewModel.swift`** — Added `clusters`, `unclusteredPings`, `displayCoordinates`, `visibleRegion`; `applyBlockFilter()` calls `computeDisplayCoordinates()` + `updateClusters()`.
+- **`MapView.swift`** — Renders `unclusteredPings` and `clusters` separately; uses `displayCoordinates` for annotation positions; added `onMapCameraChange` and `zoomToCluster()`.
+- **`PingAnnotationView.swift`** — Extracted `pinGradient: AnyGradient` computed property to fix gradient type mismatch.
+- **`SettingsView.swift`** — `@State` reads from UserDefaults (`pref_` prefix); `savePreference()` dual-writes; `cachePreferences()` after Firestore fetch; `hasLoadedPreferences` guard on `onChange`.
+- **`User.swift`** — Added `isPrivateProfile`, `notifyNearbyPings`, `notifyHotPings` defaults.
+
+### Files created
+- `PingIt/Features/Map/Models/PingCluster.swift`
+
+### Files significantly modified
+- `PingIt/Core/Models/Ping.swift`
+- `PingIt/Features/Ping/ViewModels/PingDetailViewModel.swift`
+- `PingIt/Features/Ping/Views/PingDetailView.swift`
+- `PingIt/Features/Map/ViewModels/MapViewModel.swift`
+- `PingIt/Features/Map/Views/MapView.swift`
+- `PingIt/Features/Map/Views/PingAnnotationView.swift`
+- `PingIt/Features/Settings/Views/SettingsView.swift`
+- `PingItTests/ViewModelTests/PingDetailViewModelTests.swift`
+- `PingItTests/PingItTests.swift`
+
+---
+
 ## [2026-04-19] — Phase 1 Sprint 2: Engagement + Map Polish
 
 ### Summary
