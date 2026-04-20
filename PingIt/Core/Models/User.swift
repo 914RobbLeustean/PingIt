@@ -12,4 +12,6 @@ struct User: Codable, Identifiable, Sendable {
     var isPrivateProfile: Bool = false
     var notifyNearbyPings: Bool = true
     var notifyHotPings: Bool = true
+    var fcmToken: String?
+    var lastKnownLocation: [String: Double]?
 }

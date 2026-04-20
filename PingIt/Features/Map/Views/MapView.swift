@@ -7,6 +7,7 @@ struct MapView: View {
     @Environment(LocationService.self) private var locationService
     @Environment(AuthService.self) private var authService
     @Environment(BlockService.self) private var blockService
+    @Environment(NotificationService.self) private var notificationService
     @State private var viewModel = MapViewModel()
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
@@ -218,6 +219,12 @@ struct MapView: View {
                 center: location.coordinate,
                 span: MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)
             ))
+        }
+        Task {
+            await notificationService.updateLastKnownLocation(
+                latitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude
+            )
         }
     }
 
