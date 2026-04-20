@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseAuth
 import FirebaseFirestore
 
 @Observable
@@ -84,6 +85,34 @@ final class PingService: PingServicing {
                 onUpdate(try? snapshot.data(as: Ping.self))
             }
         return ListenerHandle(registration)
+    }
+
+    func boostPing(pingId: String) async throws {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw PingItError.notAuthenticated
+        }
+
+        let batch = db.batch()
+
+        let boostRef = db.collection(Constants.Firestore.boostsCollection).document()
+        let boost = Boost(pingId: pingId, userId: userId)
+        try batch.setData(from: boost, forDocument: boostRef)
+
+        let pingRef = db.collection(Constants.Firestore.pingsCollection).document(pingId)
+        batch.updateData(["boostCount": FieldValue.increment(Int64(1))], forDocument: pingRef)
+
+        try await batch.commit()
+    }
+
+    func hasUserBoostedPing(pingId: String, userId: String) async throws -> Bool {
+        let snapshot = try await db
+            .collection(Constants.Firestore.boostsCollection)
+            .whereField("pingId", isEqualTo: pingId)
+            .whereField("userId", isEqualTo: userId)
+            .limit(to: 1)
+            .getDocuments()
+
+        return !snapshot.documents.isEmpty
     }
 
     func observeActivePings(

@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 1 — Safety & Discovery** — Sprint 1 complete (6/16 features). Client-side safety layer implemented.
+**Phase 1 — Safety & Discovery** — Sprint 2 complete (11/16 features). Engagement features and settings implemented.
 
 ## Completed
 - Project specification and documentation setup
@@ -41,6 +41,16 @@
 ## Completed (Polish — Production Auth Screens)
 - **Auth screens production-ready (2026-04-13):** Welcome + Login + Register + ForgotPassword screens with full navigation (AuthRoute + NavigationStack). Password strength indicator (PasswordValidator), client-side email & password validation, unique username check (debounced Firestore query), confirm password, ToS checkbox, show/hide password, Firebase error mapping to user-friendly messages. Shared components: AuthTextField, AuthSecureField, PasswordStrengthView. New VMs: RegisterViewModel, ForgotPasswordViewModel. ~25 new ViewModel + validator unit tests.
 
+## Completed (Phase 1 — Sprint 2: Engagement + Map Polish)
+- **Phase 1 Sprint 2 (2026-04-19 to 2026-04-20):** Engagement features, settings toggles, and device-testing fixes.
+  - **Boost Ping:** Boost model (`boosts` collection), denormalized `boostCount` on Ping, double-boost prevention (query before UI enable). PingDetailView shows boost button for non-creators with "Boosted" filled state. Boost count visible to all users (including ping creators).
+  - **Hot Pings Algorithm:** Client-side `hotScore` computed property: `boostCount × 2.0 + participantCount + min(hoursRemaining × 0.1, 2.0)`. Gate: `boostCount >= 3 && hotScore >= 8.0`. Top 10 qualifying pings shown with flame icon and red glow on map. Formula refined through 3 iterations during device testing to prevent pings from appearing hot too easily.
+  - **Ping Clustering:** Manual client-side clustering in MapViewModel (SwiftUI `Map` doesn't support native `MKClusterAnnotation`). `PingCluster` model with center calculation and hot-ping awareness. Threshold: `region.span.latitudeDelta × 0.03`, disabled at close zoom (`< 0.005`). `PingClusterAnnotationView` for clustered pins. Tap-to-zoom on clusters.
+  - **Overlapping Pin Offset:** Pings at identical coordinates arranged in circular pattern (~15m offset) to remain individually tappable.
+  - **Notification Preferences:** `notifyNearbyPings` and `notifyHotPings` toggles in SettingsView, persisted to Firestore user document. UserDefaults caching eliminates toggle flash on app restart.
+  - **Privacy Settings:** `isPrivateProfile` toggle in SettingsView, persisted to Firestore user document. UserDefaults caching eliminates toggle flash on app restart.
+  - **Boost Race Condition Fix:** `isCheckingBoostStatus` flag (defaults `true`) prevents boost button from being briefly enabled before async boost check completes.
+
 ## Completed (Phase 1 — Sprint 1: Client-Side Safety)
 - **Phase 1 Sprint 1 (2026-04-14 to 2026-04-15):** Full client-side safety layer without Cloud Functions.
   - **Email Verification:** `AuthServicing` extended with `isEmailVerified`, `sendEmailVerification()`, `reloadUser()`. CreatePingViewModel and ChatViewModel gate actions behind email verification. MapView shows dismissable `EmailVerificationBannerView` for unverified users with resend action. Banner polls `reloadUser()` every 5s and auto-hides when verified.
@@ -57,8 +67,8 @@
 _Nothing actively in progress._
 
 ## Up Next (choose one or more)
-- **Phase 1 Sprint 2:** Boost Ping, Hot Pings Algorithm, Nearby Ping Notifications, GDPR Account Deletion
-- **Phase 1 Sprint 3:** Notification Preferences, Privacy Settings, Content Review Queue, Emergency Content Removal
+- **Phase 1 Sprint 3:** Cloud Functions (ping expiration cron, push notifications, server-side rate limiting)
+- **Phase 1 Sprint 4:** Moderation Pipeline (automated image/video filtering, content review queue, emergency content removal)
 - **Phase 2: Polish & Launch** (10 features): Custom ping duration, onboarding flow, empty/error states, performance optimization, analytics, crash reporting, app icon/splash, privacy policy, beta testing
 
 ## Known Technical Debt
@@ -94,16 +104,16 @@ _Nothing actively in progress._
 - [x] User Report System
 - [ ] Content Review Queue
 - [ ] Emergency Content Removal
-- [ ] Boost Ping
-- [ ] Hot Pings Algorithm
+- [x] Boost Ping
+- [x] Hot Pings Algorithm
 - [ ] Nearby Ping Notifications
 - [ ] Hot Ping Notifications
 - [x] User Blocking
 - [ ] Account Deletion (GDPR)
 - [x] Email Verification
 - [x] Spam Detection
-- [ ] Notification Preferences
-- [ ] Privacy Settings
+- [x] Notification Preferences
+- [x] Privacy Settings
 - [x] Blocked Users Management
 
 ### Phase 2: Polish & Launch (10 features)

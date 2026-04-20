@@ -9,4 +9,7 @@ struct User: Codable, Identifiable, Sendable {
     var profileImageUrl: String?
     @ServerTimestamp var createdAt: Date?
     var blockedUsers: [String] = []
+    var isPrivateProfile: Bool = false
+    var notifyNearbyPings: Bool = true
+    var notifyHotPings: Bool = true
 }

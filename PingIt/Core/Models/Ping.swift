@@ -18,8 +18,19 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
     var geohash: String
     var expiresAt: Date
     var status: PingStatus
+    var boostCount: Int = 0
+    var participantCount: Int = 0
     var chatId: String?
     @ServerTimestamp var createdAt: Date?
+
+    var hotScore: Double {
+        let timeContribution = min(max(0, expiresAt.timeIntervalSinceNow / 3600.0) * 0.1, 2.0)
+        return Double(boostCount) * 2.0 + Double(participantCount) + timeContribution
+    }
+
+    var isHot: Bool {
+        boostCount >= 3 && hotScore >= 8.0
+    }
 
     enum PingStatus: String, Codable, Sendable {
         case active

@@ -115,4 +115,85 @@ struct PingDetailViewModelTests {
         #expect(vm.didDeletePing == false)
         #expect(vm.errorMessage != nil)
     }
+
+    // MARK: - Boost
+
+    @Test("Boost ping succeeds and increments local count")
+    func boostPingSucceeds() async {
+        let mockPing = MockPingService()
+        mockPing.hasUserBoostedPingResult = false
+        let auth = authenticatedAuth(uid: "other-user")
+        let vm = makeVM(
+            ping: makePing(creatorId: "creator1"),
+            authService: auth,
+            pingService: mockPing
+        )
+
+        await vm.checkBoostStatus()
+        #expect(vm.hasUserBoosted == false)
+        #expect(vm.canBoost)
+
+        let countBefore = vm.ping.boostCount
+        await vm.boostPing()
+        #expect(mockPing.boostPingCalled)
+        #expect(vm.hasUserBoosted)
+        #expect(vm.ping.boostCount == countBefore + 1)
+    }
+
+    @Test("Cannot boost own ping")
+    func cannotBoostOwnPing() async {
+        let auth = authenticatedAuth(uid: "creator1")
+        let vm = makeVM(
+            ping: makePing(creatorId: "creator1"),
+            authService: auth
+        )
+
+        await vm.checkBoostStatus()
+        #expect(vm.canBoost == false)
+    }
+
+    @Test("Boost button disabled while checking boost status")
+    func cannotBoostWhileCheckingStatus() {
+        let auth = authenticatedAuth(uid: "other-user")
+        let vm = makeVM(
+            ping: makePing(creatorId: "creator1"),
+            authService: auth
+        )
+
+        #expect(vm.isCheckingBoostStatus)
+        #expect(vm.canBoost == false)
+    }
+
+    @Test("Boost button enabled after check completes for non-boosted user")
+    func canBoostAfterCheckCompletes() async {
+        let mockPing = MockPingService()
+        mockPing.hasUserBoostedPingResult = false
+        let auth = authenticatedAuth(uid: "other-user")
+        let vm = makeVM(
+            ping: makePing(creatorId: "creator1"),
+            authService: auth,
+            pingService: mockPing
+        )
+
+        await vm.checkBoostStatus()
+        #expect(vm.isCheckingBoostStatus == false)
+        #expect(vm.canBoost)
+    }
+
+    @Test("Boost button stays disabled after check completes for already-boosted user")
+    func cannotBoostAfterCheckConfirmsBoosted() async {
+        let mockPing = MockPingService()
+        mockPing.hasUserBoostedPingResult = true
+        let auth = authenticatedAuth(uid: "other-user")
+        let vm = makeVM(
+            ping: makePing(creatorId: "creator1"),
+            authService: auth,
+            pingService: mockPing
+        )
+
+        await vm.checkBoostStatus()
+        #expect(vm.isCheckingBoostStatus == false)
+        #expect(vm.hasUserBoosted)
+        #expect(vm.canBoost == false)
+    }
 }
