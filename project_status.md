@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 1 — Safety & Discovery** — Sprint 2 complete (11/16 features). Engagement features and settings implemented.
+**Phase 1 — Safety & Discovery** — Sprint 3 complete (13/16 features). Cloud Functions deployed, push notifications, GDPR account deletion.
 
 ## Completed
 - Project specification and documentation setup
@@ -41,6 +41,16 @@
 ## Completed (Polish — Production Auth Screens)
 - **Auth screens production-ready (2026-04-13):** Welcome + Login + Register + ForgotPassword screens with full navigation (AuthRoute + NavigationStack). Password strength indicator (PasswordValidator), client-side email & password validation, unique username check (debounced Firestore query), confirm password, ToS checkbox, show/hide password, Firebase error mapping to user-friendly messages. Shared components: AuthTextField, AuthSecureField, PasswordStrengthView. New VMs: RegisterViewModel, ForgotPasswordViewModel. ~25 new ViewModel + validator unit tests.
 
+## Completed (Phase 1 — Sprint 3: Cloud Functions + Notifications)
+- **Phase 1 Sprint 3 (2026-04-20):** First backend work — Cloud Functions + push notifications.
+  - **Cloud Functions Setup:** TypeScript Cloud Functions with Firebase Admin SDK, health check endpoint.
+  - **Ping Expiration Cron:** `expirePings` runs every 5 minutes — queries active pings where `expiresAt <= now`, sets status to "expired", cascading deletes chat + messages + participants.
+  - **GDPR Account Deletion:** `deleteAccount` callable function — cascading delete of all user data (pings, chats, messages, participants, boosts, blocks, reports, profile image, Auth account). iOS: re-auth flow with password confirmation, Cloud Function call via `FirebaseFunctions` SDK. Settings UI with two-step confirmation.
+  - **Push Notifications:** `NotificationService` with APNs/FCM token management, `UNUserNotificationCenterDelegate` for foreground banners and tap handling. `lastKnownLocation` persisted to Firestore on map load.
+  - **Nearby Ping Notifications:** `sendNearbyNotification` Firestore trigger — 2km Haversine distance filter using `lastKnownLocation`, blocks collection query for bidirectional filtering, respects `notifyNearbyPings` preference.
+  - **Hot Ping Notifications:** `sendHotPingNotificationOnBoost` + `sendHotPingNotificationOnJoin` — aligned with client formula (`boostCount >= 3 && hotScore >= 8.0`), top-10 check, one-time notification per ping via `hotNotificationSent` flag.
+  - **SPM Dependencies:** Added `FirebaseFunctions` and `FirebaseMessaging`.
+
 ## Completed (Phase 1 — Sprint 2: Engagement + Map Polish)
 - **Phase 1 Sprint 2 (2026-04-19 to 2026-04-20):** Engagement features, settings toggles, and device-testing fixes.
   - **Boost Ping:** Boost model (`boosts` collection), denormalized `boostCount` on Ping, double-boost prevention (query before UI enable). PingDetailView shows boost button for non-creators with "Boosted" filled state. Boost count visible to all users (including ping creators).
@@ -67,16 +77,17 @@
 _Nothing actively in progress._
 
 ## Up Next (choose one or more)
-- **Phase 1 Sprint 3:** Cloud Functions (ping expiration cron, push notifications, server-side rate limiting)
 - **Phase 1 Sprint 4:** Moderation Pipeline (automated image/video filtering, content review queue, emergency content removal)
 - **Phase 2: Polish & Launch** (10 features): Custom ping duration, onboarding flow, empty/error states, performance optimization, analytics, crash reporting, app icon/splash, privacy policy, beta testing
 
 ## Known Technical Debt
-- Cloud Functions not deployed (ping expiration cron, rate limiting, push notifications)
-- Geohash field is empty string (geospatial radius queries need GeoFirestore for Phase 1)
+- Cloud Functions deployed but not yet tested end-to-end on device (need APNs key configured in Firebase Console)
+- Geohash field is empty string (geospatial radius queries need GeoFirestore for production scale)
 - No offline mode handling (Firestore caches automatically but no explicit UI for offline state)
 - Simulator networking blocked by Netskope (corporate SSL interception) — must test on physical iPhone
 - ProfileViewModel directly calls Firebase Storage — should be extracted to `ImageStorageServicing` protocol for full testability
+- Notification tap navigation (`PingItOpenPing`) not yet wired to deep-link to ping detail
+- `lastKnownLocation` only updated on first map load; could be stale if user moves significantly
 
 ---
 
@@ -106,10 +117,10 @@ _Nothing actively in progress._
 - [ ] Emergency Content Removal
 - [x] Boost Ping
 - [x] Hot Pings Algorithm
-- [ ] Nearby Ping Notifications
-- [ ] Hot Ping Notifications
+- [x] Nearby Ping Notifications
+- [x] Hot Ping Notifications
 - [x] User Blocking
-- [ ] Account Deletion (GDPR)
+- [x] Account Deletion (GDPR)
 - [x] Email Verification
 - [x] Spam Detection
 - [x] Notification Preferences

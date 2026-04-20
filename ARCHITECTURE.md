@@ -63,7 +63,7 @@ PingIt/
 
 **Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
 
-### Actual File Listing (as of 2026-04-19)
+### Actual File Listing (as of 2026-04-20)
 
 ```
 PingIt/
@@ -93,7 +93,8 @@ PingIt/
 │   │   ├── BlockServicing.swift                         Block/unblock, real-time bidirectional listeners
 │   │   ├── ContentModeratingServicing.swift             Text moderation (check → .allowed/.blocked)
 │   │   ├── RateLimitServicing.swift                     Ping + message rate limiting
-│   │   └── ReportServicing.swift                        Submit report to Firestore
+│   │   ├── ReportServicing.swift                        Submit report to Firestore
+│   │   └── NotificationServicing.swift                  FCM token + location update contract
 │   ├── Services/
 │   │   ├── AuthService.swift            Firebase Auth wrapper, auth state listener, email verification
 │   │   ├── PingService.swift            Ping CRUD, real-time snapshot listener
@@ -103,7 +104,8 @@ PingIt/
 │   │   ├── BlockService.swift           @Observable @MainActor; two Firestore snapshot listeners for real-time bidirectional blocking
 │   │   ├── ContentModerationService.swift  Bundle wordlist, localizedStandardContains matching
 │   │   ├── RateLimitService.swift       UserDefaults-backed limits; #if DEBUG bypass
-│   │   └── ReportService.swift          Writes Report documents to Firestore
+│   │   ├── ReportService.swift          Writes Report documents to Firestore
+│   │   └── NotificationService.swift   FCM token registration, APNs permission, foreground banners, location update
 │   └── Utilities/
 │       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts)
 │       ├── PingItError.swift            Typed error enum (+ emailNotVerified, contentModerated, blockFailed, reportFailed, rateLimited, etc.)
@@ -191,7 +193,8 @@ PingItTests/
 │   ├── MockBlockService.swift                Settable blockedUserIds, tracks blockUser/unblockUser calls
 │   ├── MockContentModerationService.swift    Settable result (.allowed/.blocked), tracks check calls
 │   ├── MockRateLimitService.swift            Settable ping/message results, tracks record calls
-│   └── MockReportService.swift               Tracks submitReport calls, injectable error
+│   ├── MockReportService.swift               Tracks submitReport calls, injectable error
+│   └── MockNotificationService.swift         Tracks permission/token/location calls
 ├── ViewModelTests/
 │   ├── CreatePingViewModelTests.swift        (+ email verification, moderation, rate limit tests)
 │   ├── ChatViewModelTests.swift              (+ email verification, blocking, moderation tests)
@@ -310,6 +313,13 @@ ProfileView ──observes──▶ ProfileViewModel ──calls──▶ UserSe
 
 SettingsView ──▶ BlockedUsersView ──observes──▶ BlockedUsersViewModel ──calls──▶ BlockService + UserService
 
+MapView ── uses ──▶ NotificationService.updateLastKnownLocation (on first location fix)
+
+SettingsView ── deleteAccount ──▶ AuthService.reauthenticate + AuthService.deleteAccount ──▶ Cloud Function
+
+PingItApp ── .task ──▶ NotificationService.requestPermission + registerFCMToken
+          └─ sets UNUserNotificationCenter.delegate + Messaging.delegate
+
 AuthenticationCoordinatorView ──routes──▶ LoginView / RegisterView / ForgotPasswordView
 LoginView ──observes──▶ LoginViewModel ──calls──▶ AuthService ──calls──▶ Firebase Auth
 RegisterView ──observes──▶ RegisterViewModel ──calls──▶ AuthService + UserService (username check)
@@ -332,11 +342,63 @@ ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls�
 | **RateLimitService** | UserDefaults-backed ping + message rate limiting, `#if DEBUG` bypass | Implemented |
 | **ReportService** | Writes `Report` documents to Firestore `reports` collection | Implemented |
 | **ServerTime** | Firebase RTDB `.info/serverTimeOffset` for clock-skew correction; `ServerTime.now` | Implemented (utility enum) |
-| **NotificationService** | FCM token registration, notification handling | Not yet created (Phase 1 Sprint 2+) |
+| **NotificationService** | FCM token registration, APNs permission, foreground notification display, lastKnownLocation update | Implemented |
 
 ### Service Injection Pattern
 
 Services are created as `@State` in `PingItApp` and injected via `.environment()`. Views access them with `@Environment(ServiceType.self)`. ViewModels will receive services via init parameters for testability.
+
+---
+
+---
+
+## Cloud Functions Architecture
+
+**Runtime:** TypeScript, Firebase Cloud Functions v2, Node 20
+
+```
+functions/src/
+├── index.ts                      App initialization, exports all functions
+├── expirePings.ts                Scheduled: every 5 minutes, batch-expires pings + cascading deletes
+├── deleteAccount.ts              Callable: GDPR cascading delete (pings, chats, messages, boosts, blocks, reports, storage, auth)
+├── sendNearbyNotification.ts     Firestore trigger: pings onCreate → 2km Haversine filter → FCM push
+└── sendHotPingNotification.ts    Firestore triggers: boosts/chatParticipants onCreate → hot score check → FCM push
+```
+
+### Cloud Function Data Flows
+
+```
+Ping Expiration (cron every 5min):
+  expirePings → query pings where status=="active" AND expiresAt<=now
+    → batch update status="expired"
+    → batch delete: chat, chatMessages, chatParticipants
+
+Account Deletion (callable):
+  deleteAccount(auth.uid)
+    → delete user's pings + their chats/messages/participants
+    → delete user's messages in others' chats
+    → delete user's chat participations, boosts, blocks, reports
+    → delete profile image from Storage
+    → delete user document from Firestore
+    → delete Firebase Auth account
+
+Nearby Notification (pings onCreate):
+  sendNearbyNotification
+    → read ping location
+    → query users with fcmToken != null
+    → filter: !creator, notifyNearbyPings != false, not blocked (blocks collection query)
+    → filter: lastKnownLocation within 2km (Haversine)
+    → send FCM multicast
+
+Hot Ping Notification (boosts/chatParticipants onCreate):
+  sendHotPingNotificationOnBoost / sendHotPingNotificationOnJoin
+    → resolve pingId
+    → check: boostCount >= 3 AND hotScore >= 8.0 (aligned with client formula)
+    → check: ping is in top 10 by score
+    → check: hotNotificationSent flag (prevent duplicates)
+    → query blocks collection for bidirectional filtering
+    → send FCM multicast
+```
 
 ---
 
