@@ -81,7 +81,7 @@ _Nothing actively in progress._
 - **Phase 2: Polish & Launch** (10 features): Custom ping duration, onboarding flow, empty/error states, performance optimization, analytics, crash reporting, app icon/splash, privacy policy, beta testing
 
 ## Known Technical Debt
-- Cloud Functions deployed but not yet tested end-to-end on device (need APNs key configured in Firebase Console)
+- Push notifications cannot be tested — requires personal Apple Developer Program membership ($99/yr) to generate APNs key for Firebase Console. Corporate developer account is restricted. All other Sprint 3 features can be tested without it.
 - Geohash field is empty string (geospatial radius queries need GeoFirestore for production scale)
 - No offline mode handling (Firestore caches automatically but no explicit UI for offline state)
 - Simulator networking blocked by Netskope (corporate SSL interception) — must test on physical iPhone
