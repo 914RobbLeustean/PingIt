@@ -9,6 +9,10 @@ struct SettingsView: View {
     @State private var notifyNearbyPings = UserDefaults.standard.object(forKey: "pref_notifyNearbyPings") as? Bool ?? true
     @State private var notifyHotPings = UserDefaults.standard.object(forKey: "pref_notifyHotPings") as? Bool ?? true
     @State private var hasLoadedPreferences = false
+    @State private var showDeleteConfirmation = false
+    @State private var showPasswordPrompt = false
+    @State private var deletePassword = ""
+    @State private var isDeletingAccount = false
 
     var body: some View {
         NavigationStack {
@@ -43,6 +47,13 @@ struct SettingsView: View {
                     savePreference("isPrivateProfile", value: newValue)
                 }
 
+                Section {
+                    Button("Delete Account", role: .destructive) {
+                        showDeleteConfirmation = true
+                    }
+                    .disabled(isDeletingAccount)
+                }
+
                 if let errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle")
@@ -53,6 +64,23 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .task {
                 await loadPreferences()
+            }
+            .alert("Delete your account?", isPresented: $showDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    showPasswordPrompt = true
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete your account and all your data. This cannot be undone.")
+            }
+            .alert("Confirm your password", isPresented: $showPasswordPrompt) {
+                SecureField("Password", text: $deletePassword)
+                Button("Confirm Delete", role: .destructive) {
+                    handleDeleteAccount()
+                }
+                Button("Cancel", role: .cancel) {
+                    deletePassword = ""
+                }
             }
         }
     }
@@ -68,6 +96,22 @@ struct SettingsView: View {
             try authService.signOut()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func handleDeleteAccount() {
+        let password = deletePassword
+        deletePassword = ""
+        isDeletingAccount = true
+
+        Task {
+            do {
+                try await authService.reauthenticate(password: password)
+                try await authService.deleteAccount()
+            } catch {
+                errorMessage = error.localizedDescription
+                isDeletingAccount = false
+            }
         }
     }
 

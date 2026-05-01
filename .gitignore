@@ -16,6 +16,10 @@ Pods/
 # Firebase
 GoogleService-Info.plist
 
+# Cloud Functions
+functions/node_modules/
+functions/lib/
+
 # Environment
 .env.example
 

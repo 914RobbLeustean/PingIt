@@ -15,6 +15,8 @@ final class MockAuthService: AuthServicing {
     var sendPasswordResetEmail: String?
     var sendEmailVerificationCalled = false
     var reloadUserCalled = false
+    var reauthenticateCalled = false
+    var deleteAccountCalled = false
     var errorToThrow: Error?
 
     func signUp(email: String, password: String, username: String) async throws {
@@ -45,6 +47,16 @@ final class MockAuthService: AuthServicing {
 
     func reloadUser() async throws {
         reloadUserCalled = true
+        if let error = errorToThrow { throw error }
+    }
+
+    func reauthenticate(password: String) async throws {
+        reauthenticateCalled = true
+        if let error = errorToThrow { throw error }
+    }
+
+    func deleteAccount() async throws {
+        deleteAccountCalled = true
         if let error = errorToThrow { throw error }
     }
 }

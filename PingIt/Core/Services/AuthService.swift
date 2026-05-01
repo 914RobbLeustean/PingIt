@@ -1,6 +1,7 @@
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseFunctions
 
 @Observable
 final class AuthService: AuthServicing {
@@ -99,6 +100,32 @@ final class AuthService: AuthServicing {
             self.currentUser = Auth.auth().currentUser
         } catch {
             throw PingItError.firestoreReadFailed(underlying: error)
+        }
+    }
+
+    func reauthenticate(password: String) async throws {
+        guard let user = Auth.auth().currentUser, let email = user.email else {
+            throw PingItError.notAuthenticated
+        }
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+        do {
+            try await user.reauthenticate(with: credential)
+        } catch {
+            throw PingItError.from(authError: error)
+        }
+    }
+
+    func deleteAccount() async throws {
+        guard Auth.auth().currentUser != nil else {
+            throw PingItError.notAuthenticated
+        }
+
+        do {
+            let functions = Functions.functions(region: "europe-west3")
+            let _ = try await functions.httpsCallable("deleteAccount").call()
+            try? Auth.auth().signOut()
+        } catch {
+            throw PingItError.accountDeletionFailed(underlying: error)
         }
     }
 }

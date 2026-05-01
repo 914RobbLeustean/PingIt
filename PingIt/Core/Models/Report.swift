@@ -10,6 +10,8 @@ struct Report: Codable, Identifiable, Sendable {
     var reason: ReportReason
     var details: String?
     var status: ReportStatus
+    var targetContent: String?
+    var targetImageURL: String?
     @ServerTimestamp var createdAt: Date?
 
     enum ReportTargetType: String, Codable, Sendable {

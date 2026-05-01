@@ -5,6 +5,7 @@ private struct ReportTarget: Identifiable {
     let type: Report.ReportTargetType
     let targetId: String
     let ownerId: String
+    let content: String?
 }
 
 struct ChatView: View {
@@ -45,7 +46,8 @@ struct ChatView: View {
                                     reportTarget = ReportTarget(
                                         type: .message,
                                         targetId: id,
-                                        ownerId: message.senderId
+                                        ownerId: message.senderId,
+                                        content: message.text
                                     )
                                 }
                             },
@@ -106,8 +108,9 @@ struct ChatView: View {
         .onDisappear {
             viewModel.stopObserving()
             viewModel.stopObservingPing()
-            Task {
-                await viewModel.leaveChat()
+            let vm = viewModel
+            Task.detached { @MainActor in
+                await vm.leaveChat()
             }
         }
         .onChange(of: viewModel.messages.count) { _, _ in
@@ -128,6 +131,7 @@ struct ChatView: View {
                 targetType: target.type,
                 targetId: target.targetId,
                 targetOwnerId: target.ownerId,
+                targetContent: target.content,
                 reportService: reportService,
                 blockService: blockService
             )

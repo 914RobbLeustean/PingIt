@@ -6,6 +6,94 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-05-01] — Sprint 3 E2E fixes: Firestore rules, report snapshots, stale state, pin overlap
+
+### Summary
+Bug fixes discovered during E2E testing. Added Firestore security rules, fixed chat participant rejoin duplicates, added content snapshots to reports for audit trail, added boost cleanup to ping expiration, fixed stale block/rate-limit state surviving account switches, and improved pin overlap separation for nearby pings.
+
+### Added
+- **`firestore.rules`** — Security rules for all 8 collections (users, pings, chats, chatMessages, chatParticipants, boosts, blocks, reports). Owner-gated writes, unauthenticated list on users for username availability check during registration.
+- **`Report` model** — Added `targetContent: String?` and `targetImageURL: String?` fields to snapshot reported content at report time (survives ping expiration/deletion)
+
+### Fixed
+- **Stale state on account switch** — `BlockService.stopObserving()` and `RateLimitService.resetForSignOut()` now called from `PingItApp.onChange` when auth state becomes nil. Previously, blocked user IDs and rate limit timestamps from a deleted/signed-out account persisted in memory and affected the next logged-in user.
+- **Pin overlap** — `computeDisplayCoordinates()` now groups pings within ~5m proximity (instead of exact coordinate match), so pins created from the same GPS fix are properly fanned out when zoomed in. Separation reduced to ~9m for tighter visual grouping.
+
+### Changed
+- **`firebase.json`** — Added `firestore.rules` reference
+- **`PingItApp.swift`** — Added `.onChange` watching auth state to reset `BlockService` and `RateLimitService` on sign-out/account deletion
+- **`RateLimitService.swift`** — Added `resetForSignOut()` to clear UserDefaults timestamps
+- **`MapViewModel.swift`** — Proximity-based pin grouping (~5m threshold) replaces exact coordinate string matching; offset distance reduced to ~9m
+- **`ChatService.swift`** — Fixed `joinChatIfNeeded`: removed `leftAt == NSNull()` filter (didn't match absent fields), now queries by `chatId + userId` only and clears `leftAt` on rejoin instead of creating duplicate participant docs
+- **`ChatView.swift`** — Fixed `leaveChat` in `onDisappear` using `Task.detached` so it survives view teardown; passes `message.text` as `targetContent` when reporting
+- **`PingDetailView.swift`** — Passes `ping.text` as `targetContent` when reporting
+- **`ReportServicing.swift`** — Added `targetContent` and `targetImageURL` parameters
+- **`ReportService.swift`** — Passes new content fields through to Report creation
+- **`ReportViewModel.swift`** — Accepts and forwards `targetContent` and `targetImageURL`
+- **`ReportView.swift`** — Accepts `targetContent` and `targetImageURL` in init
+- **`MockReportService.swift`** — Updated to match new protocol signature
+- **`expirePings.ts`** — Now deletes associated `boosts` docs when expiring a ping
+- **`docs/FIREBASE.md`** — Replaced outdated inline rules with pointer to `firestore.rules`, updated composite index table with all 5 required indexes
+- **`docs/SECURITY.md`** — Corrected blocking docs from `users.blockedUsers[]` to `blocks` collection with bidirectional filtering
+- **`CLAUDE.md`** — Added Firestore indexes section requiring index updates after multi-field query implementations
+- **`project_status.md`** — Updated tech debt re: Apple Developer membership blocker for push notifications
+
+---
+
+## [2026-04-20] — Phase 1 Sprint 3: Cloud Functions + Notifications
+
+### Summary
+First backend work for PingIt: deployed TypeScript Cloud Functions for ping expiration (cron), GDPR account deletion (callable), nearby ping notifications (Firestore trigger), and hot ping notifications (boost/join triggers). iOS side adds NotificationService for FCM token management and push notification handling, plus account deletion UI in Settings.
+
+### Added — Cloud Functions (`functions/src/`)
+- **`healthCheck`** — HTTP endpoint for deployment verification
+- **`expirePings`** — Scheduled function (every 5 minutes): queries active pings where `expiresAt <= now`, sets status to "expired", cascading deletes chat + messages + participants in batched writes (500 ops max per batch)
+- **`deleteAccount`** — Callable function: cascading delete of all user data (pings, chats, messages, participants, boosts, blocks, reports, profile image, user document, Auth account). Requires authentication.
+- **`sendNearbyNotification`** — Firestore trigger on `pings/{pingId}` creation: queries users with FCM tokens, filters by 2km Haversine distance from `lastKnownLocation`, respects `notifyNearbyPings` preference, queries `blocks` collection for bidirectional blocking, sends FCM push notification
+- **`sendHotPingNotificationOnBoost`** — Firestore trigger on `boosts/{boostId}` creation: checks if boosted ping meets hot criteria (aligned with client: `boostCount >= 3 && hotScore >= 8.0`, formula `boostCount × 2.0 + participantCount + min(hoursRemaining × 0.1, 2.0)`), must be in top 10 active pings, sends once per ping via `hotNotificationSent` flag
+- **`sendHotPingNotificationOnJoin`** — Firestore trigger on `chatParticipants/{participantId}` creation: resolves ping from chatId, delegates to shared hot-check logic
+
+### Added — iOS
+- **`NotificationServicing.swift`** — Protocol: `requestPermission()`, `registerFCMToken()`, `updateLastKnownLocation(latitude:longitude:)`
+- **`NotificationService.swift`** — `@Observable NSObject` subclass: UNUserNotificationCenterDelegate (foreground banners, notification tap → posts `PingItOpenPing` NotificationCenter event), MessagingDelegate (FCM token refresh → Firestore update), location update to Firestore
+- **`MockNotificationService.swift`** — Test mock with call tracking
+- **Delete Account UI** in SettingsView — two-step confirmation (alert → password re-auth → Cloud Function call → sign out)
+- **`reauthenticate(password:)`** and **`deleteAccount()`** on AuthServicing/AuthService — re-auth via EmailAuthProvider, deleteAccount calls Cloud Function via `FirebaseFunctions` SDK
+
+### Changed
+- **`User.swift`** — Added `fcmToken: String?` and `lastKnownLocation: [String: Double]?`
+- **`PingItError.swift`** — Added `accountDeletionFailed(underlying:)` case
+- **`AuthServicing.swift`** — Added `reauthenticate(password:)` and `deleteAccount()` protocol requirements
+- **`AuthService.swift`** — Implemented re-auth + Cloud Function-backed deletion; added `import FirebaseFunctions`
+- **`MockAuthService.swift`** — Added `reauthenticateCalled`, `deleteAccountCalled` tracking
+- **`PingItApp.swift`** — Added `NotificationService` as `@State`, injected via `.environment()`, sets up UNUserNotificationCenter/Messaging delegates, requests permission + registers FCM token on launch
+- **`MapView.swift`** — Added `@Environment(NotificationService.self)`, updates `lastKnownLocation` on Firestore when user location is first determined
+- **`SettingsView.swift`** — Added delete account section with two-step confirmation flow (initial alert → password re-auth alert → deletion)
+- **`project.pbxproj`** — Added `FirebaseFunctions` and `FirebaseMessaging` SPM dependencies
+
+### Files created
+- `functions/package.json`, `functions/tsconfig.json`, `functions/.eslintrc.js`
+- `functions/src/index.ts`, `functions/src/expirePings.ts`, `functions/src/deleteAccount.ts`
+- `functions/src/sendNearbyNotification.ts`, `functions/src/sendHotPingNotification.ts`
+- `firebase.json`, `.firebaserc`
+- `PingIt/Core/Protocols/NotificationServicing.swift`
+- `PingIt/Core/Services/NotificationService.swift`
+- `PingItTests/Mocks/MockNotificationService.swift`
+
+### Files significantly modified
+- `PingIt/Core/Protocols/AuthServicing.swift`
+- `PingIt/Core/Services/AuthService.swift`
+- `PingIt/Core/Models/User.swift`
+- `PingIt/Core/Utilities/PingItError.swift`
+- `PingIt/App/PingItApp.swift`
+- `PingIt/Features/Map/Views/MapView.swift`
+- `PingIt/Features/Settings/Views/SettingsView.swift`
+- `PingItTests/Mocks/MockAuthService.swift`
+- `PingIt.xcodeproj/project.pbxproj`
+- `.gitignore`
+
+---
+
 ## [2026-04-20] — Sprint 2 Device Testing Fixes
 
 ### Summary

@@ -9,6 +9,8 @@ final class ReportViewModel {
     let targetType: Report.ReportTargetType
     let targetId: String
     let targetOwnerId: String
+    let targetContent: String?
+    let targetImageURL: String?
 
     var selectedReason: Report.ReportReason?
     var additionalDetails = ""
@@ -17,10 +19,12 @@ final class ReportViewModel {
     private(set) var showBlockOffer = false
     private(set) var errorMessage: String?
 
-    init(targetType: Report.ReportTargetType, targetId: String, targetOwnerId: String) {
+    init(targetType: Report.ReportTargetType, targetId: String, targetOwnerId: String, targetContent: String? = nil, targetImageURL: String? = nil) {
         self.targetType = targetType
         self.targetId = targetId
         self.targetOwnerId = targetOwnerId
+        self.targetContent = targetContent
+        self.targetImageURL = targetImageURL
     }
 
     func configure(reportService: any ReportServicing) {
@@ -47,7 +51,9 @@ final class ReportViewModel {
                 targetId: targetId,
                 targetOwnerId: targetOwnerId,
                 reason: reason,
-                details: details.isEmpty ? nil : details
+                details: details.isEmpty ? nil : details,
+                targetContent: targetContent,
+                targetImageURL: targetImageURL
             )
             didSubmitReport = true
             showBlockOffer = true

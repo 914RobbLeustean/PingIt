@@ -1,5 +1,7 @@
 import SwiftUI
 import FirebaseCore
+import FirebaseMessaging
+import UserNotifications
 
 @main
 struct PingItApp: App {
@@ -17,6 +19,7 @@ struct PingItApp: App {
     @State private var blockService = BlockService()
     @State private var reportService = ReportService()
     @State private var rateLimitService = RateLimitService()
+    @State private var notificationService = NotificationService()
 
     var body: some Scene {
         WindowGroup {
@@ -30,6 +33,21 @@ struct PingItApp: App {
                 .environment(blockService)
                 .environment(reportService)
                 .environment(rateLimitService)
+                .environment(notificationService)
+                .onChange(of: authService.currentUser == nil) {
+                    if authService.currentUser == nil {
+                        blockService.stopObserving()
+                        rateLimitService.resetForSignOut()
+                    }
+                }
+                .task {
+                    UNUserNotificationCenter.current().delegate = notificationService
+                    Messaging.messaging().delegate = notificationService
+                    let granted = await notificationService.requestPermission()
+                    if granted {
+                        await notificationService.registerFCMToken()
+                    }
+                }
         }
     }
 }

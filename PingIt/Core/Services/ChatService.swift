@@ -16,14 +16,16 @@ final class ChatService: ChatServicing {
 
     /// Joins chat if not already an active participant. Returns the participant document ID.
     func joinChatIfNeeded(chatId: String, userId: String) async throws -> String {
-        // Check if already an active participant (no leftAt)
         let existing = try await db.collection(Constants.Firestore.chatParticipantsCollection)
             .whereField("chatId", isEqualTo: chatId)
             .whereField("userId", isEqualTo: userId)
-            .whereField("leftAt", isEqualTo: NSNull())
             .getDocuments()
 
         if let doc = existing.documents.first {
+            let data = doc.data()
+            if data["leftAt"] != nil {
+                try await doc.reference.updateData(["leftAt": FieldValue.delete()])
+            }
             return doc.documentID
         }
 

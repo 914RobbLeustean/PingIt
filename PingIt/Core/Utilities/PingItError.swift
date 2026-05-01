@@ -57,6 +57,9 @@ enum PingItError: LocalizedError {
     case reportFailed(underlying: Error)
     case reportAlreadySubmitted
 
+    // Account Deletion
+    case accountDeletionFailed(underlying: Error)
+
     // Profile
     case usernameTooShort
     case usernameTooLong
@@ -156,6 +159,8 @@ enum PingItError: LocalizedError {
             "Failed to submit report. Please try again."
         case .reportAlreadySubmitted:
             "You have already reported this content."
+        case .accountDeletionFailed:
+            "Failed to delete your account. Please try again."
         }
     }
 

@@ -12,6 +12,8 @@ struct ReportView: View {
         targetType: Report.ReportTargetType,
         targetId: String,
         targetOwnerId: String,
+        targetContent: String? = nil,
+        targetImageURL: String? = nil,
         reportService: any ReportServicing,
         blockService: BlockService,
         onDidBlock: (() -> Void)? = nil
@@ -19,7 +21,9 @@ struct ReportView: View {
         self._viewModel = State(initialValue: ReportViewModel(
             targetType: targetType,
             targetId: targetId,
-            targetOwnerId: targetOwnerId
+            targetOwnerId: targetOwnerId,
+            targetContent: targetContent,
+            targetImageURL: targetImageURL
         ))
         self.reportService = reportService
         self.blockService = blockService

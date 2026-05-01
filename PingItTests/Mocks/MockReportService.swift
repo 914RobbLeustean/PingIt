@@ -15,7 +15,9 @@ final class MockReportService: ReportServicing {
         targetId: String,
         targetOwnerId: String,
         reason: Report.ReportReason,
-        details: String?
+        details: String?,
+        targetContent: String?,
+        targetImageURL: String?
     ) async throws {
         submitReportCalled = true
         lastTargetType = targetType

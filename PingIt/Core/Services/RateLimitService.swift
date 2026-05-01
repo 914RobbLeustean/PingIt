@@ -76,6 +76,11 @@ final class RateLimitService: RateLimitServicing {
         saveTimestamps(timestamps, for: Keys.messageTimestamps)
     }
 
+    func resetForSignOut() {
+        defaults.removeObject(forKey: Keys.pingTimestamps)
+        defaults.removeObject(forKey: Keys.messageTimestamps)
+    }
+
     // MARK: - Storage
 
     private func loadTimestamps(for key: String) -> [Date] {

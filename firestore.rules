@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      // Unauthenticated list needed for username availability check during registration
+      allow list: if true;
+      allow get: if request.auth != null;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    match /pings/{pingId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.creatorId;
+      allow update: if request.auth != null;
+      allow delete: if request.auth.uid == resource.data.creatorId;
+    }
+
+    match /chats/{chatId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    match /chatMessages/{messageId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.senderId;
+      allow update, delete: if false;
+    }
+
+    match /chatParticipants/{participantId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId;
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    match /boosts/{boostId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if false;
+    }
+
+    match /blocks/{blockId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.blockerId;
+      allow delete: if request.auth.uid == resource.data.blockerId;
+      allow update: if false;
+    }
+
+    match /reports/{reportId} {
+      // List needed for duplicate-report check (client queries own reports by reporterId)
+      allow list: if request.auth != null;
+      allow get: if false;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.reporterId;
+      allow update, delete: if false;
+    }
+  }
+}
