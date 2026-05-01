@@ -5,7 +5,7 @@ import vision from "@google-cloud/vision";
 
 const client = new vision.ImageAnnotatorClient();
 
-export const moderateImage = onObjectFinalized(async (event) => {
+export const moderateImage = onObjectFinalized({ region: "europe-west3" }, async (event) => {
   const filePath = event.data.name;
   if (!filePath) return;
 

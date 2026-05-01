@@ -7,7 +7,7 @@ const adminEmails = defineString("ADMIN_EMAILS", {
   description: "Comma-separated list of admin email addresses",
 });
 
-export const removeContent = onCall(async (request) => {
+export const removeContent = onCall({ region: "europe-west3" }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) {
     throw new HttpsError("unauthenticated", "Must be authenticated.");
