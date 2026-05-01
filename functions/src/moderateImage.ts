@@ -5,7 +5,7 @@ import vision from "@google-cloud/vision";
 
 const client = new vision.ImageAnnotatorClient();
 
-export const moderateImage = onObjectFinalized({ region: "europe-west3" }, async (event) => {
+export const moderateImage = onObjectFinalized({ region: "europe-west3", bucket: "pingit-dev.firebasestorage.app" }, async (event) => {
   const filePath = event.data.name;
   if (!filePath) return;
 
@@ -21,14 +21,11 @@ export const moderateImage = onObjectFinalized({ region: "europe-west3" }, async
   const file = bucket.file(filePath);
 
   try {
-    // Get a signed URL for Vision API
-    const [url] = await file.getSignedUrl({
-      action: "read",
-      expires: Date.now() + 5 * 60 * 1000, // 5 minutes
-    });
+    // Use gs:// URI directly — avoids signBlob permission requirement
+    const gcsUri = `gs://${event.data.bucket}/${filePath}`;
 
     // Call Vision API SafeSearch
-    const [result] = await client.safeSearchDetection(url);
+    const [result] = await client.safeSearchDetection(gcsUri);
     const safeSearch = result.safeSearchAnnotation;
 
     if (!safeSearch) {
