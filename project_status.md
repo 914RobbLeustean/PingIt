@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 1 — Safety & Discovery** — Sprint 3 complete (13/16 features). Cloud Functions deployed, push notifications, GDPR account deletion.
+**Phase 1 — Safety & Discovery** — Sprint 3 complete (13/16 features). Cloud Functions deployed, push notifications, GDPR account deletion. E2E tested — Firestore rules deployed, stale state on account switch fixed, report content snapshots, pin overlap separation improved.
 
 ## Completed
 - Project specification and documentation setup

@@ -73,29 +73,49 @@ final class MapViewModel {
     }
 
     private func computeDisplayCoordinates() {
-        var coordinateGroups: [String: [Ping]] = [:]
+        // ~5 meter proximity threshold for grouping overlapping pins
+        let proximityThreshold = 0.00005
+        let offsetDistance = 0.00008
+
+        var groups: [[Ping]] = []
+        var assigned = Set<String>()
+
         for ping in pings {
-            let key = "\(ping.location.latitude),\(ping.location.longitude)"
-            coordinateGroups[key, default: []].append(ping)
+            guard let id = ping.id, !assigned.contains(id) else { continue }
+            var group = [ping]
+            assigned.insert(id)
+
+            for other in pings {
+                guard let otherId = other.id, !assigned.contains(otherId) else { continue }
+                if abs(ping.location.latitude - other.location.latitude) < proximityThreshold
+                    && abs(ping.location.longitude - other.location.longitude) < proximityThreshold {
+                    group.append(other)
+                    assigned.insert(otherId)
+                }
+            }
+            groups.append(group)
         }
 
         var result: [String: CLLocationCoordinate2D] = [:]
-        let offsetDistance = 0.00015
 
-        for (_, group) in coordinateGroups {
+        for group in groups {
             if group.count == 1, let ping = group.first, let id = ping.id {
                 result[id] = CLLocationCoordinate2D(
                     latitude: ping.location.latitude,
                     longitude: ping.location.longitude
                 )
             } else {
+                let center = CLLocationCoordinate2D(
+                    latitude: group.map(\.location.latitude).reduce(0, +) / Double(group.count),
+                    longitude: group.map(\.location.longitude).reduce(0, +) / Double(group.count)
+                )
                 let angleStep = (2.0 * .pi) / Double(group.count)
                 for (index, ping) in group.enumerated() {
                     guard let id = ping.id else { continue }
                     let angle = angleStep * Double(index)
                     result[id] = CLLocationCoordinate2D(
-                        latitude: ping.location.latitude + offsetDistance * cos(angle),
-                        longitude: ping.location.longitude + offsetDistance * sin(angle)
+                        latitude: center.latitude + offsetDistance * cos(angle),
+                        longitude: center.longitude + offsetDistance * sin(angle)
                     )
                 }
             }

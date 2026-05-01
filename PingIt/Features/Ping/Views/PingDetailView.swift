@@ -122,6 +122,7 @@ struct PingDetailView: View {
                     targetType: .ping,
                     targetId: pingId,
                     targetOwnerId: viewModel.ping.creatorId,
+                    targetContent: viewModel.ping.text,
                     reportService: reportService,
                     blockService: blockService,
                     onDidBlock: { dismiss() }

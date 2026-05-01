@@ -34,6 +34,12 @@ struct PingItApp: App {
                 .environment(reportService)
                 .environment(rateLimitService)
                 .environment(notificationService)
+                .onChange(of: authService.currentUser == nil) {
+                    if authService.currentUser == nil {
+                        blockService.stopObserving()
+                        rateLimitService.resetForSignOut()
+                    }
+                }
                 .task {
                     UNUserNotificationCenter.current().delegate = notificationService
                     Messaging.messaging().delegate = notificationService

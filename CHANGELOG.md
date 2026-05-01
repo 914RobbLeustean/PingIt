@@ -6,6 +6,40 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-05-01] — Sprint 3 E2E fixes: Firestore rules, report snapshots, stale state, pin overlap
+
+### Summary
+Bug fixes discovered during E2E testing. Added Firestore security rules, fixed chat participant rejoin duplicates, added content snapshots to reports for audit trail, added boost cleanup to ping expiration, fixed stale block/rate-limit state surviving account switches, and improved pin overlap separation for nearby pings.
+
+### Added
+- **`firestore.rules`** — Security rules for all 8 collections (users, pings, chats, chatMessages, chatParticipants, boosts, blocks, reports). Owner-gated writes, unauthenticated list on users for username availability check during registration.
+- **`Report` model** — Added `targetContent: String?` and `targetImageURL: String?` fields to snapshot reported content at report time (survives ping expiration/deletion)
+
+### Fixed
+- **Stale state on account switch** — `BlockService.stopObserving()` and `RateLimitService.resetForSignOut()` now called from `PingItApp.onChange` when auth state becomes nil. Previously, blocked user IDs and rate limit timestamps from a deleted/signed-out account persisted in memory and affected the next logged-in user.
+- **Pin overlap** — `computeDisplayCoordinates()` now groups pings within ~5m proximity (instead of exact coordinate match), so pins created from the same GPS fix are properly fanned out when zoomed in. Separation reduced to ~9m for tighter visual grouping.
+
+### Changed
+- **`firebase.json`** — Added `firestore.rules` reference
+- **`PingItApp.swift`** — Added `.onChange` watching auth state to reset `BlockService` and `RateLimitService` on sign-out/account deletion
+- **`RateLimitService.swift`** — Added `resetForSignOut()` to clear UserDefaults timestamps
+- **`MapViewModel.swift`** — Proximity-based pin grouping (~5m threshold) replaces exact coordinate string matching; offset distance reduced to ~9m
+- **`ChatService.swift`** — Fixed `joinChatIfNeeded`: removed `leftAt == NSNull()` filter (didn't match absent fields), now queries by `chatId + userId` only and clears `leftAt` on rejoin instead of creating duplicate participant docs
+- **`ChatView.swift`** — Fixed `leaveChat` in `onDisappear` using `Task.detached` so it survives view teardown; passes `message.text` as `targetContent` when reporting
+- **`PingDetailView.swift`** — Passes `ping.text` as `targetContent` when reporting
+- **`ReportServicing.swift`** — Added `targetContent` and `targetImageURL` parameters
+- **`ReportService.swift`** — Passes new content fields through to Report creation
+- **`ReportViewModel.swift`** — Accepts and forwards `targetContent` and `targetImageURL`
+- **`ReportView.swift`** — Accepts `targetContent` and `targetImageURL` in init
+- **`MockReportService.swift`** — Updated to match new protocol signature
+- **`expirePings.ts`** — Now deletes associated `boosts` docs when expiring a ping
+- **`docs/FIREBASE.md`** — Replaced outdated inline rules with pointer to `firestore.rules`, updated composite index table with all 5 required indexes
+- **`docs/SECURITY.md`** — Corrected blocking docs from `users.blockedUsers[]` to `blocks` collection with bidirectional filtering
+- **`CLAUDE.md`** — Added Firestore indexes section requiring index updates after multi-field query implementations
+- **`project_status.md`** — Updated tech debt re: Apple Developer membership blocker for push notifications
+
+---
+
 ## [2026-04-20] — Phase 1 Sprint 3: Cloud Functions + Notifications
 
 ### Summary

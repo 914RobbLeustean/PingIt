@@ -66,6 +66,22 @@ export const expirePings = onSchedule({ schedule: "every 5 minutes", region: "eu
       }
     }
 
+    const boostsSnapshot = await db
+      .collection("boosts")
+      .where("pingId", "==", pingDoc.id)
+      .get();
+
+    for (const boostDoc of boostsSnapshot.docs) {
+      batch.delete(boostDoc.ref);
+      operationCount++;
+
+      if (operationCount >= batchSize) {
+        await batch.commit();
+        batch = db.batch();
+        operationCount = 0;
+      }
+    }
+
     if (operationCount >= batchSize) {
       await batch.commit();
       batch = db.batch();

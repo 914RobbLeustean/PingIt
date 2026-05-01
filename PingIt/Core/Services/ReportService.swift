@@ -12,7 +12,9 @@ final class ReportService: ReportServicing {
         targetId: String,
         targetOwnerId: String,
         reason: Report.ReportReason,
-        details: String?
+        details: String?,
+        targetContent: String?,
+        targetImageURL: String?
     ) async throws {
         guard let currentUserId = Auth.auth().currentUser?.uid else {
             throw PingItError.notAuthenticated
@@ -37,7 +39,9 @@ final class ReportService: ReportServicing {
             targetOwnerId: targetOwnerId,
             reason: reason,
             details: details,
-            status: .pending
+            status: .pending,
+            targetContent: targetContent,
+            targetImageURL: targetImageURL
         )
 
         do {
