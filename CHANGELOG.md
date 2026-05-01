@@ -6,6 +6,25 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-05-01] — Phase 1 Sprint 4: Moderation Pipeline (Phase 1 Complete)
+
+### Summary
+Final sprint of Phase 1: deployed automated image moderation via Vision API SafeSearch and admin emergency content removal Cloud Function. Added admin moderation runbook. All 16 Phase 1 features now complete.
+
+### Added — Cloud Functions (`functions/src/`)
+- **`moderateImage`** — Storage trigger (`onObjectFinalized`): scans uploads in `profile_pictures/` and `ping_images/` via Vision API SafeSearch. `VERY_LIKELY` inappropriate content is auto-deleted (file removed, Firestore updated: `profileImageUrl` nullified or ping `status` set to "removed"). `LIKELY` content creates a `reports` document for manual review. All auto-removals logged to `moderationActions` collection.
+- **`removeContent`** — Callable function for admin emergency content removal. Verifies caller email against `ADMIN_EMAILS` environment param. Supports three target types: `ping` (status="removed" + cascade delete chat/messages/participants), `message` (delete), `user` (24hr suspension). All actions logged to `moderationActions` audit trail.
+
+### Added — Documentation
+- **`docs/ADMIN_MODERATION_RUNBOOK.md`** — Manual review workflow for Firebase Console: pending reports, content review steps, `removeContent` CLI usage, SLA targets, audit trail reference, word list update process.
+
+### Changed
+- **`.gitignore`** — Changed `docs/` to `docs/*` with `!docs/ADMIN_MODERATION_RUNBOOK.md` negation to track the runbook in version control while keeping other docs local.
+- **`functions/src/index.ts`** — Added exports for `moderateImage` and `removeContent`
+- **`functions/package.json`** — Added `@google-cloud/vision` dependency
+
+---
+
 ## [2026-05-01] — Sprint 3 E2E fixes: Firestore rules, report snapshots, stale state, pin overlap
 
 ### Summary
