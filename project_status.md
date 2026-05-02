@@ -87,6 +87,10 @@ _Nothing actively in progress._
 - ProfileViewModel directly calls Firebase Storage — should be extracted to `ImageStorageServicing` protocol for full testability
 - Notification tap navigation (`PingItOpenPing`) not yet wired to deep-link to ping detail
 - `lastKnownLocation` only updated on first map load; could be stale if user moves significantly
+- User suspension is write-only — `removeContent` sets `suspensionStatus`/`suspensionExpiresAt` in Firestore but the iOS app doesn't check or enforce it (no blocked UI, no action gating, no Firestore rule checks)
+- `moderateImage` uses `gs://` URI instead of signed URLs due to missing `iam.serviceAccounts.signBlob` permission on default compute service account
+- Node.js 20 runtime deprecated (2026-04-30) — upgrade to Node 22 before decommission (2026-10-30)
+- `firebase-functions` package is outdated — upgrade has breaking changes, needs dedicated PR
 
 ---
 
