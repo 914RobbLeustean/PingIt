@@ -14,3 +14,5 @@ export {
   sendHotPingNotificationOnBoost,
   sendHotPingNotificationOnJoin,
 } from "./sendHotPingNotification";
+export { moderateImage } from "./moderateImage";
+export { removeContent } from "./removeContent";

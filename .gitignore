@@ -28,8 +28,9 @@ functions/lib/
 *.swp
 *~
 
-# Documentation (local only)
-docs/
+# Documentation (local only, except runbooks)
+docs/*
+!docs/ADMIN_MODERATION_RUNBOOK.md
 
 # Git worktrees
 .worktrees/

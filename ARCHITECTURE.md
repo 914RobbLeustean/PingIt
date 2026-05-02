@@ -362,7 +362,9 @@ functions/src/
 ├── expirePings.ts                Scheduled: every 5 minutes, batch-expires pings + cascading deletes
 ├── deleteAccount.ts              Callable: GDPR cascading delete (pings, chats, messages, boosts, blocks, reports, storage, auth)
 ├── sendNearbyNotification.ts     Firestore trigger: pings onCreate → 2km Haversine filter → FCM push
-└── sendHotPingNotification.ts    Firestore triggers: boosts/chatParticipants onCreate → hot score check → FCM push
+├── sendHotPingNotification.ts    Firestore triggers: boosts/chatParticipants onCreate → hot score check → FCM push
+├── moderateImage.ts              Storage trigger: onObjectFinalized → Vision API SafeSearch → auto-remove or flag for review
+└── removeContent.ts              Callable: admin emergency content removal (ping, message, user suspension) with audit trail
 ```
 
 ### Cloud Function Data Flows
@@ -398,6 +400,22 @@ Hot Ping Notification (boosts/chatParticipants onCreate):
     → check: hotNotificationSent flag (prevent duplicates)
     → query blocks collection for bidirectional filtering
     → send FCM multicast
+
+Image Moderation (Storage onObjectFinalized):
+  moderateImage
+    → filter: only profile_pictures/ and ping_images/ paths
+    → generate signed URL → Vision API SafeSearch
+    → VERY_LIKELY: auto-delete file, update Firestore (nullify profileImageUrl or set ping status="removed"), create moderationActions audit doc
+    → LIKELY: create reports doc for manual review
+    → below LIKELY: no action
+
+Emergency Content Removal (callable):
+  removeContent(auth.uid)
+    → verify caller email in ADMIN_EMAILS param
+    → targetType "ping": set status="removed", cascade delete chat + messages + participants
+    → targetType "message": delete chatMessages doc
+    → targetType "user": set suspensionStatus="suspended", 24hr expiry
+    → create moderationActions audit doc
 ```
 
 ---

@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 1 — Safety & Discovery** — Sprint 3 complete (13/16 features). Cloud Functions deployed, push notifications, GDPR account deletion. E2E tested — Firestore rules deployed, stale state on account switch fixed, report content snapshots, pin overlap separation improved.
+**Phase 1 — Safety & Discovery** — Complete (16/16 features). All 4 sprints shipped: client-side safety, engagement, Cloud Functions, and moderation pipeline (Vision API image moderation + admin emergency removal).
 
 ## Completed
 - Project specification and documentation setup
@@ -76,8 +76,7 @@
 ## In Progress
 _Nothing actively in progress._
 
-## Up Next (choose one or more)
-- **Phase 1 Sprint 4:** Moderation Pipeline (automated image/video filtering, content review queue, emergency content removal)
+## Up Next
 - **Phase 2: Polish & Launch** (10 features): Custom ping duration, onboarding flow, empty/error states, performance optimization, analytics, crash reporting, app icon/splash, privacy policy, beta testing
 
 ## Known Technical Debt
@@ -88,6 +87,10 @@ _Nothing actively in progress._
 - ProfileViewModel directly calls Firebase Storage — should be extracted to `ImageStorageServicing` protocol for full testability
 - Notification tap navigation (`PingItOpenPing`) not yet wired to deep-link to ping detail
 - `lastKnownLocation` only updated on first map load; could be stale if user moves significantly
+- User suspension is write-only — `removeContent` sets `suspensionStatus`/`suspensionExpiresAt` in Firestore but the iOS app doesn't check or enforce it (no blocked UI, no action gating, no Firestore rule checks)
+- `moderateImage` uses `gs://` URI instead of signed URLs due to missing `iam.serviceAccounts.signBlob` permission on default compute service account
+- Node.js 20 runtime deprecated (2026-04-30) — upgrade to Node 22 before decommission (2026-10-30)
+- `firebase-functions` package is outdated — upgrade has breaking changes, needs dedicated PR
 
 ---
 
@@ -110,11 +113,11 @@ _Nothing actively in progress._
 - [x] Real-Time Message Updates
 
 ### Phase 1: Safety & Discovery (16 features)
-- [ ] Automated Image/Video Filtering
+- [x] Automated Image/Video Filtering
 - [x] Text Content Moderation
 - [x] User Report System
-- [ ] Content Review Queue
-- [ ] Emergency Content Removal
+- [x] Content Review Queue
+- [x] Emergency Content Removal
 - [x] Boost Ping
 - [x] Hot Pings Algorithm
 - [x] Nearby Ping Notifications
