@@ -13,6 +13,7 @@ struct PingDetailActionSection: View {
                 Button("Join Chat", systemImage: "bubble.left.and.bubble.right", action: handleJoinChat)
                     .buttonStyle(.borderedProminent)
                     .frame(maxWidth: .infinity)
+                    .accessibilityHint("Opens the group chat for this ping")
             }
 
             if isCreator {

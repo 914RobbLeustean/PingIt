@@ -76,21 +76,34 @@
 ## In Progress
 _Nothing actively in progress._
 
+## Completed (Phase 2 — Audit Remediation)
+- **Audit remediation (2026-05-02):** Addressed critical, high, and medium audit findings across 9 implementation units.
+  - **Firestore rules hardened:** Pings update restricted to boostCount increment-by-1 from non-creators. `moderationActions` collection explicitly denied for all client access.
+  - **Suspension enforcement:** User model extended with `suspensionStatus`/`suspensionExpiresAt`. RootView gates access — suspended users see full-screen `SuspendedAccountView` with expiry info and sign-out.
+  - **Privacy profile enforcement:** `isPrivateProfile` now enforced — PingDetailView shows "Anonymous" + default icon for private-profile creators (unless viewer is the creator).
+  - **Moderation wordlist expanded:** From 10 to ~150 words covering English profanity, slurs, hate speech, and Romanian profanity.
+  - **Notification tap navigation:** `NavigationRouter` wired through PingItApp → MainTabView → MapView. Tapping a push notification now switches to Map tab and navigates to the ping.
+  - **Empty states:** MapView shows "No pings nearby" overlay. Location denied banner with Settings link added.
+  - **Error states:** BlockedUsersView now displays error messages. Location denied state with "Open Settings" button.
+  - **Chat pagination:** Messages loaded in pages of 50. Real-time listener for new messages only. "Load earlier messages" button at top of chat.
+  - **Accessibility:** Labels, hints, and element grouping added across 10+ view files (PingDetail, Chat, Map, Profile, Settings, Auth).
+
 ## Up Next
-- **Phase 2: Polish & Launch** (10 features): Custom ping duration, onboarding flow, empty/error states, performance optimization, analytics, crash reporting, app icon/splash, privacy policy, beta testing
+- **Phase 2: Polish & Launch** (remaining): Custom ping duration, onboarding flow, Firebase Analytics, Crashlytics, app icon, privacy policy, beta testing
 
 ## Known Technical Debt
-- Push notifications cannot be tested — requires personal Apple Developer Program membership ($99/yr) to generate APNs key for Firebase Console. Corporate developer account is restricted. All other Sprint 3 features can be tested without it.
+- Push notifications cannot be tested — requires personal Apple Developer Program membership ($99/yr) to generate APNs key for Firebase Console. Corporate developer account is restricted.
 - Geohash field is empty string (geospatial radius queries need GeoFirestore for production scale)
 - No offline mode handling (Firestore caches automatically but no explicit UI for offline state)
 - Simulator networking blocked by Netskope (corporate SSL interception) — must test on physical iPhone
 - ProfileViewModel directly calls Firebase Storage — should be extracted to `ImageStorageServicing` protocol for full testability
-- Notification tap navigation (`PingItOpenPing`) not yet wired to deep-link to ping detail
 - `lastKnownLocation` only updated on first map load; could be stale if user moves significantly
-- User suspension is write-only — `removeContent` sets `suspensionStatus`/`suspensionExpiresAt` in Firestore but the iOS app doesn't check or enforce it (no blocked UI, no action gating, no Firestore rule checks)
 - `moderateImage` uses `gs://` URI instead of signed URLs due to missing `iam.serviceAccounts.signBlob` permission on default compute service account
 - Node.js 20 runtime deprecated (2026-04-30) — upgrade to Node 22 before decommission (2026-10-30)
 - `firebase-functions` package is outdated — upgrade has breaking changes, needs dedicated PR
+- No server-side rate limiting (client-side only — can be bypassed)
+- No admin web dashboard (Firebase Console + runbook only)
+- No GDPR data export (deletion exists but no export)
 
 ---
 
@@ -133,9 +146,9 @@ _Nothing actively in progress._
 ### Phase 2: Polish & Launch (10 features)
 - [ ] Custom Ping Duration
 - [ ] Onboarding Flow
-- [ ] Empty States
-- [ ] Error States
-- [ ] Performance Optimization
+- [x] Empty States
+- [x] Error States
+- [x] Performance Optimization
 - [ ] Firebase Analytics
 - [ ] Crash Reporting
 - [ ] App Icon & Splash Screen

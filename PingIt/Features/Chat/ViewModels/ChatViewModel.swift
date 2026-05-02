@@ -19,6 +19,8 @@ final class ChatViewModel {
     private var allMessages: [ChatMessage] = []
     private(set) var messages: [ChatMessage] = []
     private(set) var isLoading = false
+    private(set) var isLoadingMore = false
+    private(set) var hasMoreMessages = true
     private(set) var isSending = false
     private(set) var errorMessage: String?
     private(set) var hasJoined = false
@@ -26,6 +28,7 @@ final class ChatViewModel {
     var messageText = ""
     var pingUnavailable = false
     private(set) var userCache: [String: User] = [:]
+    private let pageSize = 50
 
     var canSend: Bool {
         !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending
@@ -60,22 +63,60 @@ final class ChatViewModel {
         isConfigured = true
     }
 
-    func startObserving() {
-        guard let chatService, listenerRegistration == nil else { return }
+    func loadInitialMessages() async {
+        guard let chatService else { return }
         isLoading = true
+        defer { isLoading = false }
 
-        listenerRegistration = chatService.observeMessages(chatId: chatId) { [weak self] result in
+        do {
+            let fetched = try await chatService.fetchMessages(chatId: chatId, before: nil, limit: pageSize)
+            allMessages = fetched
+            hasMoreMessages = fetched.count >= pageSize
+            applyBlockFilter()
+            startListeningForNewMessages()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func loadMoreMessages() async {
+        guard let chatService, hasMoreMessages, !isLoadingMore else { return }
+        guard let oldestDate = allMessages.first?.createdAt else { return }
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+
+        do {
+            let older = try await chatService.fetchMessages(chatId: chatId, before: oldestDate, limit: pageSize)
+            hasMoreMessages = older.count >= pageSize
+            allMessages = older + allMessages
+            applyBlockFilter()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func startListeningForNewMessages() {
+        guard let chatService, listenerRegistration == nil else { return }
+        let after = allMessages.last?.createdAt ?? Date.now
+
+        listenerRegistration = chatService.observeNewMessages(chatId: chatId, after: after) { [weak self] result in
             guard let self else { return }
             Task { @MainActor [self] in
                 switch result {
-                case .success(let messages):
-                    self.allMessages = messages
-                    self.applyBlockFilter()
+                case .success(let newMessages):
+                    let existingIds = Set(self.allMessages.compactMap(\.id))
+                    let unique = newMessages.filter { msg in
+                        guard let id = msg.id else { return true }
+                        return !existingIds.contains(id)
+                    }
+                    if !unique.isEmpty {
+                        self.allMessages.append(contentsOf: unique)
+                        self.applyBlockFilter()
+                    }
                     self.errorMessage = nil
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
-                self.isLoading = false
             }
         }
     }

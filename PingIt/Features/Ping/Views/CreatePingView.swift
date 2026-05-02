@@ -26,6 +26,8 @@ struct CreatePingView: View {
                         Text("\(viewModel.characterCount) / \(Constants.Ping.maxTextLength)")
                             .font(.caption)
                             .foregroundStyle(viewModel.isOverLimit ? .red : .secondary)
+                            .accessibilityLabel("Character count")
+                            .accessibilityValue("\(viewModel.characterCount) of \(Constants.Ping.maxTextLength)")
                     }
                 }
 
@@ -45,6 +47,7 @@ struct CreatePingView: View {
                         }
                         .foregroundStyle(viewModel.selectedLocation != nil ? .primary : .secondary)
                     }
+                    .accessibilityHint("Opens a map to choose the ping location")
                 }
 
                 Section("Expires in") {

@@ -2,15 +2,54 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AuthService.self) private var authService
+    @Environment(UserService.self) private var userService
+
+    @State private var currentUserProfile: User?
+    @State private var isCheckingSuspension = true
+
+    private var isSuspended: Bool {
+        guard let profile = currentUserProfile,
+              let status = profile.suspensionStatus else { return false }
+        guard status == "suspended" || status == "banned" else { return false }
+        if status == "banned" { return true }
+        if let expiresAt = profile.suspensionExpiresAt {
+            return expiresAt > Date.now
+        }
+        return true
+    }
 
     var body: some View {
         Group {
             if authService.currentUser != nil {
-                MainTabView()
+                if isCheckingSuspension {
+                    ProgressView()
+                } else if isSuspended {
+                    SuspendedAccountView(expiresAt: currentUserProfile?.suspensionExpiresAt)
+                } else {
+                    MainTabView()
+                }
             } else {
                 AuthenticationCoordinatorView()
             }
         }
         .animation(.default, value: authService.currentUser != nil)
+        .task(id: authService.currentUser?.uid) {
+            await checkSuspension()
+        }
+    }
+
+    private func checkSuspension() async {
+        guard let userId = authService.currentUser?.uid else {
+            currentUserProfile = nil
+            isCheckingSuspension = false
+            return
+        }
+        isCheckingSuspension = true
+        do {
+            currentUserProfile = try await userService.fetchUser(id: userId)
+        } catch {
+            currentUserProfile = nil
+        }
+        isCheckingSuspension = false
     }
 }

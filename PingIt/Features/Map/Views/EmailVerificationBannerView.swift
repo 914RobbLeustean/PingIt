@@ -27,5 +27,6 @@ struct EmailVerificationBannerView: View {
         .background(.ultraThinMaterial)
         .clipShape(.rect(cornerRadius: 12))
         .padding(.horizontal)
+        .accessibilityElement(children: .combine)
     }
 }

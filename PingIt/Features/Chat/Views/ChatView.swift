@@ -35,6 +35,19 @@ struct ChatView: View {
         VStack(spacing: 0) {
             ScrollView {
                 LazyVStack(spacing: 8) {
+                    if viewModel.hasMoreMessages && !viewModel.isLoading {
+                        Button(action: handleLoadMore) {
+                            if viewModel.isLoadingMore {
+                                ProgressView()
+                            } else {
+                                Text("Load earlier messages")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .disabled(viewModel.isLoadingMore)
+                    }
+
                     ForEach(viewModel.messages) { message in
                         MessageBubbleView(
                             message: message,
@@ -94,6 +107,7 @@ struct ChatView: View {
                     .labelStyle(.iconOnly)
                     .font(.title2)
                     .disabled(viewModel.canSend == false)
+                    .accessibilityHint("Sends your message")
             }
             .padding()
         }
@@ -101,7 +115,7 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             viewModel.configure(authService: authService, chatService: chatService, pingService: pingService, userService: userService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService)
-            viewModel.startObserving()
+            await viewModel.loadInitialMessages()
             viewModel.startObservingPing()
             await viewModel.joinChat()
         }
@@ -143,6 +157,12 @@ struct ChatView: View {
     private func handleSend() {
         Task {
             await viewModel.sendMessage()
+        }
+    }
+
+    private func handleLoadMore() {
+        Task {
+            await viewModel.loadMoreMessages()
         }
     }
 

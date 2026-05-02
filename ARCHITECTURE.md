@@ -68,9 +68,10 @@ PingIt/
 ```
 PingIt/
 ├── App/
-│   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection
-│   ├── RootView.swift               Auth gate: LoginView or MainTabView
-│   └── MainTabView.swift            Tab bar (Map, Profile, Settings)
+│   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection, notification routing
+│   ├── RootView.swift               Auth gate with suspension check: LoginView or SuspendedAccountView or MainTabView
+│   ├── MainTabView.swift            Tab bar (Map, Profile, Settings) with tab selection for notification navigation
+│   └── NavigationRouter.swift       @Observable router for push notification → ping navigation
 ├── Core/
 │   ├── Models/
 │   │   ├── User.swift               Firestore: users collection
@@ -127,6 +128,7 @@ PingIt/
 │   │       ├── LoginView.swift             Email + password sign-in
 │   │       ├── RegisterView.swift          Full registration form with strength indicator
 │   │       ├── ForgotPasswordView.swift    Password reset request
+│   │       ├── SuspendedAccountView.swift   Full-screen suspension gate (shows expiry, contact, sign-out)
 │   │       ├── TermsOfServiceView.swift    Placeholder (Phase 2: WebView)
 │   │       └── Components/
 │   │           ├── AuthTextField.swift         Styled field with icon + validation indicator
@@ -319,6 +321,13 @@ SettingsView ── deleteAccount ──▶ AuthService.reauthenticate + AuthSer
 
 PingItApp ── .task ──▶ NotificationService.requestPermission + registerFCMToken
           └─ sets UNUserNotificationCenter.delegate + Messaging.delegate
+          └─ .onReceive(PingItOpenPing) ──▶ NavigationRouter.pendingPingId
+
+RootView ── checks ──▶ UserService.fetchUser (suspension gate)
+         └─ if suspended ──▶ SuspendedAccountView
+         └─ if not suspended ──▶ MainTabView
+
+NavigationRouter ──observed by──▶ MainTabView (tab switch) + MapView (ping navigation)
 
 AuthenticationCoordinatorView ──routes──▶ LoginView / RegisterView / ForgotPasswordView
 LoginView ──observes──▶ LoginViewModel ──calls──▶ AuthService ──calls──▶ Firebase Auth
