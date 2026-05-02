@@ -55,6 +55,7 @@ struct MessageBubbleView: View {
                 Spacer(minLength: 48)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder

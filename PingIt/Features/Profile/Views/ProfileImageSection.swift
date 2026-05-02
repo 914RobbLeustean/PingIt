@@ -57,6 +57,7 @@ struct ProfileImageSection: View {
                     .clipShape(.circle)
             }
         }
+        .accessibilityLabel("Profile picture")
     }
 
     private var editButton: some View {

@@ -12,8 +12,10 @@ final class MockChatService: ChatServicing {
     var leaveChatCalled = false
     private(set) var removeCalled = false
     var lastSentMessage: ChatMessage?
+    var messagesToReturn: [ChatMessage] = []
 
     private(set) var messagesCallback: (@Sendable (Result<[ChatMessage], Error>) -> Void)?
+    private(set) var newMessagesCallback: (@Sendable (Result<[ChatMessage], Error>) -> Void)?
 
     func sendMessage(_ message: ChatMessage) async throws {
         sendMessageCalled = true
@@ -41,6 +43,15 @@ final class MockChatService: ChatServicing {
         if let error = errorToThrow { throw error }
     }
 
+    func fetchMessages(chatId: String, before: Date?, limit: Int) async throws -> [ChatMessage] {
+        if let error = errorToThrow { throw error }
+        if let before {
+            return messagesToReturn.filter { ($0.createdAt ?? .distantFuture) < before }
+                .suffix(limit).map { $0 }
+        }
+        return Array(messagesToReturn.suffix(limit))
+    }
+
     func observeMessages(
         chatId: String,
         onUpdate: @escaping @Sendable (Result<[ChatMessage], Error>) -> Void
@@ -49,6 +60,21 @@ final class MockChatService: ChatServicing {
         return ListenerHandle { [weak self] in
             self?.removeCalled = true
         }
+    }
+
+    func observeNewMessages(
+        chatId: String,
+        after: Date,
+        onUpdate: @escaping @Sendable (Result<[ChatMessage], Error>) -> Void
+    ) -> ListenerHandle {
+        newMessagesCallback = onUpdate
+        return ListenerHandle { [weak self] in
+            self?.removeCalled = true
+        }
+    }
+
+    func simulateNewMessage(_ message: ChatMessage) {
+        newMessagesCallback?(.success([message]))
     }
 
     /// Simulates a Firestore snapshot arriving with the given messages.

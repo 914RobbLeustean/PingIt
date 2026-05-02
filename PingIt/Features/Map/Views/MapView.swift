@@ -8,6 +8,7 @@ struct MapView: View {
     @Environment(AuthService.self) private var authService
     @Environment(BlockService.self) private var blockService
     @Environment(NotificationService.self) private var notificationService
+    @Environment(NavigationRouter.self) private var navigationRouter
     @State private var viewModel = MapViewModel()
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
@@ -16,6 +17,7 @@ struct MapView: View {
     @State private var createdPingLocation: CLLocationCoordinate2D?
     @State private var showVerificationBanner = true
     @State private var isResendingVerification = false
+    @State private var showPingUnavailableAlert = false
 
     private static let clujRegion = MKCoordinateRegion(
         center: Constants.Cluj.center,
@@ -85,6 +87,39 @@ struct MapView: View {
                     }
                 } else if viewModel.isLoading {
                     ProgressView()
+                } else if viewModel.pings.isEmpty {
+                    VStack {
+                        Spacer()
+                        Label("No pings nearby. Be the first to create one!", systemImage: "mappin.slash")
+                            .font(.callout)
+                            .padding()
+                            .background(.ultraThinMaterial)
+                            .clipShape(.rect(cornerRadius: 12))
+                            .padding()
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+
+                if viewModel.authorizationStatus == .denied || viewModel.authorizationStatus == .restricted {
+                    VStack {
+                        HStack {
+                            Image(systemName: "location.slash")
+                                .foregroundStyle(.red)
+                            Text("Location access denied. Enable in Settings to see your position.")
+                                .font(.subheadline)
+                            Spacer()
+                            Button("Open Settings", action: handleOpenSettings)
+                                .font(.subheadline)
+                                .bold()
+                        }
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .clipShape(.rect(cornerRadius: 12))
+                        .padding(.horizontal)
+                        .accessibilityElement(children: .combine)
+                        Spacer()
+                    }
+                    .padding(.top)
                 }
 
                 if !authService.isEmailVerified && showVerificationBanner {
@@ -134,6 +169,17 @@ struct MapView: View {
             .onChange(of: viewModel.authorizationStatus) { _, newStatus in
                 handleAuthorizationChange(newStatus)
             }
+            .onChange(of: navigationRouter.pendingPingId) {
+                if let pingId = navigationRouter.pendingPingId {
+                    navigationRouter.pendingPingId = nil
+                    Task { await handleNotificationNavigation(pingId: pingId) }
+                }
+            }
+            .alert("Ping Unavailable", isPresented: $showPingUnavailableAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("This ping is no longer available.")
+            }
         }
     }
 
@@ -144,6 +190,24 @@ struct MapView: View {
             isResendingVerification = true
             defer { isResendingVerification = false }
             try? await authService.sendEmailVerification()
+        }
+    }
+
+    private func handleOpenSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func handleNotificationNavigation(pingId: String) async {
+        do {
+            let ping = try await pingService.fetchPing(id: pingId)
+            if ping.status == .active {
+                selectedPing = ping
+            } else {
+                showPingUnavailableAlert = true
+            }
+        } catch {
+            showPingUnavailableAlert = true
         }
     }
 

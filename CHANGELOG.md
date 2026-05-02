@@ -6,6 +6,76 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-05-02] — Audit Remediation: Security, Privacy, Polish, Accessibility
+
+### Summary
+Addressed 9 critical/high/medium audit findings: hardened Firestore rules, enforced suspension and privacy settings, expanded moderation, wired notification navigation, added empty/error states, paginated chat messages, and added accessibility labels across the app.
+
+### Changed — Firestore Rules (`firestore.rules`)
+- **Pings update rule hardened:** Restricted client-side update to `boostCount` increment-by-1 from non-creators only (Cloud Functions bypass via admin SDK)
+- **`moderationActions` collection:** Added explicit deny-all rule for client reads/writes
+
+### Added — Suspension Enforcement
+- **`User.swift`** — Added `suspensionStatus: String?` and `suspensionExpiresAt: Date?` fields
+- **`SuspendedAccountView.swift`** — Full-screen suspension gate: expiry date, contact email, sign-out
+- **`RootView.swift`** — Suspension check on login: fetches user profile, shows SuspendedAccountView for suspended/banned users
+
+### Added — Privacy Profile Enforcement
+- **`PingDetailViewModel.swift`** — `shouldHideCreatorIdentity` computed property: hides creator username/photo for private profiles (non-creators)
+- **`PingDetailView.swift`** — Passes "Anonymous" + nil image URL when creator has private profile
+
+### Changed — Moderation
+- **`moderation_wordlist.txt`** — Expanded from 10 to ~150 words (English profanity, slurs, hate speech, Romanian profanity)
+
+### Added — Notification Tap Navigation
+- **`NavigationRouter.swift`** — `@Observable` router with `pendingPingId` for deep linking from push notifications
+- **`PingItApp.swift`** — Observes `PingItOpenPing` notification, sets `navigationRouter.pendingPingId`
+- **`MainTabView.swift`** — Switches to Map tab on pending notification; uses `AppTab` enum for tab selection
+- **`MapView.swift`** — Fetches and navigates to ping from `pendingPingId`; shows alert if ping unavailable
+
+### Added — Empty & Error States
+- **`MapView.swift`** — Empty state overlay ("No pings nearby"), location denied banner with Settings link
+- **`BlockedUsersView.swift`** — Error state display using `ContentUnavailableView`
+
+### Changed — Chat Pagination
+- **`ChatServicing.swift`** — Added `fetchMessages(chatId:before:limit:)` and `observeNewMessages(chatId:after:onUpdate:)` protocol methods
+- **`ChatService.swift`** — Implemented paginated fetch (50 per page, ordered by createdAt) and real-time listener for new messages only
+- **`ChatViewModel.swift`** — `loadInitialMessages()` + `loadMoreMessages()` replace unlimited snapshot listener; tracks `isLoadingMore`/`hasMoreMessages`
+- **`ChatView.swift`** — "Load earlier messages" button at top of chat when more messages available
+
+### Added — Accessibility
+- Labels, hints, and element grouping across 10+ view files: PingDetailCreatorSection, PingDetailView, PingDetailActionSection, CreatePingView, ChatView, MessageBubbleView, MapView, EmailVerificationBannerView, ProfileImageSection, BlockedUsersView
+
+### Added — Tests
+- **`SuspensionTests.swift`** — 7 tests covering suspension logic (active, expired, permanent, banned, unknown status)
+- **`PrivacyProfileTests.swift`** — 4 tests for private profile enforcement on PingDetailViewModel
+- **`ContentModerationTests.swift`** — 4 tests for expanded wordlist (profanity, clean text, case insensitive, Romanian)
+
+### Files Created
+- `PingIt/Features/Authentication/Views/SuspendedAccountView.swift`
+- `PingIt/App/NavigationRouter.swift`
+- `PingItTests/SuspensionTests.swift`
+- `PingItTests/ViewModelTests/PrivacyProfileTests.swift`
+- `PingItTests/ContentModerationTests.swift`
+
+### Files Modified
+- `firestore.rules`, `docs/FIREBASE.md`
+- `PingIt/Core/Models/User.swift`
+- `PingIt/App/PingItApp.swift`, `RootView.swift`, `MainTabView.swift`
+- `PingIt/Core/Protocols/ChatServicing.swift`
+- `PingIt/Core/Services/ChatService.swift`
+- `PingIt/Features/Ping/ViewModels/PingDetailViewModel.swift`
+- `PingIt/Features/Ping/Views/PingDetailView.swift`, `PingDetailCreatorSection.swift`, `PingDetailActionSection.swift`, `CreatePingView.swift`
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift`
+- `PingIt/Features/Chat/Views/ChatView.swift`, `MessageBubbleView.swift`
+- `PingIt/Features/Map/Views/MapView.swift`, `EmailVerificationBannerView.swift`
+- `PingIt/Features/Profile/Views/ProfileImageSection.swift`
+- `PingIt/Features/Settings/Views/BlockedUsersView.swift`
+- `PingIt/Resources/moderation_wordlist.txt`
+- `PingItTests/Mocks/MockChatService.swift`
+
+---
+
 ## [2026-05-01] — Phase 1 Sprint 4: Moderation Pipeline (Phase 1 Complete)
 
 ### Summary

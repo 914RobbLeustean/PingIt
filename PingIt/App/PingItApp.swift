@@ -20,6 +20,7 @@ struct PingItApp: App {
     @State private var reportService = ReportService()
     @State private var rateLimitService = RateLimitService()
     @State private var notificationService = NotificationService()
+    @State private var navigationRouter = NavigationRouter()
 
     var body: some Scene {
         WindowGroup {
@@ -34,10 +35,16 @@ struct PingItApp: App {
                 .environment(reportService)
                 .environment(rateLimitService)
                 .environment(notificationService)
+                .environment(navigationRouter)
                 .onChange(of: authService.currentUser == nil) {
                     if authService.currentUser == nil {
                         blockService.stopObserving()
                         rateLimitService.resetForSignOut()
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .init("PingItOpenPing"))) { notification in
+                    if let pingId = notification.userInfo?["pingId"] as? String {
+                        navigationRouter.pendingPingId = pingId
                     }
                 }
                 .task {

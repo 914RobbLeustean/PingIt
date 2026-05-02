@@ -17,6 +17,12 @@ struct BlockedUsersView: View {
                     systemImage: "person.crop.circle.badge.xmark",
                     description: Text("You haven't blocked anyone.")
                 )
+            } else if let errorMessage = viewModel.errorMessage {
+                ContentUnavailableView(
+                    "Something went wrong",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(errorMessage)
+                )
             } else {
                 List {
                     ForEach(viewModel.blockedUsers, id: \.block.blockedUserId) { entry in
@@ -30,10 +36,12 @@ struct BlockedUsersView: View {
                                 }
                                 .frame(width: 40, height: 40)
                                 .clipShape(.circle)
+                                .accessibilityLabel("Profile picture")
                             } else {
                                 Image(systemName: "person.circle.fill")
                                     .font(.title)
                                     .foregroundStyle(.secondary)
+                                    .accessibilityLabel("Profile picture")
                             }
 
                             Text(entry.user?.username ?? "Unknown User")

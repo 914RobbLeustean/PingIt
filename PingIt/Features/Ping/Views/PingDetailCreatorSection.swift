@@ -37,5 +37,6 @@ struct PingDetailCreatorSection: View {
                 .font(.caption)
                 .foregroundStyle(.orange)
         }
+        .accessibilityElement(children: .combine)
     }
 }

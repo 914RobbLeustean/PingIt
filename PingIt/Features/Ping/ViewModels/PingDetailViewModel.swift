@@ -30,6 +30,11 @@ final class PingDetailViewModel {
         authService?.currentUser?.uid == ping.creatorId
     }
 
+    var shouldHideCreatorIdentity: Bool {
+        guard let creator, creator.isPrivateProfile else { return false }
+        return !isCreator
+    }
+
     init(ping: Ping) {
         self.ping = ping
         self.countdownText = ping.expiresAt.countdownDescription

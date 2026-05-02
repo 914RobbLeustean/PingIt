@@ -24,8 +24,8 @@ struct PingDetailView: View {
         ScrollView {
             VStack(alignment: .leading) {
                 PingDetailCreatorSection(
-                    username: viewModel.creator?.username,
-                    profileImageUrl: viewModel.creator?.profileImageUrl,
+                    username: viewModel.shouldHideCreatorIdentity ? "Anonymous" : viewModel.creator?.username,
+                    profileImageUrl: viewModel.shouldHideCreatorIdentity ? nil : viewModel.creator?.profileImageUrl,
                     countdownText: viewModel.countdownText
                 )
 
@@ -58,6 +58,8 @@ struct PingDetailView: View {
                         }
                         .disabled(!viewModel.canBoost)
                         .tint(viewModel.hasUserBoosted ? .orange : .primary)
+                        .accessibilityLabel(viewModel.hasUserBoosted ? "Boosted" : "Boost this ping")
+                        .accessibilityHint("Increases this ping's visibility")
                     }
 
                     Label(
@@ -66,6 +68,8 @@ struct PingDetailView: View {
                     )
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel("Boost count")
+                    .accessibilityValue("\(viewModel.ping.boostCount)")
                 }
 
                 if !viewModel.isCreator {
