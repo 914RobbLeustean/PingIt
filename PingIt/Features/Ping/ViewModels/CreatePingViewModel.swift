@@ -10,10 +10,13 @@ final class CreatePingViewModel {
     private var locationService: (any LocationServicing)?
     private var contentModerationService: (any ContentModeratingServicing)?
     private var rateLimitService: (any RateLimitServicing)?
+    private var analyticsService: (any AnalyticsServicing)?
     private var isConfigured = false
 
     var text = ""
     var selectedExpirationIndex = 1 // Default: 24hr
+    var isCustomDuration = false
+    var customExpiryDate = Calendar.current.date(byAdding: .hour, value: 6, to: Date.now) ?? Date.now
     var selectedLocation: CLLocationCoordinate2D?
     var selectedLocationName: String?
     private(set) var isCreating = false
@@ -38,14 +41,25 @@ final class CreatePingViewModel {
         return "Choose location"
     }
 
-    private var selectedExpiration: TimeInterval {
-        Constants.Ping.expirationPresets[selectedExpirationIndex]
+    private static let presetLabels = ["6h", "24h", "48h", "Custom"]
+
+    var selectedExpiration: TimeInterval {
+        if isCustomDuration {
+            let duration = customExpiryDate.timeIntervalSince(Date.now)
+            return min(max(duration, Constants.Ping.customDurationMin), Constants.Ping.customDurationMax)
+        }
+        return Constants.Ping.expirationPresets[selectedExpirationIndex]
     }
 
-    private static let expirationLabels = ["6h", "24h", "48h"]
+    var customExpiryRange: ClosedRange<Date> {
+        let minDate = Date.now.addingTimeInterval(Constants.Ping.customDurationMin)
+        let endOfDay = Calendar.current.startOfDay(for: Date.now).addingTimeInterval(24 * 3600 - 60)
+        let maxDate = max(minDate, endOfDay)
+        return minDate...maxDate
+    }
 
     func expirationLabel(for index: Int) -> String {
-        Self.expirationLabels[index]
+        Self.presetLabels[index]
     }
 
     func configure(
@@ -54,7 +68,8 @@ final class CreatePingViewModel {
         chatService: any ChatServicing,
         locationService: any LocationServicing,
         contentModerationService: any ContentModeratingServicing,
-        rateLimitService: any RateLimitServicing
+        rateLimitService: any RateLimitServicing,
+        analyticsService: (any AnalyticsServicing)? = nil
     ) {
         guard !isConfigured else { return }
         self.authService = authService
@@ -63,6 +78,7 @@ final class CreatePingViewModel {
         self.locationService = locationService
         self.contentModerationService = contentModerationService
         self.rateLimitService = rateLimitService
+        self.analyticsService = analyticsService
         isConfigured = true
     }
 
@@ -128,6 +144,12 @@ final class CreatePingViewModel {
             try await pingService.createPingWithChat(ping)
             didCreatePing = true
             rateLimitService?.recordPingCreation()
+
+            let durationHours = Int(selectedExpiration / 3600)
+            analyticsService?.logEvent(AnalyticsService.EventName.pingCreated, parameters: [
+                AnalyticsService.ParameterName.durationType: isCustomDuration ? "custom" : "preset",
+                AnalyticsService.ParameterName.durationHours: durationHours
+            ])
         } catch {
             errorMessage = error.localizedDescription
         }

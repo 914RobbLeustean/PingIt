@@ -74,7 +74,7 @@
   - **Chat Sender Identity:** MessageBubbleView shows sender avatar (AsyncImage + initial-letter fallback) and username. Consecutive messages from same sender grouped (avatar/name on first only). ChatViewModel caches User profiles per sender ID.
 
 ## In Progress
-_Nothing actively in progress._
+- **Phase 2 Session 1 (2026-05-06):** Custom Ping Duration, Firebase Analytics, Crashlytics — code complete and verified.
 
 ## Completed (Phase 2 — Audit Remediation)
 - **Audit remediation (2026-05-02):** Addressed critical, high, and medium audit findings across 9 implementation units.
@@ -100,7 +100,7 @@ _Nothing actively in progress._
   - **Hot notifications:** Participant trigger now listens to writes so rejoin transitions can re-check hot status while preserving `hotNotificationSent`.
 
 ## Up Next
-- **Phase 2: Polish & Launch** (remaining): Custom ping duration, onboarding flow, Firebase Analytics, Crashlytics, app icon, privacy policy, beta testing
+- **Phase 2: Polish & Launch** (remaining): Onboarding flow, privacy policy & terms, app icon, beta testing
 
 ## Known Technical Debt
 - Push notifications cannot be tested — requires personal Apple Developer Program membership ($99/yr) to generate APNs key for Firebase Console. Corporate developer account is restricted.
@@ -155,13 +155,13 @@ _Nothing actively in progress._
 - [x] Blocked Users Management
 
 ### Phase 2: Polish & Launch (10 features)
-- [ ] Custom Ping Duration
+- [x] Custom Ping Duration
 - [ ] Onboarding Flow
 - [x] Empty States
 - [x] Error States
 - [x] Performance Optimization
-- [ ] Firebase Analytics
-- [ ] Crash Reporting
+- [x] Firebase Analytics
+- [x] Crash Reporting
 - [ ] App Icon & Splash Screen
 - [ ] Privacy Policy & Terms
 - [ ] Beta Testing

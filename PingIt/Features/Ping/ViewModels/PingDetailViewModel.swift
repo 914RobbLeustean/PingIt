@@ -7,6 +7,7 @@ final class PingDetailViewModel {
     private var pingService: (any PingServicing)?
     private var chatService: (any ChatServicing)?
     private var userService: (any UserServicing)?
+    private var analyticsService: (any AnalyticsServicing)?
     private var isConfigured = false
 
     private(set) var creator: User?
@@ -44,13 +45,15 @@ final class PingDetailViewModel {
         authService: any AuthServicing,
         pingService: any PingServicing,
         chatService: any ChatServicing,
-        userService: any UserServicing
+        userService: any UserServicing,
+        analyticsService: (any AnalyticsServicing)? = nil
     ) {
         guard !isConfigured else { return }
         self.authService = authService
         self.pingService = pingService
         self.chatService = chatService
         self.userService = userService
+        self.analyticsService = analyticsService
         isConfigured = true
     }
 
@@ -126,6 +129,9 @@ final class PingDetailViewModel {
             let result = try await pingService.boostPing(pingId: pingId)
             hasUserBoosted = result.didBoost
             ping.boostCount = result.boostCount
+            if result.didBoost {
+                analyticsService?.logEvent(AnalyticsService.EventName.boostUsed, parameters: nil)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -9,6 +9,7 @@ final class ChatViewModel {
     private var contentModerationService: (any ContentModeratingServicing)?
     private var blockService: (any BlockServicing)?
     private var rateLimitService: (any RateLimitServicing)?
+    private var analyticsService: (any AnalyticsServicing)?
     private var listenerRegistration: ListenerHandle?
     private var pingListener: ListenerHandle?
     private var isConfigured = false
@@ -50,7 +51,8 @@ final class ChatViewModel {
         userService: (any UserServicing)? = nil,
         contentModerationService: (any ContentModeratingServicing)? = nil,
         blockService: (any BlockServicing)? = nil,
-        rateLimitService: (any RateLimitServicing)? = nil
+        rateLimitService: (any RateLimitServicing)? = nil,
+        analyticsService: (any AnalyticsServicing)? = nil
     ) {
         guard !isConfigured else { return }
         self.authService = authService
@@ -60,6 +62,7 @@ final class ChatViewModel {
         self.contentModerationService = contentModerationService
         self.blockService = blockService
         self.rateLimitService = rateLimitService
+        self.analyticsService = analyticsService
         isConfigured = true
     }
 
@@ -132,6 +135,7 @@ final class ChatViewModel {
             _ = try await chatService.joinChatIfNeeded(chatId: chatId)
             joinedChatId = chatId
             hasJoined = true
+            analyticsService?.logEvent(AnalyticsService.EventName.chatJoined, parameters: nil)
         } catch {
             errorMessage = error.localizedDescription
         }

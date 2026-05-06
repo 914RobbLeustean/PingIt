@@ -6,6 +6,57 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-05-06] — Custom Ping Duration + Firebase Analytics + Crashlytics
+
+### Summary
+Phase 2 Session 1: Added custom ping duration selection, Firebase Analytics event tracking, and Firebase Crashlytics crash reporting.
+
+### Added — Custom Ping Duration
+- `Constants.Ping.customDurationMin` / `customDurationMax` for custom range (1–48 hours).
+- `CreatePingViewModel`: `isCustomDuration` and `customDurationHours` properties with clamped boundary validation.
+- `CreatePingView`: 4th "Custom" segment in expiration Picker, `Stepper` for hour selection with accessibility labels.
+- 4 new unit tests: preset returns correct duration, custom duration returns correct seconds, boundary clamping at 1h and 48h.
+
+### Added — Firebase Analytics
+- `AnalyticsServicing` protocol with `logEvent()` and `setUserId()`.
+- `AnalyticsService` wrapping `FirebaseAnalytics.Analytics`. Event constants: `ping_created`, `chat_joined`, `boost_used`, `onboarding_completed`.
+- `MockAnalyticsService` for test assertions.
+- Events logged after: successful ping creation (with duration type/hours), chat join, and boost.
+- User ID set on auth state change, cleared on sign-out.
+- `AnalyticsService` injected into environment from `PingItApp` and passed to `CreatePingViewModel`, `ChatViewModel`, `PingDetailViewModel`.
+
+### Added — Firebase Crashlytics
+- `CrashReportingServicing` protocol with `setUserId()` and `record(error:)`.
+- `CrashReportingService` wrapping `Crashlytics.crashlytics()`.
+- `MockCrashReportingService` for test assertions.
+- User ID set on auth state change, cleared on sign-out.
+- `CrashReportingService` injected into environment from `PingItApp`.
+
+### Changed — SPM Dependencies
+- Added `FirebaseAnalytics` and `FirebaseCrashlytics` products from existing `firebase-ios-sdk` package.
+
+### Files Created
+- `PingIt/Core/Protocols/AnalyticsServicing.swift`
+- `PingIt/Core/Protocols/CrashReportingServicing.swift`
+- `PingIt/Core/Services/AnalyticsService.swift`
+- `PingIt/Core/Services/CrashReportingService.swift`
+- `PingItTests/Mocks/MockAnalyticsService.swift`
+- `PingItTests/Mocks/MockCrashReportingService.swift`
+
+### Files Modified
+- `PingIt/Core/Utilities/Constants.swift`
+- `PingIt/App/PingItApp.swift`
+- `PingIt/Features/Ping/ViewModels/CreatePingViewModel.swift`
+- `PingIt/Features/Ping/Views/CreatePingView.swift`
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift`
+- `PingIt/Features/Chat/Views/ChatView.swift`
+- `PingIt/Features/Ping/ViewModels/PingDetailViewModel.swift`
+- `PingIt/Features/Ping/Views/PingDetailView.swift`
+- `PingItTests/ViewModelTests/CreatePingViewModelTests.swift`
+- `PingIt.xcodeproj/project.pbxproj`
+
+---
+
 ## [2026-05-06] — Server-Authoritative Firestore Writes + Duplicate Report Fix
 
 ### Summary

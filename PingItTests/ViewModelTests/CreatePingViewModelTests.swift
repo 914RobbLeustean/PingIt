@@ -247,6 +247,42 @@ struct CreatePingViewModelTests {
         #expect(mockPing.createPingWithChatCalled == false)
     }
 
+    // MARK: - Custom Duration
+
+    @Test func presetExpirationReturnsCorrectDuration() {
+        let vm = makeVM()
+        vm.selectedExpirationIndex = 0
+        #expect(vm.selectedExpiration == 6 * 3600)
+
+        vm.selectedExpirationIndex = 1
+        #expect(vm.selectedExpiration == 24 * 3600)
+
+        vm.selectedExpirationIndex = 2
+        #expect(vm.selectedExpiration == 48 * 3600)
+    }
+
+    @Test func customExpiryReturnsCorrectDuration() {
+        let vm = makeVM()
+        vm.isCustomDuration = true
+        vm.customExpiryDate = Date.now.addingTimeInterval(6 * 3600)
+        let expiration = vm.selectedExpiration
+        #expect(abs(expiration - 6 * 3600) < 2)
+    }
+
+    @Test func customExpiryClampedToMinimum() {
+        let vm = makeVM()
+        vm.isCustomDuration = true
+        vm.customExpiryDate = Date.now.addingTimeInterval(600) // 10 min in future, below 1h min
+        #expect(vm.selectedExpiration == 1 * 3600)
+    }
+
+    @Test func customExpiryClampedToMaximum() {
+        let vm = makeVM()
+        vm.isCustomDuration = true
+        vm.customExpiryDate = Date.now.addingTimeInterval(100 * 3600) // 100h in future, above 48h max
+        #expect(vm.selectedExpiration == 48 * 3600)
+    }
+
     // MARK: - Rate Limiting
 
     @Test("Rate limited user cannot create ping")
