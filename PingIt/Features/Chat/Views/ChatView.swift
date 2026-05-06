@@ -17,6 +17,7 @@ struct ChatView: View {
     @Environment(BlockService.self) private var blockService
     @Environment(RateLimitService.self) private var rateLimitService
     @Environment(ReportService.self) private var reportService
+    @Environment(AnalyticsService.self) private var analyticsService
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
@@ -114,7 +115,7 @@ struct ChatView: View {
         .navigationTitle("Chat")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            viewModel.configure(authService: authService, chatService: chatService, pingService: pingService, userService: userService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService)
+            viewModel.configure(authService: authService, chatService: chatService, pingService: pingService, userService: userService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService, analyticsService: analyticsService)
             await viewModel.loadInitialMessages()
             viewModel.startObservingPing()
             await viewModel.joinChat()

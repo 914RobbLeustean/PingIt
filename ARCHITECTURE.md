@@ -30,7 +30,8 @@ Infrastructure diagram lives in `project_spec.md` Section 2.2.
                    │ network
 ┌──────────────────▼───────────────────────────────┐
 │              Firebase / External APIs             │
-│  Firestore, Auth, Storage, FCM, Vision API        │
+│  Firestore, Auth, Storage, FCM, Analytics,        │
+│  Crashlytics, Vision API                          │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -68,7 +69,7 @@ PingIt/
 ```
 PingIt/
 ├── App/
-│   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection, notification routing
+│   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection, notification routing, analytics + crashlytics user tracking
 │   ├── RootView.swift               Auth gate with suspension check: LoginView or SuspendedAccountView or MainTabView
 │   ├── MainTabView.swift            Tab bar (Map, Profile, Settings) with tab selection for notification navigation
 │   └── NavigationRouter.swift       @Observable router for push notification → ping navigation
@@ -95,7 +96,9 @@ PingIt/
 │   │   ├── ContentModeratingServicing.swift             Text moderation (check → .allowed/.blocked)
 │   │   ├── RateLimitServicing.swift                     Ping + message rate limiting
 │   │   ├── ReportServicing.swift                        Submit report via callable
-│   │   └── NotificationServicing.swift                  FCM token + location update contract
+│   │   ├── NotificationServicing.swift                  FCM token + location update contract
+│   │   ├── AnalyticsServicing.swift                     Event logging + user ID tracking
+│   │   └── CrashReportingServicing.swift                Crash/error reporting + user ID
 │   ├── Services/
 │   │   ├── AuthService.swift            Firebase Auth wrapper, auth state listener, email verification
 │   │   ├── PingService.swift            Ping creation/read/listen, callable delete and boost
@@ -106,7 +109,9 @@ PingIt/
 │   │   ├── ContentModerationService.swift  Bundle wordlist, localizedStandardContains matching
 │   │   ├── RateLimitService.swift       UserDefaults-backed limits; #if DEBUG bypass
 │   │   ├── ReportService.swift          Calls submitReport callable and maps duplicate report errors
-│   │   └── NotificationService.swift   FCM token registration, APNs permission, foreground banners, location update
+│   │   ├── NotificationService.swift   FCM token registration, APNs permission, foreground banners, location update
+│   │   ├── AnalyticsService.swift       Wraps FirebaseAnalytics event logging and user ID
+│   │   └── CrashReportingService.swift  Wraps FirebaseCrashlytics crash/error reporting and user ID
 │   └── Utilities/
 │       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts, usernames)
 │       ├── PingItError.swift            Typed error enum (+ emailNotVerified, contentModerated, blockFailed, reportFailed, rateLimited, etc.)
@@ -196,7 +201,9 @@ PingItTests/
 │   ├── MockContentModerationService.swift    Settable result (.allowed/.blocked), tracks check calls
 │   ├── MockRateLimitService.swift            Settable ping/message results, tracks record calls
 │   ├── MockReportService.swift               Tracks submitReport calls, injectable error
-│   └── MockNotificationService.swift         Tracks permission/token/location calls
+│   ├── MockNotificationService.swift         Tracks permission/token/location calls
+│   ├── MockAnalyticsService.swift            Records logged events for test assertions
+│   └── MockCrashReportingService.swift       Records reported errors for test assertions
 ├── ViewModelTests/
 │   ├── CreatePingViewModelTests.swift        (+ email verification, moderation, rate limit tests)
 │   ├── ChatViewModelTests.swift              (+ email verification, blocking, moderation tests)
@@ -325,6 +332,7 @@ MapView ──observes──▶ MapViewModel ──calls──▶ PingService �
 
 PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ PingService (callable delete/boost, boost check)
                                                             ChatService
+                                                            AnalyticsService (logs boost_used)
              └─ report/block buttons ──▶ ReportView / BlockService
 
 SettingsView ──calls──▶ UserService (fetch + update preferences)
@@ -336,12 +344,14 @@ ChatView ──observes──▶ ChatViewModel ──calls──▶ ChatService 
                                                ContentModerationService (outbound text check)
                                                RateLimitService (outbound message throttle)
                                                BlockService (filters incoming messages)
+                                               AnalyticsService (logs chat_joined)
          └─ message context menu ──▶ ReportView / BlockService
 
 CreatePingView ──observes──▶ CreatePingViewModel ──calls──▶ PingService
                                                             ContentModerationService
                                                             RateLimitService
                                                             LocationService
+                                                            AnalyticsService (logs ping_created)
 
 ProfileView ──observes──▶ ProfileViewModel ──calls──▶ UserService ──reads/writes──▶ Firestore (users + usernames)
                                                       AuthService ──calls──▶ Firebase Auth
@@ -357,6 +367,7 @@ SettingsView ── deleteAccount ──▶ AuthService.reauthenticate + AuthSer
 PingItApp ── .task ──▶ NotificationService.requestPermission + registerFCMToken
           └─ sets UNUserNotificationCenter.delegate + Messaging.delegate
           └─ .onReceive(PingItOpenPing) ──▶ NavigationRouter.pendingPingId
+          └─ .onChange(of: auth.uid) ──▶ AnalyticsService.setUserId + CrashReportingService.setUserId
 
 RootView ── checks ──▶ UserService.fetchUser (suspension gate)
          └─ if suspended ──▶ SuspendedAccountView
@@ -387,6 +398,8 @@ ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls�
 | **ReportService** | Calls `submitReport`, maps duplicate report callable error to user-visible `reportAlreadySubmitted` | Implemented |
 | **ServerTime** | Firebase RTDB `.info/serverTimeOffset` for clock-skew correction; `ServerTime.now` | Implemented (utility enum) |
 | **NotificationService** | FCM token registration, APNs permission, foreground notification display, lastKnownLocation update | Implemented |
+| **AnalyticsService** | Wraps FirebaseAnalytics for event logging (`ping_created`, `chat_joined`, `boost_used`, `onboarding_completed`) and user ID tracking | Implemented |
+| **CrashReportingService** | Wraps FirebaseCrashlytics for crash/non-fatal error reporting and user ID tracking | Implemented |
 
 ### Service Injection Pattern
 

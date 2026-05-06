@@ -7,6 +7,7 @@ struct PingDetailView: View {
     @Environment(UserService.self) private var userService
     @Environment(BlockService.self) private var blockService
     @Environment(ReportService.self) private var reportService
+    @Environment(AnalyticsService.self) private var analyticsService
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: PingDetailViewModel
     @State private var showDeleteConfirmation = false
@@ -146,7 +147,8 @@ struct PingDetailView: View {
                 authService: authService,
                 pingService: pingService,
                 chatService: chatService,
-                userService: userService
+                userService: userService,
+                analyticsService: analyticsService
             )
             await viewModel.loadCreator()
             await viewModel.checkBoostStatus()

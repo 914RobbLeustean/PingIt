@@ -20,6 +20,8 @@ struct PingItApp: App {
     @State private var reportService = ReportService()
     @State private var rateLimitService = RateLimitService()
     @State private var notificationService = NotificationService()
+    @State private var analyticsService = AnalyticsService()
+    @State private var crashReportingService = CrashReportingService()
     @State private var navigationRouter = NavigationRouter()
 
     var body: some Scene {
@@ -35,9 +37,16 @@ struct PingItApp: App {
                 .environment(reportService)
                 .environment(rateLimitService)
                 .environment(notificationService)
+                .environment(analyticsService)
+                .environment(crashReportingService)
                 .environment(navigationRouter)
-                .onChange(of: authService.currentUser == nil) {
-                    if authService.currentUser == nil {
+                .onChange(of: authService.currentUser?.uid) { _, newUid in
+                    if let uid = newUid {
+                        analyticsService.setUserId(uid)
+                        crashReportingService.setUserId(uid)
+                    } else {
+                        analyticsService.setUserId(nil)
+                        crashReportingService.setUserId(nil)
                         blockService.stopObserving()
                         rateLimitService.resetForSignOut()
                     }

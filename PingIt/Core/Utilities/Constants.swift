@@ -18,6 +18,8 @@ enum Constants {
             24 * 3600,  // 24 hours
             48 * 3600   // 48 hours
         ]
+        static let customDurationMin: TimeInterval = 3600
+        static let customDurationMax: TimeInterval = 48 * 3600
     }
 
     enum RateLimit {

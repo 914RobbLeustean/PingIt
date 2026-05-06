@@ -8,6 +8,7 @@ struct CreatePingView: View {
     @Environment(LocationService.self) private var locationService
     @Environment(ContentModerationService.self) private var contentModerationService
     @Environment(RateLimitService.self) private var rateLimitService
+    @Environment(AnalyticsService.self) private var analyticsService
     @Environment(\.dismiss) private var dismiss
     @Binding var createdPingLocation: CLLocationCoordinate2D?
     @State private var viewModel = CreatePingViewModel()
@@ -52,11 +53,24 @@ struct CreatePingView: View {
 
                 Section("Expires in") {
                     Picker("Expiration", selection: $viewModel.selectedExpirationIndex) {
-                        ForEach(0..<3, id: \.self) { index in
+                        ForEach(0..<4, id: \.self) { index in
                             Text(viewModel.expirationLabel(for: index)).tag(index)
                         }
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: viewModel.selectedExpirationIndex) { _, newValue in
+                        viewModel.isCustomDuration = newValue == 3
+                    }
+
+                    if viewModel.isCustomDuration {
+                        DatePicker(
+                            "Expires at",
+                            selection: $viewModel.customExpiryDate,
+                            in: viewModel.customExpiryRange,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .accessibilityLabel("Custom ping expiry time")
+                    }
                 }
 
                 if let errorMessage = viewModel.errorMessage {
@@ -84,7 +98,8 @@ struct CreatePingView: View {
                     chatService: chatService,
                     locationService: locationService,
                     contentModerationService: contentModerationService,
-                    rateLimitService: rateLimitService
+                    rateLimitService: rateLimitService,
+                    analyticsService: analyticsService
                 )
             }
             .onChange(of: viewModel.didCreatePing) { _, didCreate in
