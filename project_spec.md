@@ -1,7 +1,7 @@
 # PingIt — Product & Engineering Specification
 
 **Version:** 1.0
-**Last Updated:** March 28, 2026
+**Last Updated:** May 6, 2026
 **Target Launch:** July 1, 2026 (Cluj-Napoca, Romania)
 **Thesis Submission:** July 1, 2026
 
@@ -38,7 +38,7 @@ The theoretical foundation comes from three frameworks:
 | **Authentication** | Firebase Auth | Email/password, session management |
 | **Database** | Cloud Firestore | Real-time sync, geospatial queries |
 | **Media Storage** | Firebase Storage | Profile pictures, ping images (Phase 2+) |
-| **Server Logic** | Cloud Functions (Node.js) | Ping expiration, moderation triggers, push notifications |
+| **Server Logic** | Cloud Functions (Node.js) | Server-authoritative ping cleanup, boosts, chat participants, reports, moderation triggers, push notifications |
 | **Content Moderation** | Google Cloud Vision API | Image safety analysis (SafeSearch) |
 | **Push Notifications** | Firebase Cloud Messaging (FCM) | Hot ping alerts, chat notifications |
 | **Geospatial** | GeoFirestore library | Geohash-based location queries |
@@ -67,10 +67,11 @@ The theoretical foundation comes from three frameworks:
 │                                                            │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │         Cloud Functions (Server-Side Logic)          │  │
+│  │  • Server-authoritative ping cleanup/counters        │  │
 │  │  • Scheduled ping expiration (cron)                  │  │
 │  │  • Content moderation triggers (Storage onCreate)    │  │
 │  │  • Push notification dispatch (Firestore onWrite)    │  │
-│  │  • Rate limiting enforcement (callable functions)    │  │
+│  │  • Callable report duplicate prevention              │  │
 │  └──────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────┘
                             ▲ ▼
@@ -88,22 +89,23 @@ The theoretical foundation comes from three frameworks:
 
 ### 3.1 Core Firestore Collections
 
-The application uses 14 primary Firestore collections. Each ping has a one-to-one relationship with a chat. When a ping expires, both are removed atomically.
+The application uses the following Firestore collections. Each ping has a one-to-one relationship with a chat. When a ping expires or is removed, Cloud Functions mark the ping inactive and clean related chat, participant, message, and boost data.
 
 | Collection | Purpose | Key Fields |
 |------------|---------|------------|
 | **users** | User profiles, preferences, engagement metrics | userId, username, email, profileImageUrl, createdAt, blockedUsers[] |
+| **usernames** | Username reservation and public availability checks | normalizedUsername, userId, createdAt |
 | **userPreferences** | Privacy, UI, notification, discovery settings | userId, theme, language, notificationPrefs{}, privacySettings{} |
 | **cities** | Geographic boundaries (GeoJSON), active ping/user counts | cityId, name, boundary (GeoJSON), activePingCount, activeUserCount |
-| **pings** | Content, location (geohash), timing, moderation status | pingId, creatorId, text, location (geohash), expiresAt, status, boosts[], chatId |
+| **pings** | Content, location (geohash), timing, moderation status, denormalized counts | pingId, creatorId, text, location, geohash, expiresAt, status, boostCount, participantCount, chatId |
 | **pingMedia** | Images/videos with moderation scores (Phase 2+) | mediaId, pingId, storageUrl, moderationScore, status |
 | **chats** | One-to-one with ping, metrics, settings | chatId, pingId, participantCount, lastMessageAt, createdAt |
 | **chatMessages** | Text, reactions, location sharing, moderation | messageId, chatId, senderId, text, createdAt, isModerated |
-| **chatParticipants** | Join/leave tracking, permissions | participantId, chatId, userId, joinedAt, leftAt |
+| **chatParticipants** | Join/leave tracking, permissions | participantId `{chatId}_{userId}`, chatId, userId, joinedAt, leftAt |
 | **follows** | Per-relationship notification preferences (Phase 2+) | followId, followerId, followedUserId, notifyOnPing, createdAt |
-| **boosts** | Ping engagement tracking | boostId, pingId, userId, createdAt |
+| **boosts** | Ping engagement tracking | boostId `{pingId}_{userId}`, pingId, userId, createdAt |
 | **blocks** | User safety | blockId, blockerId, blockedUserId, createdAt |
-| **reports** | Status tracking, comprehensive reporting | reportId, reporterId, targetType, targetId, reason, status, reviewedAt |
+| **reports** | Status tracking, comprehensive reporting | reportId `{reporterId}_{targetId}`, reporterId, targetType, targetId, reason, status, reviewedAt |
 | **notifications** | Delivery tracking, action data | notificationId, userId, type, data{}, isRead, createdAt |
 | **moderationActions** | Audit trail for all moderation decisions | actionId, moderatorId, targetType, targetId, action, reason, timestamp |
 
@@ -130,21 +132,21 @@ The application uses 14 primary Firestore collections. Each ping has a one-to-on
 7. **Create Text Ping** — Text input (max 280 chars), user-selected location via: (a) current GPS location, (b) search address with autocomplete, or (c) drag pin on map. Must be within Cluj-Napoca boundary. Future: Saved Places (Phase 2+)
 8. **Set Ping Expiration** — 3 preset options: 6hr, 24hr, 48hr (simple picker UI)
 9. **View Ping Details** — Full-screen detail view with text, creator, expiration countdown
-10. **Delete Own Ping** — Creator can delete before expiration (cascading delete of chat)
+10. **Delete Own Ping** — Creator can delete before expiration through `deletePing` callable (server-side cascading cleanup)
 11. **Live Ping Visualization** — Map annotations update in real-time via Firestore listener
 
 #### Chat Core (3 features)
-12. **Join Ping Chat** — Tap ping → enter chat (auto-create ChatParticipant document)
+12. **Join Ping Chat** — Tap ping → enter chat (`joinChat` callable creates/reactivates deterministic ChatParticipant)
 13. **Send Text Message** — Text input, stored in Firestore, rate-limited (6 msgs/10sec)
 14. **Real-Time Message Updates** — Firestore onSnapshot listener for instant message delivery
 
 **Technical Deliverables:**
 - Firebase project configured (Auth, Firestore, Storage, Functions)
 - Cloud Function: `expirePings` (cron job, runs every 5 minutes)
-- Cloud Function: `createPing` (callable, enforces rate limits: 5 pings/hour, 10 pings/day)
+- Cloud Functions: `deletePing`, `joinChat`, and `leaveChat` for server-owned destructive cleanup and participant counters
 - GeoFirestore library integrated for spatial queries
 - Cluj-Napoca GeoJSON boundary loaded from app bundle
-- Firestore security rules (MVP scope: authenticated users only)
+- Firestore security rules with authenticated reads, strict client-owned creates, and server-owned counters/destructive writes
 
 **Success Criteria:**
 - Can create account, log in, see map, create ping, join chat, send message
@@ -166,8 +168,8 @@ The application uses 14 primary Firestore collections. Each ping has a one-to-on
 19. **Emergency Content Removal** — Cloud Function: `removeContent` (callable, admin-only)
 
 #### Discovery & Engagement (4 features)
-20. **Boost Ping** — Any user can boost any ping once (updates `boosts[]` array)
-21. **Hot Pings Algorithm** — `hotScore = boosts.length * 2 + participantCount + hoursRemaining * 0.5`
+20. **Boost Ping** — Any non-creator can boost any active unblocked ping once through `boostPing`
+21. **Hot Pings Algorithm** — `hotScore = boostCount * 2 + participantCount + min(hoursRemaining * 0.1, 2.0)`, gated by `boostCount >= 3` and score `>= 8.0`
 22. **Nearby Ping Notifications** — Push notification when new ping created within 2km
 23. **Hot Ping Notifications** — Push notification when ping enters top 10 hot pings
 
@@ -184,10 +186,11 @@ The application uses 14 primary Firestore collections. Each ping has a one-to-on
 
 **Technical Deliverables:**
 - Cloud Function: `moderateImage` (Storage trigger, Vision API integration)
-- Cloud Function: `sendNotification` (Firestore trigger on ping create, FCM dispatch)
-- Cloud Function: `deleteAccount` (callable, cascading delete with transaction)
-- Admin web dashboard (React app, Firebase Hosting, reads `reports` collection)
-- Firestore security rules updated (block rules, report rules)
+- Cloud Function: `sendNearbyNotification` (Firestore trigger on ping create, FCM dispatch)
+- Cloud Functions: `boostPing`, `submitReport`, `removeContent`, and hot ping notification triggers
+- Cloud Function: `deleteAccount` (callable, cascading delete using shared cleanup)
+- Admin review workflow (Firebase Console + runbook; React dashboard remains a future enhancement)
+- Firestore security rules updated (block rules, report rules, username reservations, server-owned counters/cleanup)
 - APNs certificate configured for push notifications
 
 **Success Criteria:**
@@ -344,6 +347,7 @@ The application uses 14 primary Firestore collections. Each ping has a one-to-on
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1 | May 6, 2026 | Robert Leustean + Codex | Updated for server-authoritative ping cleanup, boosts, chat participants, reports, username reservations, and hardened Firestore rules |
 | 1.0 | March 28, 2026 | Robert Leustean | Initial specification (MVP, Phase 1-2, tech stack finalized) |
 
 ---

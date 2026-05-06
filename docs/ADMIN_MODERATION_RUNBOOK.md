@@ -12,7 +12,9 @@ These run without admin intervention:
 
 2. **Text moderation** (client-side): Blocks profanity/hate speech before submission. Word list at `PingIt/Resources/moderation_wordlist.txt`.
 
-3. **Rate limiting** (client-side + planned server-side): Prevents spam (5 pings/hour, 6 messages/10 seconds).
+3. **Rate limiting** (client-side): Prevents spam (5 pings/hour, 6 messages/10 seconds). Server-side spam rate limiting is still planned.
+
+4. **Report intake** (`submitReport` Cloud Function): Creates deterministic report documents and rejects duplicates before they reach the review queue.
 
 ## Manual Review Workflow
 
@@ -21,6 +23,14 @@ These run without admin intervention:
 Go to Firebase Console -> Firestore -> `reports` collection.
 
 Filter: `status == "pending"`, sort by `createdAt` descending.
+
+Report document IDs are deterministic:
+
+```text
+{reporterId}_{targetId}
+```
+
+If a user reports the same ping/message twice, the callable returns `already-exists`; the app shows "You have already reported this content." and no new report document is created.
 
 Each report contains:
 - `reporterId`: Who reported it
@@ -42,18 +52,12 @@ Based on `targetType`:
 - Update the report document: `status` -> "dismissed", add `reviewedAt` timestamp
 
 **Option B: Remove the content**
-- Use the Firebase CLI to call the `removeContent` function:
+- Use a deployed admin client or callable invocation to call the `removeContent` function. The legacy `firebase functions:shell` flow is unreliable for v2 callables, so prefer testing deployed callables from an authenticated admin context.
 
 ```bash
-# Remove a ping
-firebase functions:shell
-> removeContent({ targetType: "ping", targetId: "PING_DOC_ID", reason: "Violated community guidelines" })
-
-# Remove a message
-> removeContent({ targetType: "message", targetId: "MESSAGE_DOC_ID", reason: "Harassment" })
-
-# Suspend a user (24hr)
-> removeContent({ targetType: "user", targetId: "USER_DOC_ID", reason: "Repeated violations" })
+# Deploy latest callable implementation and rules first
+npm --prefix functions run build
+firebase deploy --only functions,firestore:rules --project pingit-dev
 ```
 
 - Update the report: `status` -> "reviewed", add `reviewedAt`
@@ -62,6 +66,7 @@ firebase functions:shell
 
 - Check `moderationActions` collection for the audit trail
 - If content was removed, verify in the respective collection
+- For ping removals, verify the ping `status` is `removed` and related chat/messages/participants/boosts were cleaned by shared backend cleanup
 
 ## SLA Targets
 

@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 1 — Safety & Discovery** — Complete (16/16 features). All 4 sprints shipped: client-side safety, engagement, Cloud Functions, and moderation pipeline (Vision API image moderation + admin emergency removal).
+**Phase 1 — Safety & Discovery** — Complete (16/16 features). All 4 sprints shipped: client-side safety, engagement, Cloud Functions, and moderation pipeline (Vision API image moderation + admin emergency removal). Post-audit server-authoritative hardening is complete for ping deletion, boosts, chat participants, reports, username reservations, and Firestore rules.
 
 ## Completed
 - Project specification and documentation setup
@@ -19,7 +19,7 @@
 - CreatePingViewModel/View with validation, ChatService/PingService enhancements
 - PingDetailViewModel/View with creator loading, countdown timer, cascade delete
 - Location Picker (Uber-style): current GPS, address search with autocomplete, drag-pin-on-map
-- Atomic Firestore batch writes for ping+chat creation and deletion
+- Atomic Firestore batch writes for ping+chat creation; backend callable cascade for ping deletion
 - Search results filtered to Cluj-Napoca (title + subtitle)
 - 19 unit tests (at Map & Location phase): boundary validator, date extensions, constants, ping model
 - Authentication: User Registration with username, Login with session management, Profile Management
@@ -53,7 +53,7 @@
 
 ## Completed (Phase 1 — Sprint 2: Engagement + Map Polish)
 - **Phase 1 Sprint 2 (2026-04-19 to 2026-04-20):** Engagement features, settings toggles, and device-testing fixes.
-  - **Boost Ping:** Boost model (`boosts` collection), denormalized `boostCount` on Ping, double-boost prevention (query before UI enable). PingDetailView shows boost button for non-creators with "Boosted" filled state. Boost count visible to all users (including ping creators).
+  - **Boost Ping:** Boost model (`boosts` collection), denormalized `boostCount` on Ping, double-boost prevention, server-authoritative `boostPing` callable for boost creation and counter updates. PingDetailView shows boost button for non-creators with "Boosted" filled state. Boost count visible to all users (including ping creators).
   - **Hot Pings Algorithm:** Client-side `hotScore` computed property: `boostCount × 2.0 + participantCount + min(hoursRemaining × 0.1, 2.0)`. Gate: `boostCount >= 3 && hotScore >= 8.0`. Top 10 qualifying pings shown with flame icon and red glow on map. Formula refined through 3 iterations during device testing to prevent pings from appearing hot too easily.
   - **Ping Clustering:** Manual client-side clustering in MapViewModel (SwiftUI `Map` doesn't support native `MKClusterAnnotation`). `PingCluster` model with center calculation and hot-ping awareness. Threshold: `region.span.latitudeDelta × 0.03`, disabled at close zoom (`< 0.005`). `PingClusterAnnotationView` for clustered pins. Tap-to-zoom on clusters.
   - **Overlapping Pin Offset:** Pings at identical coordinates arranged in circular pattern (~15m offset) to remain individually tappable.
@@ -66,7 +66,7 @@
   - **Email Verification:** `AuthServicing` extended with `isEmailVerified`, `sendEmailVerification()`, `reloadUser()`. CreatePingViewModel and ChatViewModel gate actions behind email verification. MapView shows dismissable `EmailVerificationBannerView` for unverified users with resend action. Banner polls `reloadUser()` every 5s and auto-hides when verified.
   - **Text Content Moderation:** `ContentModerationService` with bundle-loaded wordlist (`moderation_wordlist.txt`), `localizedStandardContains()` matching. Blocks ping creation and message sending.
   - **User Blocking:** `BlockService` with real-time bidirectional Firestore listeners (two snapshot listeners: `blockerId == me` and `blockedUserId == me`). Enforcement is instant — when UserA blocks UserB, UserB's listener fires and UserA's pings/messages disappear within seconds. MapViewModel and ChatViewModel re-filter reactively via `onChange(of: blockedUserIds)`. Blocking from chat auto-dismisses ChatView + PingDetailView back to map. Duplicate blocks prevented (idempotent). `BlockedUsersView` + `BlockedUsersViewModel` in Settings.
-  - **User Reporting:** `ReportService` writes to Firestore `reports` collection with duplicate prevention (queries before writing, throws `reportAlreadySubmitted`). `ReportView` accepts services via init (not @Environment — fixes blank sheet in navigation stacks). `ReportViewModel` with reason picker, details field, block offer after success. `onDidBlock` callback auto-dismisses parent views.
+  - **User Reporting:** `ReportService` calls the `submitReport` callable. Reports use deterministic IDs for duplicate prevention; duplicate submits return `reportAlreadySubmitted` for visible UI feedback. `ReportView` accepts services via init (not @Environment — fixes blank sheet in navigation stacks). `ReportViewModel` with reason picker, details field, block offer after success. `onDidBlock` callback auto-dismisses parent views.
   - **Spam Detection (Client-Side):** `RateLimitService` with UserDefaults-backed hourly (5/hr) + daily (10/day) ping limits, per-10-seconds (6) message limit. `#if DEBUG` bypass for testing.
   - **Expired Ping Filtering:** MapViewModel filters pings where `expiresAt <= ServerTime.now` client-side.
   - **Server Time Sync:** `ServerTime` utility using Firebase Realtime Database `.info/serverTimeOffset` for consistent cross-device clocks. All countdown, expiration, and ping creation logic uses `ServerTime.now`.
@@ -87,6 +87,17 @@ _Nothing actively in progress._
   - **Error states:** BlockedUsersView now displays error messages. Location denied state with "Open Settings" button.
   - **Chat pagination:** Messages loaded in pages of 50. Real-time listener for new messages only. "Load earlier messages" button at top of chat.
   - **Accessibility:** Labels, hints, and element grouping added across 10+ view files (PingDetail, Chat, Map, Profile, Settings, Auth).
+
+## Completed (Post-Audit Server-Authoritative Hardening)
+- **Server-authoritative backend rewrite (2026-05-06):** Moved destructive writes, engagement counters, participant counters, and report duplicate checks out of direct client ownership.
+  - **Ping deletion:** `deletePing` callable verifies creator ownership and uses shared `pingCleanup` to mark status `removed` and delete related chat, messages, participants, and boosts in chunked batches.
+  - **Shared cleanup:** `pingCleanup` is reused by `deletePing`, `expirePings`, `removeContent`, and `deleteAccount`.
+  - **Boosts:** `boostPing` callable validates auth, suspension, active ping state, non-creator, and bidirectional blocks; uses deterministic `boosts/{pingId}_{uid}` and increments `pings.boostCount` transactionally.
+  - **Chat participants:** `joinChat` and `leaveChat` callables use deterministic `chatParticipants/{chatId}_{uid}` and update both chat and ping participant counts only on active/left transitions.
+  - **Reports:** `submitReport` callable creates deterministic `reports/{reporterId}_{targetId}` and maps duplicates to visible `reportAlreadySubmitted` UI errors.
+  - **Firestore rules:** Direct client updates/deletes for `pings`, `chats`, `boosts`, `chatParticipants`, and `reports` are denied. User updates are restricted to safe profile/preference fields.
+  - **Username reservations:** Added `usernames/{normalizedUsername}` documents for public username availability checks without listing `users`.
+  - **Hot notifications:** Participant trigger now listens to writes so rejoin transitions can re-check hot status while preserving `hotNotificationSent`.
 
 ## Up Next
 - **Phase 2: Polish & Launch** (remaining): Custom ping duration, onboarding flow, Firebase Analytics, Crashlytics, app icon, privacy policy, beta testing

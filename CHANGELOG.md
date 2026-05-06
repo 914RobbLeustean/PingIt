@@ -6,6 +6,63 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-05-06] — Server-Authoritative Firestore Writes + Duplicate Report Fix
+
+### Summary
+Moved destructive ping cleanup, boost counters, chat participant counters, username availability, and report duplicate prevention behind server-authoritative flows. The iOS client now requests intent through callables while Cloud Functions validate ownership, suspension state, active ping state, block relationships, and duplicate state before writing with Admin SDK privileges.
+
+### Added — Cloud Functions (`functions/src/`)
+- **`pingCleanup.ts`** — Shared chunked cleanup helper for ping-related data. Deletes associated chats, messages, participants, and boosts while keeping batches under Firestore write limits.
+- **`pingCallables.ts`** — `deletePing`, `boostPing`, `joinChat`, and `leaveChat` callables.
+- **`reportCallables.ts`** — `submitReport` callable with deterministic report IDs and `already-exists` duplicate response.
+
+### Changed — Cloud Functions
+- **`expirePings.ts`**, **`removeContent.ts`**, and **`deleteAccount.ts`** now share `pingCleanup` for consistent cascade behavior.
+- **`sendHotPingNotification.ts`** now uses a participant write trigger so rejoin transitions can re-check hot status.
+- **`deleteAccount.ts`** also removes username reservation documents.
+
+### Changed — Firestore Rules
+- Direct client updates/deletes for `pings` and `chats` are denied.
+- Direct client creates/updates/deletes for `boosts`, `chatParticipants`, and `reports` are denied.
+- `users` no longer allows unauthenticated listing; owner updates are restricted to safe profile/preference fields.
+- Added `usernames/{normalizedUsername}` reservation documents for public username availability `get` without public `users` queries.
+- `reports` are now server-created only through `submitReport`.
+
+### Changed — iOS
+- **`PingService`** calls `deletePing` and `boostPing`; boost UI uses the server-returned count.
+- **`ChatService`** calls `joinChat` and `leaveChat`; `ChatViewModel` stores `chatId` as the leave key.
+- **`ReportService`** calls `submitReport` and maps Firebase Functions `already-exists` to `PingItError.reportAlreadySubmitted`.
+- **`AuthService`** and **`UserService`** create/delete username reservation documents during signup and username rename.
+
+### Added — Tests
+- Added duplicate report regression coverage ensuring repeated reports show the existing "You have already reported this content." UI error instead of a false success.
+
+### Documentation
+- Updated architecture, Firebase, security, risk, project status, E2E, audit, runbook, and spec docs for the server-authoritative design.
+
+### Files Created
+- `functions/src/pingCallables.ts`
+- `functions/src/pingCleanup.ts`
+- `functions/src/reportCallables.ts`
+
+### Files Significantly Modified
+- `firestore.rules`
+- `functions/src/index.ts`
+- `functions/src/deleteAccount.ts`
+- `functions/src/expirePings.ts`
+- `functions/src/removeContent.ts`
+- `functions/src/sendHotPingNotification.ts`
+- `PingIt/Core/Services/PingService.swift`
+- `PingIt/Core/Services/ChatService.swift`
+- `PingIt/Core/Services/ReportService.swift`
+- `PingIt/Core/Services/AuthService.swift`
+- `PingIt/Core/Services/UserService.swift`
+- `PingIt/Features/Ping/ViewModels/PingDetailViewModel.swift`
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift`
+- `PingItTests/ViewModelTests/ReportViewModelTests.swift`
+
+---
+
 ## [2026-05-02] — Audit Remediation: Security, Privacy, Polish, Accessibility
 
 ### Summary

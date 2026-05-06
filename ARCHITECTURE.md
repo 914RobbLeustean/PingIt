@@ -63,7 +63,7 @@ PingIt/
 
 **Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
 
-### Actual File Listing (as of 2026-04-20)
+### Actual File Listing (as of 2026-05-06)
 
 ```
 PingIt/
@@ -87,28 +87,28 @@ PingIt/
 │   │   ├── AuthUserRepresentable.swift                  Minimal user identity (uid, isEmailVerified)
 │   │   ├── FirebaseUser+AuthUserRepresentable.swift     Firebase conformance
 │   │   ├── AuthServicing.swift                          Auth service contract (+ isEmailVerified, sendEmailVerification, reloadUser)
-│   │   ├── PingServicing.swift                          Ping service contract (+ observePing, boostPing, hasUserBoostedPing)
-│   │   ├── ChatServicing.swift                          Chat service contract
-│   │   ├── UserServicing.swift                          User service contract
+│   │   ├── PingServicing.swift                          Ping service contract (+ callable-backed delete/boost)
+│   │   ├── ChatServicing.swift                          Chat service contract (+ callable-backed join/leave)
+│   │   ├── UserServicing.swift                          User profile + username reservation contract
 │   │   ├── LocationServicing.swift                      Location service contract
 │   │   ├── BlockServicing.swift                         Block/unblock, real-time bidirectional listeners
 │   │   ├── ContentModeratingServicing.swift             Text moderation (check → .allowed/.blocked)
 │   │   ├── RateLimitServicing.swift                     Ping + message rate limiting
-│   │   ├── ReportServicing.swift                        Submit report to Firestore
+│   │   ├── ReportServicing.swift                        Submit report via callable
 │   │   └── NotificationServicing.swift                  FCM token + location update contract
 │   ├── Services/
 │   │   ├── AuthService.swift            Firebase Auth wrapper, auth state listener, email verification
-│   │   ├── PingService.swift            Ping CRUD, real-time snapshot listener
-│   │   ├── ChatService.swift            Messages, participants, snapshot listener
-│   │   ├── UserService.swift            User profile CRUD
+│   │   ├── PingService.swift            Ping creation/read/listen, callable delete and boost
+│   │   ├── ChatService.swift            Messages, callable join/leave, snapshot listener
+│   │   ├── UserService.swift            User profile CRUD + usernames reservation documents
 │   │   ├── LocationService.swift        CLLocationManager, GeoJSON boundary check
 │   │   ├── BlockService.swift           @Observable @MainActor; two Firestore snapshot listeners for real-time bidirectional blocking
 │   │   ├── ContentModerationService.swift  Bundle wordlist, localizedStandardContains matching
 │   │   ├── RateLimitService.swift       UserDefaults-backed limits; #if DEBUG bypass
-│   │   ├── ReportService.swift          Writes Report documents to Firestore
+│   │   ├── ReportService.swift          Calls submitReport callable and maps duplicate report errors
 │   │   └── NotificationService.swift   FCM token registration, APNs permission, foreground banners, location update
 │   └── Utilities/
-│       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts)
+│       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts, usernames)
 │       ├── PingItError.swift            Typed error enum (+ emailNotVerified, contentModerated, blockFailed, reportFailed, rateLimited, etc.)
 │       ├── Date+Extensions.swift        Countdown (ServerTime-corrected), relative formatting
 │       ├── ServerTime.swift             Firebase RTDB .info/serverTimeOffset for clock sync
@@ -230,20 +230,52 @@ User taps "Create Ping"
   → Firestore listener on MapViewModel fires → new pin appears on map
 ```
 
+### 1.1 Ping Deletion
+```
+Creator taps "Delete"
+  → PingDetailViewModel calls PingService.deletePing(id:)
+  → PingService calls deletePing({ pingId })
+  → Cloud Function verifies auth + creator ownership
+  → Shared cleanup marks ping status="removed"
+  → Shared cleanup deletes associated chat, messages, participants, and boosts in chunked batches
+  → Firestore listeners remove the ping from map/detail/chat screens
+```
+
 ### 2. Real-Time Chat
 ```
 User opens ping detail → taps "Join Chat"
+  → ChatService calls joinChat({ chatId })
+  → Cloud Function validates user, active ping, suspension state, and block relationship
+  → Deterministic chatParticipants/{chatId}_{uid} is created/reactivated
+  → chats.participantCount and pings.participantCount increment only on active transition
   → ChatViewModel attaches Firestore snapshot listener
   → New messages appear instantly (push-based, not polling)
   → User sends message → ChatService writes to Firestore
-  → User leaves chat → listener detached (critical for cost/memory)
+  → User leaves chat → ChatService calls leaveChat({ chatId }) idempotently, then listener detached
+```
+
+### 2.1 Boost And Report
+```
+User taps "Boost"
+  → PingService calls boostPing({ pingId })
+  → Cloud Function validates auth, suspension, active ping, creator mismatch, and blocks
+  → Deterministic boosts/{pingId}_{uid} is created once
+  → pings.boostCount increments in the same transaction
+  → iOS uses returned boostCount instead of optimistic +1
+
+User submits report
+  → ReportService calls submitReport({ targetType, targetId, targetOwnerId, reason, ... })
+  → Cloud Function validates auth, suspension, allowed target/reason, and non-self-report
+  → Deterministic reports/{reporterId}_{targetId} is created
+  → Duplicate submit returns already-exists, shown as "You have already reported this content."
 ```
 
 ### 3. Ping Expiration
 ```
 Cloud Function runs every 5 minutes (cron)
   → Queries pings where expiresAt <= now AND status == active
-  → Updates status to "expired", deletes associated chat
+  → Updates status to "expired"
+  → Shared cleanup deletes associated chat, chatMessages, chatParticipants, and boosts
   → Firestore listener on MapViewModel fires → pin removed from map
 ```
 
@@ -291,7 +323,7 @@ MapView ──observes──▶ MapViewModel ──calls──▶ PingService �
                      └─ renders unclusteredPings + clusters (manual client-side clustering)
                      └─ uses displayCoordinates (offset for overlapping pins)
 
-PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ PingService (delete, boost, boost check)
+PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ PingService (callable delete/boost, boost check)
                                                             ChatService
              └─ report/block buttons ──▶ ReportView / BlockService
 
@@ -300,6 +332,7 @@ SettingsView ──calls──▶ UserService (fetch + update preferences)
              └─ dual-write: UserDefaults cache + Firestore (eliminates toggle flash on restart)
 
 ChatView ──observes──▶ ChatViewModel ──calls──▶ ChatService ──listens──▶ Firestore (chatMessages)
+                                               └─ joins/leaves via Cloud Functions
                                                ContentModerationService (outbound text check)
                                                RateLimitService (outbound message throttle)
                                                BlockService (filters incoming messages)
@@ -310,8 +343,10 @@ CreatePingView ──observes──▶ CreatePingViewModel ──calls──▶ 
                                                             RateLimitService
                                                             LocationService
 
-ProfileView ──observes──▶ ProfileViewModel ──calls──▶ UserService ──reads/writes──▶ Firestore (users)
+ProfileView ──observes──▶ ProfileViewModel ──calls──▶ UserService ──reads/writes──▶ Firestore (users + usernames)
                                                       AuthService ──calls──▶ Firebase Auth
+
+ReportView ──observes──▶ ReportViewModel ──calls──▶ ReportService ──calls──▶ submitReport Cloud Function
 
 SettingsView ──▶ BlockedUsersView ──observes──▶ BlockedUsersViewModel ──calls──▶ BlockService + UserService
 
@@ -342,14 +377,14 @@ ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls�
 | Service | Responsibility | Status |
 |---------|---------------|--------|
 | **AuthService** | Sign up, sign in, sign out, password reset, session state, email verification | Implemented |
-| **PingService** | Ping CRUD, geospatial queries, real-time listener, single-doc observer | Implemented |
-| **ChatService** | Messages, snapshot listeners, participant tracking | Implemented |
-| **UserService** | Profile read/write | Implemented |
+| **PingService** | Client-side ping creation/read/listen, callable-backed delete and boost, boost-state lookup | Implemented |
+| **ChatService** | Messages, snapshot listeners, callable-backed join/leave participant tracking | Implemented |
+| **UserService** | Profile read/write, username reservation get/create/delete during signup and rename | Implemented |
 | **LocationService** | CLLocationManager wrapper, boundary check | Implemented |
 | **BlockService** | Real-time bidirectional blocking via two Firestore snapshot listeners, optimistic local updates | Implemented |
 | **ContentModerationService** | Bundle wordlist check, returns `.allowed`/`.blocked(reason:)` | Implemented |
 | **RateLimitService** | UserDefaults-backed ping + message rate limiting, `#if DEBUG` bypass | Implemented |
-| **ReportService** | Writes `Report` documents to Firestore `reports` collection | Implemented |
+| **ReportService** | Calls `submitReport`, maps duplicate report callable error to user-visible `reportAlreadySubmitted` | Implemented |
 | **ServerTime** | Firebase RTDB `.info/serverTimeOffset` for clock-skew correction; `ServerTime.now` | Implemented (utility enum) |
 | **NotificationService** | FCM token registration, APNs permission, foreground notification display, lastKnownLocation update | Implemented |
 
@@ -368,10 +403,13 @@ Services are created as `@State` in `PingItApp` and injected via `.environment()
 ```
 functions/src/
 ├── index.ts                      App initialization, exports all functions
-├── expirePings.ts                Scheduled: every 5 minutes, batch-expires pings + cascading deletes
+├── expirePings.ts                Scheduled: every 5 minutes, batch-expires pings via shared cleanup
+├── pingCleanup.ts                Shared chunked cleanup for ping chat/messages/participants/boosts
+├── pingCallables.ts              Callable: deletePing, boostPing, joinChat, leaveChat
+├── reportCallables.ts            Callable: submitReport with deterministic report IDs
 ├── deleteAccount.ts              Callable: GDPR cascading delete (pings, chats, messages, boosts, blocks, reports, storage, auth)
 ├── sendNearbyNotification.ts     Firestore trigger: pings onCreate → 2km Haversine filter → FCM push
-├── sendHotPingNotification.ts    Firestore triggers: boosts/chatParticipants onCreate → hot score check → FCM push
+├── sendHotPingNotification.ts    Firestore triggers: boosts onCreate + chatParticipants onWrite → hot score check → FCM push
 ├── moderateImage.ts              Storage trigger: onObjectFinalized → Vision API SafeSearch → auto-remove or flag for review
 └── removeContent.ts              Callable: admin emergency content removal (ping, message, user suspension) with audit trail
 ```
@@ -382,13 +420,41 @@ functions/src/
 Ping Expiration (cron every 5min):
   expirePings → query pings where status=="active" AND expiresAt<=now
     → batch update status="expired"
-    → batch delete: chat, chatMessages, chatParticipants
+    → shared cleanup deletes: chat, chatMessages, chatParticipants, boosts
+
+Ping Deletion (callable):
+  deletePing({ pingId })
+    → require auth
+    → verify caller owns the ping
+    → ignore client-supplied related IDs
+    → shared cleanup sets status="removed"
+    → delete related chat, chatMessages, chatParticipants, boosts in chunked batches
+
+Boost (callable):
+  boostPing({ pingId })
+    → require auth, non-suspended user, active ping, non-creator, no bidirectional block
+    → create deterministic boosts/{pingId}_{uid}
+    → increment pings/{pingId}.boostCount in one transaction
+    → return { boostCount, didBoost }
+
+Chat Participants (callable):
+  joinChat({ chatId }) / leaveChat({ chatId })
+    → deterministic chatParticipants/{chatId}_{uid}
+    → validate active ping and block state on join
+    → increment/decrement chats.participantCount and pings.participantCount only on state transitions
+    → leave is idempotent
+
+Reports (callable):
+  submitReport({ targetType, targetId, targetOwnerId, reason, ... })
+    → require auth and non-suspended user
+    → create deterministic reports/{reporterId}_{targetId}
+    → duplicate reports return already-exists for visible UI feedback
 
 Account Deletion (callable):
   deleteAccount(auth.uid)
     → delete user's pings + their chats/messages/participants
     → delete user's messages in others' chats
-    → delete user's chat participations, boosts, blocks, reports
+    → delete user's chat participations, boosts, blocks, reports, username reservation
     → delete profile image from Storage
     → delete user document from Firestore
     → delete Firebase Auth account
