@@ -1,11 +1,11 @@
 import Foundation
 import FirebaseAuth
-import FirebaseFirestore
+import FirebaseFunctions
 
 @Observable
 @MainActor
 final class ReportService: ReportServicing {
-    private let db = Firestore.firestore()
+    private let functions = Functions.functions(region: "europe-west3")
 
     func submitReport(
         targetType: Report.ReportTargetType,
@@ -16,37 +16,32 @@ final class ReportService: ReportServicing {
         targetContent: String?,
         targetImageURL: String?
     ) async throws {
-        guard let currentUserId = Auth.auth().currentUser?.uid else {
+        guard Auth.auth().currentUser != nil else {
             throw PingItError.notAuthenticated
         }
 
-        // Prevent duplicate reports from the same user on the same target
-        let existing = try await db
-            .collection(Constants.Firestore.reportsCollection)
-            .whereField("reporterId", isEqualTo: currentUserId)
-            .whereField("targetId", isEqualTo: targetId)
-            .limit(to: 1)
-            .getDocuments()
-
-        guard existing.documents.isEmpty else {
-            throw PingItError.reportAlreadySubmitted
-        }
-
-        let report = Report(
-            reporterId: currentUserId,
-            targetType: targetType,
-            targetId: targetId,
-            targetOwnerId: targetOwnerId,
-            reason: reason,
-            details: details,
-            status: .pending,
-            targetContent: targetContent,
-            targetImageURL: targetImageURL
-        )
-
         do {
-            try db.collection(Constants.Firestore.reportsCollection)
-                .addDocument(from: report)
+            var payload: [String: Any] = [
+                "targetType": targetType.rawValue,
+                "targetId": targetId,
+                "targetOwnerId": targetOwnerId,
+                "reason": reason.rawValue
+            ]
+            if let details {
+                payload["details"] = details
+            }
+            if let targetContent {
+                payload["targetContent"] = targetContent
+            }
+            if let targetImageURL {
+                payload["targetImageURL"] = targetImageURL
+            }
+
+            _ = try await functions.httpsCallable("submitReport").call(payload)
+        } catch let error as NSError
+            where error.domain == FunctionsErrorDomain
+                && error.code == FunctionsErrorCode.alreadyExists.rawValue {
+            throw PingItError.reportAlreadySubmitted
         } catch {
             throw PingItError.reportFailed(underlying: error)
         }

@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 import CoreLocation
 import FirebaseFirestore
@@ -10,13 +11,19 @@ struct CreatePingViewModelTests {
     // MARK: - Helpers
 
     private func makeVM(
-        authService: MockAuthService = MockAuthService(),
-        pingService: MockPingService = MockPingService(),
-        chatService: MockChatService = MockChatService(),
-        locationService: MockLocationService = MockLocationService(),
-        contentModerationService: MockContentModerationService = MockContentModerationService(),
-        rateLimitService: MockRateLimitService = MockRateLimitService()
+        authService: MockAuthService? = nil,
+        pingService: MockPingService? = nil,
+        chatService: MockChatService? = nil,
+        locationService: MockLocationService? = nil,
+        contentModerationService: MockContentModerationService? = nil,
+        rateLimitService: MockRateLimitService? = nil
     ) -> CreatePingViewModel {
+        let authService = authService ?? MockAuthService()
+        let pingService = pingService ?? MockPingService()
+        let chatService = chatService ?? MockChatService()
+        let locationService = locationService ?? MockLocationService()
+        let contentModerationService = contentModerationService ?? MockContentModerationService()
+        let rateLimitService = rateLimitService ?? MockRateLimitService()
         let vm = CreatePingViewModel()
         vm.configure(
             authService: authService,

@@ -49,6 +49,7 @@ enum Constants {
 
     enum Firestore {
         static let usersCollection = "users"
+        static let usernamesCollection = "usernames"
         static let pingsCollection = "pings"
         static let chatsCollection = "chats"
         static let chatMessagesCollection = "chatMessages"

@@ -11,8 +11,10 @@ final class MockUserService: UserServicing {
     var createUserProfileCalled = false
     var fetchUserCalled = false
     var updateUserCalled = false
+    var updateUsernameCalled = false
     var isUsernameTakenCalled = false
     var lastUpdateData: [String: Any]?
+    var lastUpdatedUsername: String?
     var lastCheckedUsername: String?
 
     func createUserProfile(_ user: User) async throws {
@@ -29,6 +31,12 @@ final class MockUserService: UserServicing {
     func updateUser(id: String, data: [String: Any]) async throws {
         updateUserCalled = true
         lastUpdateData = data
+        if let error = errorToThrow { throw error }
+    }
+
+    func updateUsername(id: String, currentUsername: String?, newUsername: String) async throws {
+        updateUsernameCalled = true
+        lastUpdatedUsername = newUsername
         if let error = errorToThrow { throw error }
     }
 

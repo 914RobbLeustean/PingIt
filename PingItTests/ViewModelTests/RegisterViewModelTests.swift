@@ -8,9 +8,11 @@ struct RegisterViewModelTests {
     // MARK: - Helpers
 
     private func makeVM(
-        authService: MockAuthService = MockAuthService(),
-        userService: MockUserService = MockUserService()
+        authService: MockAuthService? = nil,
+        userService: MockUserService? = nil
     ) -> RegisterViewModel {
+        let authService = authService ?? MockAuthService()
+        let userService = userService ?? MockUserService()
         let vm = RegisterViewModel()
         vm.configure(authService: authService, userService: userService)
         return vm

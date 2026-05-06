@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import PingIt
 
@@ -53,5 +54,23 @@ struct ReportViewModelTests {
         await vm.submitReport()
 
         #expect(vm.showBlockOffer == true)
+    }
+
+    @Test("Duplicate report shows already submitted error")
+    func duplicateReportShowsError() async {
+        let mockReport = MockReportService()
+        mockReport.errorToThrow = PingItError.reportAlreadySubmitted
+        let vm = ReportViewModel(
+            targetType: .ping,
+            targetId: "ping1",
+            targetOwnerId: "user2"
+        )
+        vm.configure(reportService: mockReport)
+        vm.selectedReason = .spam
+
+        await vm.submitReport()
+
+        #expect(vm.didSubmitReport == false)
+        #expect(vm.errorMessage == PingItError.reportAlreadySubmitted.localizedDescription)
     }
 }

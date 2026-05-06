@@ -24,7 +24,7 @@ final class ChatViewModel {
     private(set) var isSending = false
     private(set) var errorMessage: String?
     private(set) var hasJoined = false
-    private var participantDocId: String?
+    private var joinedChatId: String?
     var messageText = ""
     var pingUnavailable = false
     private(set) var userCache: [String: User] = [:]
@@ -127,9 +127,10 @@ final class ChatViewModel {
     }
 
     func joinChat() async {
-        guard let chatService, let currentUserId, !hasJoined else { return }
+        guard let chatService, currentUserId != nil, !hasJoined else { return }
         do {
-            participantDocId = try await chatService.joinChatIfNeeded(chatId: chatId, userId: currentUserId)
+            _ = try await chatService.joinChatIfNeeded(chatId: chatId)
+            joinedChatId = chatId
             hasJoined = true
         } catch {
             errorMessage = error.localizedDescription
@@ -137,10 +138,10 @@ final class ChatViewModel {
     }
 
     func leaveChat() async {
-        guard let chatService, let participantDocId else { return }
+        guard let chatService, let joinedChatId else { return }
         do {
-            try await chatService.leaveChat(participantId: participantDocId)
-            self.participantDocId = nil
+            try await chatService.leaveChat(chatId: joinedChatId)
+            self.joinedChatId = nil
             hasJoined = false
         } catch {
             errorMessage = error.localizedDescription

@@ -7,7 +7,11 @@ struct LoginViewModelTests {
 
     // MARK: - Helpers
 
-    private func makeVM(authService: MockAuthService = MockAuthService()) -> LoginViewModel {
+    private func makeVM() -> LoginViewModel {
+        makeVM(authService: MockAuthService())
+    }
+
+    private func makeVM(authService: MockAuthService) -> LoginViewModel {
         let vm = LoginViewModel()
         vm.configure(authService: authService)
         return vm

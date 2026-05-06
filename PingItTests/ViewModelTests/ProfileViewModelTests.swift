@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import PingIt
 
@@ -7,9 +8,13 @@ struct ProfileViewModelTests {
 
     // MARK: - Helpers
 
+    private func makeVM() -> ProfileViewModel {
+        makeVM(authService: MockAuthService(), userService: MockUserService())
+    }
+
     private func makeVM(
-        authService: MockAuthService = MockAuthService(),
-        userService: MockUserService = MockUserService()
+        authService: MockAuthService,
+        userService: MockUserService
     ) -> ProfileViewModel {
         let vm = ProfileViewModel()
         vm.configure(authService: authService, userService: userService)
@@ -73,8 +78,8 @@ struct ProfileViewModelTests {
         vm.editedUsername = "newname1"
         await vm.saveUsername()
 
-        #expect(user.updateUserCalled)
-        #expect(user.lastUpdateData?["username"] as? String == "newname1")
+        #expect(user.updateUsernameCalled)
+        #expect(user.lastUpdatedUsername == "newname1")
         #expect(vm.errorMessage == nil)
     }
 
@@ -86,7 +91,7 @@ struct ProfileViewModelTests {
 
         await vm.saveUsername()
 
-        #expect(user.updateUserCalled == false)
+        #expect(user.updateUsernameCalled == false)
         #expect(vm.errorMessage != nil)
     }
 
@@ -98,7 +103,7 @@ struct ProfileViewModelTests {
 
         await vm.saveUsername()
 
-        #expect(user.updateUserCalled == false)
+        #expect(user.updateUsernameCalled == false)
         #expect(vm.errorMessage != nil)
     }
 

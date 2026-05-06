@@ -16,3 +16,5 @@ export {
 } from "./sendHotPingNotification";
 export { moderateImage } from "./moderateImage";
 export { removeContent } from "./removeContent";
+export { deletePing, boostPing, joinChat, leaveChat } from "./pingCallables";
+export { submitReport } from "./reportCallables";

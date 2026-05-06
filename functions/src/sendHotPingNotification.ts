@@ -1,4 +1,4 @@
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 
@@ -152,20 +152,22 @@ export const sendHotPingNotificationOnBoost = onDocumentCreated(
   }
 );
 
-export const sendHotPingNotificationOnJoin = onDocumentCreated(
+export const sendHotPingNotificationOnJoin = onDocumentWritten(
   { document: "chatParticipants/{participantId}", region: "europe-west3" },
   async (event) => {
-    const participantData = event.data?.data();
+    const beforeData = event.data?.before.data();
+    const participantData = event.data?.after.data();
     if (!participantData?.chatId) return;
 
-    const db = getFirestore();
-    const pingsSnapshot = await db
-      .collection("pings")
-      .where("chatId", "==", participantData.chatId)
-      .limit(1)
-      .get();
+    const wasActive = event.data?.before.exists === true && beforeData?.leftAt === undefined;
+    const isActive = event.data?.after.exists === true && participantData.leftAt === undefined;
+    if (wasActive || !isActive) return;
 
-    if (pingsSnapshot.empty) return;
-    await checkAndNotifyHotPing(pingsSnapshot.docs[0].id);
+    const db = getFirestore();
+    const chatDoc = await db.collection("chats").doc(participantData.chatId).get();
+    const pingId = chatDoc.data()?.pingId;
+
+    if (typeof pingId !== "string") return;
+    await checkAndNotifyHotPing(pingId);
   }
 );

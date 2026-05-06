@@ -18,6 +18,7 @@ module.exports = {
     sourceType: "module",
   },
   ignorePatterns: [
+    ".eslintrc.js",
     "/lib/**/*",
   ],
   plugins: [

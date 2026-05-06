@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 import FirebaseFirestore
 @testable import PingIt
@@ -25,11 +26,15 @@ struct PingDetailViewModelTests {
 
     private func makeVM(
         ping: Ping? = nil,
-        authService: MockAuthService = MockAuthService(),
-        pingService: MockPingService = MockPingService(),
-        chatService: MockChatService = MockChatService(),
-        userService: MockUserService = MockUserService()
+        authService: MockAuthService? = nil,
+        pingService: MockPingService? = nil,
+        chatService: MockChatService? = nil,
+        userService: MockUserService? = nil
     ) -> PingDetailViewModel {
+        let authService = authService ?? MockAuthService()
+        let pingService = pingService ?? MockPingService()
+        let chatService = chatService ?? MockChatService()
+        let userService = userService ?? MockUserService()
         let vm = PingDetailViewModel(ping: ping ?? makePing())
         vm.configure(
             authService: authService,
@@ -101,7 +106,7 @@ struct PingDetailViewModelTests {
         await vm.deletePing()
 
         #expect(vm.didDeletePing)
-        #expect(ping.deletePingAndChatCalled)
+        #expect(ping.deletePingCalled)
         #expect(vm.errorMessage == nil)
     }
 

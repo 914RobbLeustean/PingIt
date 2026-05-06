@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import PingIt
 
@@ -7,7 +8,11 @@ struct ForgotPasswordViewModelTests {
 
     // MARK: - Helpers
 
-    private func makeVM(authService: MockAuthService = MockAuthService()) -> ForgotPasswordViewModel {
+    private func makeVM() -> ForgotPasswordViewModel {
+        makeVM(authService: MockAuthService())
+    }
+
+    private func makeVM(authService: MockAuthService) -> ForgotPasswordViewModel {
         let vm = ForgotPasswordViewModel()
         vm.configure(authService: authService)
         return vm

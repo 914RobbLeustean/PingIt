@@ -1,5 +1,6 @@
 import Testing
 import CoreLocation
+import FirebaseFirestore
 @testable import PingIt
 
 @Suite("MapViewModel")
@@ -9,9 +10,11 @@ struct MapViewModelTests {
     // MARK: - Helpers
 
     private func makeVM(
-        pingService: MockPingService = MockPingService(),
-        locationService: MockLocationService = MockLocationService()
+        pingService: MockPingService? = nil,
+        locationService: MockLocationService? = nil
     ) -> MapViewModel {
+        let pingService = pingService ?? MockPingService()
+        let locationService = locationService ?? MockLocationService()
         let vm = MapViewModel()
         vm.configure(pingService: pingService, locationService: locationService)
         return vm

@@ -1,10 +1,11 @@
 import Foundation
-import FirebaseAuth
 import FirebaseFirestore
+import FirebaseFunctions
 
 @Observable
 final class PingService: PingServicing {
     private let db = Firestore.firestore()
+    private let functions = Functions.functions(region: "europe-west3")
 
     func createPing(_ ping: Ping) async throws -> String {
         do {
@@ -28,9 +29,7 @@ final class PingService: PingServicing {
 
     func deletePing(id: String) async throws {
         do {
-            try await db.collection(Constants.Firestore.pingsCollection)
-                .document(id)
-                .delete()
+            _ = try await functions.httpsCallable("deletePing").call(["pingId": id])
         } catch {
             throw PingItError.firestoreWriteFailed(underlying: error)
         }
@@ -57,20 +56,6 @@ final class PingService: PingServicing {
         }
     }
 
-    /// Deletes a ping and its associated chat atomically using a batched write.
-    func deletePingAndChat(pingId: String, chatId: String?) async throws {
-        let batch = db.batch()
-        batch.deleteDocument(db.collection(Constants.Firestore.pingsCollection).document(pingId))
-        if let chatId {
-            batch.deleteDocument(db.collection(Constants.Firestore.chatsCollection).document(chatId))
-        }
-        do {
-            try await batch.commit()
-        } catch {
-            throw PingItError.firestoreWriteFailed(underlying: error)
-        }
-    }
-
     func observePing(
         id: String,
         onUpdate: @escaping @Sendable (Ping?) -> Void
@@ -87,21 +72,23 @@ final class PingService: PingServicing {
         return ListenerHandle(registration)
     }
 
-    func boostPing(pingId: String) async throws {
-        guard let userId = Auth.auth().currentUser?.uid else {
-            throw PingItError.notAuthenticated
+    func boostPing(pingId: String) async throws -> BoostPingResult {
+        do {
+            let result = try await functions.httpsCallable("boostPing").call(["pingId": pingId])
+            guard
+                let data = result.data as? [String: Any],
+                let boostCount = Self.intValue(data["boostCount"]),
+                let didBoost = Self.boolValue(data["didBoost"])
+            else {
+                throw PingItError.firestoreReadFailed(underlying: PingItError.documentNotFound)
+            }
+
+            return BoostPingResult(boostCount: boostCount, didBoost: didBoost)
+        } catch let error as PingItError {
+            throw error
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
         }
-
-        let batch = db.batch()
-
-        let boostRef = db.collection(Constants.Firestore.boostsCollection).document()
-        let boost = Boost(pingId: pingId, userId: userId)
-        try batch.setData(from: boost, forDocument: boostRef)
-
-        let pingRef = db.collection(Constants.Firestore.pingsCollection).document(pingId)
-        batch.updateData(["boostCount": FieldValue.increment(Int64(1))], forDocument: pingRef)
-
-        try await batch.commit()
     }
 
     func hasUserBoostedPing(pingId: String, userId: String) async throws -> Bool {
@@ -129,5 +116,25 @@ final class PingService: PingServicing {
                 onUpdate(.success(pings))
             }
         return ListenerHandle(registration)
+    }
+
+    private static func intValue(_ value: Any?) -> Int? {
+        if let value = value as? Int {
+            return value
+        }
+        if let value = value as? NSNumber {
+            return value.intValue
+        }
+        return nil
+    }
+
+    private static func boolValue(_ value: Any?) -> Bool? {
+        if let value = value as? Bool {
+            return value
+        }
+        if let value = value as? NSNumber {
+            return value.boolValue
+        }
+        return nil
     }
 }

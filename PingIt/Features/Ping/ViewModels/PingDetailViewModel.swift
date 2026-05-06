@@ -89,7 +89,7 @@ final class PingDetailViewModel {
             guard let self else { return }
             Task { @MainActor [self] in
                 // Don't show unavailable alert if current user initiated the delete
-                guard !self.didDeletePing else { return }
+                guard !self.didDeletePing && !self.isDeleting else { return }
                 if updatedPing == nil || updatedPing?.status != .active {
                     self.pingUnavailable = true
                 }
@@ -123,9 +123,9 @@ final class PingDetailViewModel {
         defer { isBoosting = false }
 
         do {
-            try await pingService.boostPing(pingId: pingId)
-            hasUserBoosted = true
-            ping.boostCount += 1
+            let result = try await pingService.boostPing(pingId: pingId)
+            hasUserBoosted = result.didBoost
+            ping.boostCount = result.boostCount
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -138,9 +138,8 @@ final class PingDetailViewModel {
 
         do {
             guard let pingId = ping.id else { return }
-            // Set before Firestore delete so the snapshot listener guard catches it
+            try await pingService.deletePing(id: pingId)
             didDeletePing = true
-            try await pingService.deletePingAndChat(pingId: pingId, chatId: ping.chatId)
         } catch {
             errorMessage = error.localizedDescription
         }

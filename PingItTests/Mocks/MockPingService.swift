@@ -11,9 +11,10 @@ final class MockPingService: PingServicing {
 
     var createPingCalled = false
     var createPingWithChatCalled = false
-    var deletePingAndChatCalled = false
+    var deletePingCalled = false
     var boostPingCalled = false
     var hasUserBoostedPingResult = false
+    var boostPingResult = BoostPingResult(boostCount: 1, didBoost: true)
     var lastBoostedPingId: String?
     private(set) var removeCalled = false
 
@@ -38,16 +39,12 @@ final class MockPingService: PingServicing {
     }
 
     func deletePing(id: String) async throws {
+        deletePingCalled = true
         if let error = errorToThrow { throw error }
     }
 
     func createPingWithChat(_ ping: Ping) async throws {
         createPingWithChatCalled = true
-        if let error = errorToThrow { throw error }
-    }
-
-    func deletePingAndChat(pingId: String, chatId: String?) async throws {
-        deletePingAndChatCalled = true
         if let error = errorToThrow { throw error }
     }
 
@@ -67,10 +64,11 @@ final class MockPingService: PingServicing {
         ListenerHandle { }
     }
 
-    func boostPing(pingId: String) async throws {
+    func boostPing(pingId: String) async throws -> BoostPingResult {
         boostPingCalled = true
         lastBoostedPingId = pingId
         if let error = errorToThrow { throw error }
+        return boostPingResult
     }
 
     func hasUserBoostedPing(pingId: String, userId: String) async throws -> Bool {

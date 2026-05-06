@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import PingIt
 
@@ -8,13 +9,17 @@ struct ChatViewModelTests {
     // MARK: - Helpers
 
     private func makeVM(
-        authService: MockAuthService = MockAuthService(),
-        chatService: MockChatService = MockChatService(),
-        contentModerationService: MockContentModerationService = MockContentModerationService(),
-        rateLimitService: MockRateLimitService = MockRateLimitService(),
+        authService: MockAuthService? = nil,
+        chatService: MockChatService? = nil,
+        contentModerationService: MockContentModerationService? = nil,
+        rateLimitService: MockRateLimitService? = nil,
         chatId: String = "chat-1",
         pingId: String = "ping-1"
     ) -> ChatViewModel {
+        let authService = authService ?? MockAuthService()
+        let chatService = chatService ?? MockChatService()
+        let contentModerationService = contentModerationService ?? MockContentModerationService()
+        let rateLimitService = rateLimitService ?? MockRateLimitService()
         let vm = ChatViewModel(chatId: chatId, pingId: pingId)
         vm.configure(authService: authService, chatService: chatService, contentModerationService: contentModerationService, rateLimitService: rateLimitService)
         return vm
@@ -61,19 +66,19 @@ struct ChatViewModelTests {
         #expect(vm.currentUserId == nil)
     }
 
-    // MARK: - startObserving / stopObserving
+    // MARK: - loadInitialMessages / stopObserving
 
-    @Test func startObservingAttachesListener() {
+    @Test func loadInitialMessagesAttachesListener() async {
         let chat = MockChatService()
         let vm = makeVM(chatService: chat)
-        vm.startObserving()
-        #expect(chat.messagesCallback != nil)
+        await vm.loadInitialMessages()
+        #expect(chat.newMessagesCallback != nil)
     }
 
-    @Test func stopObservingCallsRemoveOnListener() {
+    @Test func stopObservingCallsRemoveOnListener() async {
         let chat = MockChatService()
         let vm = makeVM(chatService: chat)
-        vm.startObserving()
+        await vm.loadInitialMessages()
         vm.stopObserving()
         #expect(chat.removeCalled)
     }
@@ -123,7 +128,7 @@ struct ChatViewModelTests {
         let chat = MockChatService()
         let vm = makeVM(authService: auth, chatService: chat)
 
-        await vm.joinChat() // sets participantDocId
+        await vm.joinChat()
         await vm.leaveChat()
 
         #expect(vm.hasJoined == false)
@@ -189,13 +194,12 @@ struct ChatViewModelTests {
 
         let vm = ChatViewModel(chatId: "chat1", pingId: "ping1")
         vm.configure(authService: mockAuth, chatService: mockChat, contentModerationService: MockContentModerationService(), blockService: mockBlockService)
-        vm.startObserving()
 
         let normalMessage = ChatMessage(chatId: "chat1", senderId: "user2", text: "Hi")
         let blockedMessage = ChatMessage(chatId: "chat1", senderId: "blocked_user", text: "You cant see me")
+        mockChat.messagesToReturn = [normalMessage, blockedMessage]
 
-        mockChat.simulateUpdate(messages: [normalMessage, blockedMessage])
-        try? await Task.sleep(for: .milliseconds(50))
+        await vm.loadInitialMessages()
 
         #expect(vm.messages.count == 1)
         #expect(vm.messages.first?.text == "Hi")

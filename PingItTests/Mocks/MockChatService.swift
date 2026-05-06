@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 @testable import PingIt
 
@@ -5,7 +6,7 @@ import Observation
 @MainActor
 final class MockChatService: ChatServicing {
     var errorToThrow: Error?
-    var participantIdToReturn = "mock-participant-id"
+    var joinResult = ChatJoinResult(participantId: "mock-participant-id", participantCount: 1)
 
     var sendMessageCalled = false
     var joinChatCalled = false
@@ -23,13 +24,13 @@ final class MockChatService: ChatServicing {
         if let error = errorToThrow { throw error }
     }
 
-    func joinChatIfNeeded(chatId: String, userId: String) async throws -> String {
+    func joinChatIfNeeded(chatId: String) async throws -> ChatJoinResult {
         joinChatCalled = true
         if let error = errorToThrow { throw error }
-        return participantIdToReturn
+        return joinResult
     }
 
-    func leaveChat(participantId: String) async throws {
+    func leaveChat(chatId: String) async throws {
         leaveChatCalled = true
         if let error = errorToThrow { throw error }
     }

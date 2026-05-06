@@ -82,9 +82,16 @@ final class ProfileViewModel {
         defer { isSaving = false }
 
         do {
-            try await userService.updateUser(id: currentUserId, data: ["username": trimmed])
+            try await userService.updateUsername(
+                id: currentUserId,
+                currentUsername: user?.usernameLowercase,
+                newUsername: trimmed
+            )
             user?.username = trimmed
+            user?.usernameLowercase = trimmed.lowercased()
             successMessage = "Username updated"
+        } catch PingItError.usernameAlreadyTaken {
+            errorMessage = PingItError.usernameAlreadyTaken.localizedDescription
         } catch {
             errorMessage = PingItError.profileUpdateFailed(underlying: error).localizedDescription
         }

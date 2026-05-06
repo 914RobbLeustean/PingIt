@@ -1,9 +1,11 @@
 import Foundation
 import FirebaseFirestore
+import FirebaseFunctions
 
 @Observable
 final class ChatService: ChatServicing {
     private let db = Firestore.firestore()
+    private let functions = Functions.functions(region: "europe-west3")
 
     func sendMessage(_ message: ChatMessage) async throws {
         do {
@@ -14,36 +16,28 @@ final class ChatService: ChatServicing {
         }
     }
 
-    /// Joins chat if not already an active participant. Returns the participant document ID.
-    func joinChatIfNeeded(chatId: String, userId: String) async throws -> String {
-        let existing = try await db.collection(Constants.Firestore.chatParticipantsCollection)
-            .whereField("chatId", isEqualTo: chatId)
-            .whereField("userId", isEqualTo: userId)
-            .getDocuments()
-
-        if let doc = existing.documents.first {
-            let data = doc.data()
-            if data["leftAt"] != nil {
-                try await doc.reference.updateData(["leftAt": FieldValue.delete()])
-            }
-            return doc.documentID
-        }
-
-        let participant = ChatParticipant(chatId: chatId, userId: userId)
+    /// Joins chat through the server-authoritative participant counter.
+    func joinChatIfNeeded(chatId: String) async throws -> ChatJoinResult {
         do {
-            let ref = try db.collection(Constants.Firestore.chatParticipantsCollection)
-                .addDocument(from: participant)
-            return ref.documentID
+            let result = try await functions.httpsCallable("joinChat").call(["chatId": chatId])
+            guard
+                let data = result.data as? [String: Any],
+                let participantId = data["participantId"] as? String,
+                let participantCount = Self.intValue(data["participantCount"])
+            else {
+                throw PingItError.firestoreReadFailed(underlying: PingItError.documentNotFound)
+            }
+            return ChatJoinResult(participantId: participantId, participantCount: participantCount)
+        } catch let error as PingItError {
+            throw error
         } catch {
             throw PingItError.firestoreWriteFailed(underlying: error)
         }
     }
 
-    func leaveChat(participantId: String) async throws {
+    func leaveChat(chatId: String) async throws {
         do {
-            try await db.collection(Constants.Firestore.chatParticipantsCollection)
-                .document(participantId)
-                .updateData(["leftAt": FieldValue.serverTimestamp()])
+            _ = try await functions.httpsCallable("leaveChat").call(["chatId": chatId])
         } catch {
             throw PingItError.firestoreWriteFailed(underlying: error)
         }
@@ -123,5 +117,15 @@ final class ChatService: ChatServicing {
                 onUpdate(.success(messages))
             }
         return ListenerHandle(registration)
+    }
+
+    private static func intValue(_ value: Any?) -> Int? {
+        if let value = value as? Int {
+            return value
+        }
+        if let value = value as? NSNumber {
+            return value.intValue
+        }
+        return nil
     }
 }

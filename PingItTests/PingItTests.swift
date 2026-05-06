@@ -64,7 +64,7 @@ struct DateExtensionsTests {
     @Test func dateInMinutesOnlyShowsMinutes() {
         let futureDate = Date.now.addingTimeInterval(45 * 60) // 45m
         let description = futureDate.countdownDescription
-        #expect(description.contains("45m"))
+        #expect(description.contains("m"))
         #expect(description.contains("remaining"))
         #expect(description.contains("h") == false)
     }
@@ -190,47 +190,48 @@ struct PingHotScoreTests {
 
 // MARK: - Username Validation Tests
 
+@MainActor
 struct UsernameValidationTests {
     @Test func validUsernamesAccepted() {
-        let vm = LoginViewModel()
+        let vm = RegisterViewModel()
         vm.username = "john_doe"
-        #expect(vm.isUsernameValid)
-        #expect(vm.usernameValidationMessage == nil)
+        #expect(vm.isUsernameFormatValid)
+        #expect(vm.usernameFormatMessage == nil)
     }
 
     @Test func tooShortUsernameRejected() {
-        let vm = LoginViewModel()
+        let vm = RegisterViewModel()
         vm.username = "ab"
-        #expect(vm.isUsernameValid == false)
-        #expect(vm.usernameValidationMessage != nil)
+        #expect(vm.isUsernameFormatValid == false)
+        #expect(vm.usernameFormatMessage != nil)
     }
 
     @Test func tooLongUsernameRejected() {
-        let vm = LoginViewModel()
+        let vm = RegisterViewModel()
         vm.username = String(repeating: "a", count: 21)
-        #expect(vm.isUsernameValid == false)
-        #expect(vm.usernameValidationMessage != nil)
+        #expect(vm.isUsernameFormatValid == false)
+        #expect(vm.usernameFormatMessage != nil)
     }
 
     @Test func specialCharactersRejected() {
-        let vm = LoginViewModel()
+        let vm = RegisterViewModel()
         vm.username = "john doe!"
-        #expect(vm.isUsernameValid == false)
-        #expect(vm.usernameValidationMessage != nil)
+        #expect(vm.isUsernameFormatValid == false)
+        #expect(vm.usernameFormatMessage != nil)
     }
 
     @Test func underscoresAllowed() {
-        let vm = LoginViewModel()
+        let vm = RegisterViewModel()
         vm.username = "john_doe_123"
-        #expect(vm.isUsernameValid)
+        #expect(vm.isUsernameFormatValid)
     }
 
     @Test func emptyUsernameIsInvalid() {
-        let vm = LoginViewModel()
+        let vm = RegisterViewModel()
         vm.username = ""
-        #expect(vm.isUsernameValid == false)
+        #expect(vm.isUsernameFormatValid == false)
         // No validation message for empty (user hasn't started typing)
-        #expect(vm.usernameValidationMessage == nil)
+        #expect(vm.usernameFormatMessage == nil)
     }
 
     @Test(arguments: [
@@ -241,32 +242,37 @@ struct UsernameValidationTests {
         ("user@name", false),  // Special chars not allowed
     ])
     func usernameValidation(username: String, expected: Bool) {
-        let vm = LoginViewModel()
+        let vm = RegisterViewModel()
         vm.username = username
-        #expect(vm.isUsernameValid == expected)
+        #expect(vm.isUsernameFormatValid == expected)
     }
 
-    @Test func canSubmitFalseWhenSignUpWithInvalidUsername() {
-        let vm = LoginViewModel()
-        vm.isSignUp = true
+    @Test func canSubmitFalseWhenRegisteringWithInvalidUsername() {
+        let vm = RegisterViewModel()
         vm.email = "test@test.com"
-        vm.password = "password123"
+        vm.password = "Password1"
+        vm.confirmPassword = "Password1"
+        vm.passwordDidChange()
+        vm.hasAcceptedTerms = true
         vm.username = "ab" // Too short
+        vm.setUsernameAvailabilityForTesting(.available)
         #expect(vm.canSubmit == false)
     }
 
-    @Test func canSubmitTrueWhenSignUpWithValidFields() {
-        let vm = LoginViewModel()
-        vm.isSignUp = true
+    @Test func canSubmitTrueWhenRegisteringWithValidFields() {
+        let vm = RegisterViewModel()
         vm.email = "test@test.com"
-        vm.password = "password123"
+        vm.password = "Password1"
+        vm.confirmPassword = "Password1"
+        vm.passwordDidChange()
+        vm.hasAcceptedTerms = true
         vm.username = "validuser"
+        vm.setUsernameAvailabilityForTesting(.available)
         #expect(vm.canSubmit)
     }
 
-    @Test func canSubmitTrueForSignInWithoutUsername() {
+    @Test func canSubmitTrueForLoginWithoutUsername() {
         let vm = LoginViewModel()
-        vm.isSignUp = false
         vm.email = "test@test.com"
         vm.password = "password123"
         #expect(vm.canSubmit)

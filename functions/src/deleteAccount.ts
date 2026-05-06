@@ -1,7 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
+import { ChunkedWriteBatch, cleanupPing } from "./pingCleanup";
 
 export const deleteAccount = onCall({ region: "europe-west3" }, async (request) => {
   const uid = request.auth?.uid;
@@ -14,6 +15,9 @@ export const deleteAccount = onCall({ region: "europe-west3" }, async (request) 
   const storage = getStorage();
 
   try {
+    const userDoc = await db.collection("users").doc(uid).get();
+    const usernameLowercase = userDoc.data()?.usernameLowercase;
+
     // 1. Delete all pings created by user (and their chats/messages)
     const userPings = await db
       .collection("pings")
@@ -21,26 +25,10 @@ export const deleteAccount = onCall({ region: "europe-west3" }, async (request) 
       .get();
 
     for (const pingDoc of userPings.docs) {
-      const pingData = pingDoc.data();
-      if (pingData.chatId) {
-        const messages = await db
-          .collection("chatMessages")
-          .where("chatId", "==", pingData.chatId)
-          .get();
-        for (const msg of messages.docs) {
-          await msg.ref.delete();
-        }
-        const participants = await db
-          .collection("chatParticipants")
-          .where("chatId", "==", pingData.chatId)
-          .get();
-        for (const part of participants.docs) {
-          await part.ref.delete();
-        }
-        await db.collection("chats").doc(pingData.chatId).delete();
-      }
-      await pingDoc.ref.delete();
+      await cleanupPing(db, pingDoc, { deletePing: true });
     }
+
+    const writer = new ChunkedWriteBatch(db);
 
     // 2. Delete all chat messages sent by user (in other people's chats)
     const userMessages = await db
@@ -48,25 +36,49 @@ export const deleteAccount = onCall({ region: "europe-west3" }, async (request) 
       .where("senderId", "==", uid)
       .get();
     for (const msg of userMessages.docs) {
-      await msg.ref.delete();
+      await writer.delete(msg.ref);
     }
 
-    // 3. Delete all chat participant records
+    // 3. Delete all chat participant records and decrement active counters
     const userParticipations = await db
       .collection("chatParticipants")
       .where("userId", "==", uid)
       .get();
     for (const part of userParticipations.docs) {
-      await part.ref.delete();
+      const partData = part.data();
+      if (partData.leftAt === undefined && typeof partData.chatId === "string") {
+        const chatRef = db.collection("chats").doc(partData.chatId);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          const pingId = chatDoc.data()?.pingId;
+          await writer.update(chatRef, { participantCount: FieldValue.increment(-1) });
+          if (typeof pingId === "string") {
+            const pingRef = db.collection("pings").doc(pingId);
+            const pingDoc = await pingRef.get();
+            if (pingDoc.exists) {
+              await writer.update(pingRef, { participantCount: FieldValue.increment(-1) });
+            }
+          }
+        }
+      }
+      await writer.delete(part.ref);
     }
 
-    // 4. Delete all boosts by user
+    // 4. Delete all boosts by user and decrement ping counters
     const userBoosts = await db
       .collection("boosts")
       .where("userId", "==", uid)
       .get();
     for (const boost of userBoosts.docs) {
-      await boost.ref.delete();
+      const pingId = boost.data().pingId;
+      if (typeof pingId === "string") {
+        const pingRef = db.collection("pings").doc(pingId);
+        const pingDoc = await pingRef.get();
+        if (pingDoc.exists) {
+          await writer.update(pingRef, { boostCount: FieldValue.increment(-1) });
+        }
+      }
+      await writer.delete(boost.ref);
     }
 
     // 5. Delete all blocks by/against user
@@ -75,7 +87,7 @@ export const deleteAccount = onCall({ region: "europe-west3" }, async (request) 
       .where("blockerId", "==", uid)
       .get();
     for (const block of blocksAsBlocker.docs) {
-      await block.ref.delete();
+      await writer.delete(block.ref);
     }
 
     const blocksAsBlocked = await db
@@ -83,7 +95,7 @@ export const deleteAccount = onCall({ region: "europe-west3" }, async (request) 
       .where("blockedUserId", "==", uid)
       .get();
     for (const block of blocksAsBlocked.docs) {
-      await block.ref.delete();
+      await writer.delete(block.ref);
     }
 
     // 6. Delete all reports by user
@@ -92,7 +104,11 @@ export const deleteAccount = onCall({ region: "europe-west3" }, async (request) 
       .where("reporterId", "==", uid)
       .get();
     for (const report of userReports.docs) {
-      await report.ref.delete();
+      await writer.delete(report.ref);
+    }
+
+    if (typeof usernameLowercase === "string" && usernameLowercase.length > 0) {
+      await writer.delete(db.collection("usernames").doc(usernameLowercase));
     }
 
     // 7. Delete profile image from Storage
@@ -104,7 +120,8 @@ export const deleteAccount = onCall({ region: "europe-west3" }, async (request) 
     }
 
     // 8. Delete user document from Firestore
-    await db.collection("users").doc(uid).delete();
+    await writer.delete(db.collection("users").doc(uid));
+    await writer.commit();
 
     // 9. Delete Firebase Auth account
     await auth.deleteUser(uid);

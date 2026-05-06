@@ -27,18 +27,41 @@ final class AuthService: AuthServicing {
         defer { isLoading = false }
 
         do {
+            let normalizedUsername = username.lowercased()
+            let db = Firestore.firestore()
+            let usernameDoc = try await db
+                .collection(Constants.Firestore.usernamesCollection)
+                .document(normalizedUsername)
+                .getDocument()
+
+            guard !usernameDoc.exists else {
+                throw PingItError.usernameAlreadyTaken
+            }
+
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
 
             // Create Firestore user profile using the Auth UID as the document ID
             let user = User(
                 username: username,
                 email: email,
-                usernameLowercase: username.lowercased()
+                usernameLowercase: normalizedUsername
             )
-            try Firestore.firestore()
-                .collection(Constants.Firestore.usersCollection)
-                .document(result.user.uid)
-                .setData(from: user)
+
+            do {
+                let batch = db.batch()
+                batch.setData([
+                    "userId": result.user.uid,
+                    "createdAt": FieldValue.serverTimestamp(),
+                ], forDocument: db.collection(Constants.Firestore.usernamesCollection).document(normalizedUsername))
+                try batch.setData(
+                    from: user,
+                    forDocument: db.collection(Constants.Firestore.usersCollection).document(result.user.uid)
+                )
+                try await batch.commit()
+            } catch {
+                try? await result.user.delete()
+                throw PingItError.firestoreWriteFailed(underlying: error)
+            }
 
             try? await result.user.sendEmailVerification()
         } catch let error as PingItError {
