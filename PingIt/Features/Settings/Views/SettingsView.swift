@@ -47,6 +47,11 @@ struct SettingsView: View {
                     savePreference("isPrivateProfile", value: newValue)
                 }
 
+                Section("Legal") {
+                    NavigationLink("Terms of Service", destination: TermsOfServiceView())
+                    NavigationLink("Privacy Policy", destination: PrivacyPolicyView())
+                }
+
                 Section {
                     Button("Delete Account", role: .destructive) {
                         showDeleteConfirmation = true

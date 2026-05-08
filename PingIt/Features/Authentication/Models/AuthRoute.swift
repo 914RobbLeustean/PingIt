@@ -5,4 +5,5 @@ enum AuthRoute: Hashable {
     case register
     case forgotPassword
     case termsOfService
+    case privacyPolicy
 }

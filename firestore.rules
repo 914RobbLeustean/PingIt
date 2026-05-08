@@ -81,6 +81,7 @@ service cloud.firestore {
           "notifyHotPings",
           "fcmToken",
           "lastKnownLocation",
+          "hasCompletedOnboarding",
         ])
         && validUsername(request.resource.data.username)
         && validNormalizedUsername(request.resource.data.usernameLowercase)
@@ -103,6 +104,7 @@ service cloud.firestore {
           "notifyHotPings",
           "fcmToken",
           "lastKnownLocation",
+          "hasCompletedOnboarding",
         ])
         && (
           !changedKeys.hasAny(["username", "usernameLowercase"])

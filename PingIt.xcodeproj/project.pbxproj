@@ -15,6 +15,7 @@
 		3AE1F0032FA5A00000C56A39 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 3AE1F0022FA5A00000C56A39 /* FirebaseMessaging */; };
 		3AF1A0042FAA000100D1E001 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 3AF1A0032FAA000100D1E001 /* FirebaseAnalytics */; };
 		3AF1A0062FAA000100D1E001 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 3AF1A0052FAA000100D1E001 /* FirebaseCrashlytics */; };
+		3AF1A0082FAB000100D1E001 /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = 3AF1A0072FAB000100D1E001 /* FirebasePerformance */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +85,7 @@
 				3AE1F0032FA5A00000C56A39 /* FirebaseMessaging in Frameworks */,
 				3AF1A0042FAA000100D1E001 /* FirebaseAnalytics in Frameworks */,
 				3AF1A0062FAA000100D1E001 /* FirebaseCrashlytics in Frameworks */,
+				3AF1A0082FAB000100D1E001 /* FirebasePerformance in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -160,6 +162,7 @@
 				3AE1F0022FA5A00000C56A39 /* FirebaseMessaging */,
 				3AF1A0032FAA000100D1E001 /* FirebaseAnalytics */,
 				3AF1A0052FAA000100D1E001 /* FirebaseCrashlytics */,
+				3AF1A0072FAB000100D1E001 /* FirebasePerformance */,
 			);
 			productName = PingIt;
 			productReference = 3A1E75BF2F787EB400A2237A /* PingIt.app */;
@@ -687,6 +690,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCrashlytics;
+		};
+		3AF1A0072FAB000100D1E001 /* FirebasePerformance */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3AD97F342F78A0B600C56A39 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebasePerformance;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

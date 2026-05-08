@@ -6,6 +6,100 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-05-07] — App Icon, Performance Monitoring, Beta Testing Docs, Spec Alignment
+
+### Summary
+Phase 2 Session 3: Added app icon, Firebase Performance Monitoring, Beta Testing guide, and aligned project spec with actual implementation.
+
+### Added — App Icon
+- Resized `logo.png` (1254x1254) to 1024x1024 `AppIcon.png` in `AppIcon.appiconset`.
+- Updated `Contents.json` with `"filename": "AppIcon.png"` for light, dark, and tinted slots (same image for all three; can be replaced with distinct variants later).
+
+### Added — Firebase Performance Monitoring
+- `PerformanceServicing` protocol with `startTrace(name:)` and `PerformanceTrace` protocol for custom traces.
+- `PerformanceService`: `@Observable @MainActor` wrapper around `FirebasePerformance`. `startTrace()` is `nonisolated` for use from any context. `FirebasePerformanceTrace` struct bridges to the SDK's `Trace` type.
+- `MockPerformanceService` + `MockPerformanceTrace` for test assertions.
+- `FirebasePerformance` SPM product added to Xcode project.
+- `PerformanceService` wired into `PingItApp.swift` via `@State` + `.environment()`.
+- Firebase Performance automatically captures app startup time, network request metrics, and screen rendering traces once linked.
+
+### Added — Beta Testing Documentation
+- `docs/BETA_TESTING.md`: Full guide covering Apple Developer enrollment prerequisites, APNs Auth Key setup, Xcode signing configuration, App Store Connect setup, TestFlight archive/upload workflow, ExportOptions.plist template, internal/external tester management, tester onboarding template, feedback collection process, and timeline estimate.
+
+### Changed — Project Spec Alignment
+- Updated `project_spec.md` data model to reflect actual Firestore collections (removed unimplemented `userPreferences`, `cities`, `notifications`, `pingMedia`, `follows`; added implementation notes explaining each decision).
+- Updated tech stack: GeoFirestore deferred (single Firestore listener at thesis scale), FirebasePerformance added.
+- Content Review Queue description updated to reflect Firebase Console + runbook approach.
+- Performance Monitoring added as 11th Phase 2 feature (total: 41 features).
+- Clarified Apple Developer enrollment blockers on APNs, TestFlight, and App Store submission.
+
+### Blocker
+- Beta Testing implementation requires Apple Developer Program enrollment ($99/yr, 2-5 day approval). Not yet enrolled.
+
+### Files Created
+- `PingIt/Assets.xcassets/AppIcon.appiconset/AppIcon.png`
+- `PingIt/Core/Protocols/PerformanceServicing.swift`
+- `PingIt/Core/Services/PerformanceService.swift`
+- `PingItTests/Mocks/MockPerformanceService.swift`
+- `docs/BETA_TESTING.md`
+
+### Files Modified
+- `PingIt/Assets.xcassets/AppIcon.appiconset/Contents.json`
+- `PingIt/App/PingItApp.swift`
+- `PingIt.xcodeproj/project.pbxproj` (added FirebasePerformance SPM product)
+- `project_spec.md` (v1.2 — spec-to-implementation alignment)
+- `ARCHITECTURE.md`
+
+---
+
+## [2026-05-06] — Privacy Policy, Terms of Service, and Onboarding Flow
+
+### Summary
+Phase 2 Session 2: Added Privacy Policy and Terms of Service views (bundled HTML in WKWebView), and a 3-page onboarding tutorial flow gated before first app use.
+
+### Added — Privacy Policy & Terms of Service
+- `WebContentView`: `UIViewRepresentable` wrapper around `WKWebView` for loading bundled HTML files. Supports dark mode, external link handling.
+- `PrivacyPolicyView`: Displays `privacy.html` with navigation title.
+- `TermsOfServiceView`: Replaced "Coming Soon" placeholder with `WebContentView` loading `terms.html`.
+- `terms.html`: Terms of Service covering eligibility, acceptable use, content moderation, location data, account termination, liability.
+- `privacy.html`: Privacy Policy with GDPR compliance, data collection table, Firebase services disclosure, data retention, user rights, contact info.
+- `AuthRoute.privacyPolicy` case added to auth navigation.
+- `RegisterView`: TOS section now includes both "Terms of Service" and "Privacy Policy" links.
+- `SettingsView`: Added "Legal" section with NavigationLinks to Terms and Privacy Policy.
+
+### Added — Onboarding Flow
+- `OnboardingViewModel`: `@Observable @MainActor` class managing 3-page tutorial. `advance()`, `skip()`, `completeOnboarding()` — updates `hasCompletedOnboarding` on Firestore user doc and logs `onboarding_completed` analytics event.
+- `OnboardingPageView`: Reusable page with SF Symbol icon, title, and subtitle.
+- `OnboardingView`: `TabView(.page)` container with Skip/Next/Get Started buttons. Shows once per user.
+- `User.hasCompletedOnboarding: Bool` field added to User model.
+- `RootView`: Onboarding gate between suspension check and MainTabView — shows `OnboardingView` when `hasCompletedOnboarding == false`.
+- `firestore.rules`: Added `hasCompletedOnboarding` to both `safeUserCreate` and `safeUserUpdate` allowed fields.
+
+### Added — Tests
+- `OnboardingViewModelTests`: 8 tests covering page navigation, skip, completion, analytics logging, error handling, and initial state.
+
+### Files Created
+- `PingIt/Features/Authentication/Views/WebContentView.swift`
+- `PingIt/Features/Authentication/Views/PrivacyPolicyView.swift`
+- `PingIt/Resources/terms.html`
+- `PingIt/Resources/privacy.html`
+- `PingIt/Features/Onboarding/ViewModels/OnboardingViewModel.swift`
+- `PingIt/Features/Onboarding/Views/OnboardingView.swift`
+- `PingIt/Features/Onboarding/Views/OnboardingPageView.swift`
+- `PingItTests/ViewModelTests/OnboardingViewModelTests.swift`
+
+### Files Modified
+- `PingIt/Features/Authentication/Views/TermsOfServiceView.swift`
+- `PingIt/Features/Authentication/Models/AuthRoute.swift`
+- `PingIt/Features/Authentication/Views/AuthenticationCoordinatorView.swift`
+- `PingIt/Features/Authentication/Views/RegisterView.swift`
+- `PingIt/Features/Settings/Views/SettingsView.swift`
+- `PingIt/Core/Models/User.swift`
+- `PingIt/App/RootView.swift`
+- `firestore.rules`
+
+---
+
 ## [2026-05-06] — Custom Ping Duration + Firebase Analytics + Crashlytics
 
 ### Summary

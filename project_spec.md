@@ -1,7 +1,7 @@
 # PingIt — Product & Engineering Specification
 
 **Version:** 1.0
-**Last Updated:** May 6, 2026
+**Last Updated:** May 7, 2026
 **Target Launch:** July 1, 2026 (Cluj-Napoca, Romania)
 **Thesis Submission:** July 1, 2026
 
@@ -41,7 +41,7 @@ The theoretical foundation comes from three frameworks:
 | **Server Logic** | Cloud Functions (Node.js) | Server-authoritative ping cleanup, boosts, chat participants, reports, moderation triggers, push notifications |
 | **Content Moderation** | Google Cloud Vision API | Image safety analysis (SafeSearch) |
 | **Push Notifications** | Firebase Cloud Messaging (FCM) | Hot ping alerts, chat notifications |
-| **Geospatial** | GeoFirestore library | Geohash-based location queries |
+| **Performance** | Firebase Performance Monitoring | App startup time, custom traces, network request metrics |
 
 **Key Architectural Principle:** Single source of truth (Firestore). No Core Data sync layer.
 
@@ -93,21 +93,23 @@ The application uses the following Firestore collections. Each ping has a one-to
 
 | Collection | Purpose | Key Fields |
 |------------|---------|------------|
-| **users** | User profiles, preferences, engagement metrics | userId, username, email, profileImageUrl, createdAt, blockedUsers[] |
+| **users** | User profiles, preferences, engagement metrics | userId, username, email, profileImageUrl, createdAt, hasCompletedOnboarding, notifyNearbyPings, notifyHotPings, isPrivateProfile, suspensionStatus, suspensionExpiresAt, lastKnownLocation |
 | **usernames** | Username reservation and public availability checks | normalizedUsername, userId, createdAt |
-| **userPreferences** | Privacy, UI, notification, discovery settings | userId, theme, language, notificationPrefs{}, privacySettings{} |
-| **cities** | Geographic boundaries (GeoJSON), active ping/user counts | cityId, name, boundary (GeoJSON), activePingCount, activeUserCount |
-| **pings** | Content, location (geohash), timing, moderation status, denormalized counts | pingId, creatorId, text, location, geohash, expiresAt, status, boostCount, participantCount, chatId |
-| **pingMedia** | Images/videos with moderation scores (Phase 2+) | mediaId, pingId, storageUrl, moderationScore, status |
+| **pings** | Content, location, timing, moderation status, denormalized counts | pingId, creatorId, text, location, geohash, expiresAt, status, boostCount, participantCount, chatId |
 | **chats** | One-to-one with ping, metrics, settings | chatId, pingId, participantCount, lastMessageAt, createdAt |
-| **chatMessages** | Text, reactions, location sharing, moderation | messageId, chatId, senderId, text, createdAt, isModerated |
-| **chatParticipants** | Join/leave tracking, permissions | participantId `{chatId}_{userId}`, chatId, userId, joinedAt, leftAt |
-| **follows** | Per-relationship notification preferences (Phase 2+) | followId, followerId, followedUserId, notifyOnPing, createdAt |
+| **chatMessages** | Text messages with moderation status | messageId, chatId, senderId, text, createdAt, isModerated |
+| **chatParticipants** | Join/leave tracking, permissions | participantId `{chatId}_{userId}`, chatId, userId, joinedAt, leftAt, status |
 | **boosts** | Ping engagement tracking | boostId `{pingId}_{userId}`, pingId, userId, createdAt |
 | **blocks** | User safety | blockId, blockerId, blockedUserId, createdAt |
 | **reports** | Status tracking, comprehensive reporting | reportId `{reporterId}_{targetId}`, reporterId, targetType, targetId, reason, status, reviewedAt |
-| **notifications** | Delivery tracking, action data | notificationId, userId, type, data{}, isRead, createdAt |
 | **moderationActions** | Audit trail for all moderation decisions | actionId, moderatorId, targetType, targetId, action, reason, timestamp |
+
+**Implementation notes:**
+- **User preferences** (notification toggles, privacy settings) are stored directly on the `users` document rather than in a separate `userPreferences` collection. This simplifies reads and avoids cross-collection joins.
+- **City boundary** is loaded from a bundled GeoJSON file (`clujnapoca.geojson`) rather than a `cities` Firestore collection. Single-city scope makes a collection unnecessary.
+- **Notification history** is not persisted to Firestore. Push notifications are dispatched directly via FCM from Cloud Functions triggers. Users see notifications in the iOS notification center.
+- **Geohash** field exists on pings but is currently an empty string. All active pings within Cluj-Napoca are loaded via a single Firestore listener, which is performant at thesis scale (~500 users). GeoFirestore radius queries would be needed for multi-city or higher-scale deployment.
+- **`pingMedia`** and **`follows`** collections are deferred to post-thesis (v2).
 
 ---
 
@@ -144,8 +146,7 @@ The application uses the following Firestore collections. Each ping has a one-to
 - Firebase project configured (Auth, Firestore, Storage, Functions)
 - Cloud Function: `expirePings` (cron job, runs every 5 minutes)
 - Cloud Functions: `deletePing`, `joinChat`, and `leaveChat` for server-owned destructive cleanup and participant counters
-- GeoFirestore library integrated for spatial queries
-- Cluj-Napoca GeoJSON boundary loaded from app bundle
+- Cluj-Napoca GeoJSON boundary loaded from app bundle (single-city scope — all active pings loaded via one Firestore listener; GeoFirestore radius queries deferred to multi-city scale)
 - Firestore security rules with authenticated reads, strict client-owned creates, and server-owned counters/destructive writes
 
 **Success Criteria:**
@@ -164,7 +165,7 @@ The application uses the following Firestore collections. Each ping has a one-to
 15. **Automated Image/Video Filtering** — Cloud Function calls Vision API on Storage upload
 16. **Text Content Moderation** — Client-side keyword filter for profanity/hate speech
 17. **User Report System** — Report ping or chat message (reason: spam, harassment, inappropriate)
-18. **Content Review Queue** — Admin dashboard (web app, simple Firebase Hosting site)
+18. **Content Review Queue** — Admin review via Firebase Console + moderation runbook (`docs/ADMIN_MODERATION_RUNBOOK.md`). A dedicated web dashboard is deferred to post-thesis.
 19. **Emergency Content Removal** — Cloud Function: `removeContent` (callable, admin-only)
 
 #### Discovery & Engagement (4 features)
@@ -191,11 +192,11 @@ The application uses the following Firestore collections. Each ping has a one-to
 - Cloud Function: `deleteAccount` (callable, cascading delete using shared cleanup)
 - Admin review workflow (Firebase Console + runbook; React dashboard remains a future enhancement)
 - Firestore security rules updated (block rules, report rules, username reservations, server-owned counters/cleanup)
-- APNs certificate configured for push notifications
+- APNs Auth Key configuration — blocked on personal Apple Developer Program enrollment ($99/yr). Push notification code is implemented; FCM token management and notification handlers are wired. Key upload to Firebase Console required before notifications function on device.
 
 **Success Criteria:**
 - Image with nudity auto-flagged and removed within 30 seconds
-- Report submitted → appears in admin dashboard
+- Report submitted → visible in Firebase Console (`reports` collection) per admin runbook
 - Account deletion → all user pings/messages removed
 - Push notification received when ping created nearby (tested with TestFlight)
 
@@ -204,30 +205,31 @@ The application uses the following Firestore collections. Each ping has a one-to
 ### Phase 2: Polish & Launch
 **Goal:** Production-ready for App Store launch and thesis evaluation
 
-**10 Features:**
+**11 Features:**
 
 #### UX Enhancements (4 features)
-31. **Custom Ping Duration** — "Custom" button opens time picker (1-48hr range)
-32. **Onboarding Flow** — 3-screen tutorial (map intro, ping creation, chat join)
+31. **Custom Ping Duration** — "Custom" segment with Stepper (1-48hr range)
+32. **Onboarding Flow** — 3-screen TabView(.page) tutorial (map intro, ping creation, chat join). Tracked via `hasCompletedOnboarding` on user document.
 33. **Empty States** — No pings nearby, no chat messages, no notifications
 34. **Error States** — Network errors, location denied, rate limit exceeded
 
-#### Performance & Analytics (3 features)
+#### Performance & Analytics (4 features)
 35. **Performance Optimization** — Image caching, pagination for chat messages (50 msgs/load)
-36. **Firebase Analytics** — Track: ping_created, chat_joined, boost_used, session_duration
+36. **Firebase Analytics** — Track: ping_created, chat_joined, boost_used, onboarding_completed, session_duration
 37. **Crash Reporting** — Firebase Crashlytics integration
+38. **Performance Monitoring** — Firebase Performance Monitoring integration (automatic app startup, network traces, custom traces via `PerformanceService`)
 
 #### Launch Prep (3 features)
-38. **App Icon & Splash Screen** — Designed in Figma, exported to Xcode asset catalog
-39. **Privacy Policy & Terms** — In-app WebView, hosted on Firebase Hosting
-40. **Beta Testing** — TestFlight release to 10 Cluj students (feedback loop)
+39. **App Icon & Splash Screen** — Designed in Figma, exported to Xcode asset catalog
+40. **Privacy Policy & Terms** — Bundled HTML in-app via WKWebView (terms.html, privacy.html)
+41. **Beta Testing** — TestFlight release to 10 Cluj students (feedback loop)
 
 **Technical Deliverables:**
-- App Store Connect submission (screenshots, description, keywords)
-- Privacy policy drafted (GDPR-compliant, covers location, chat, analytics)
-- TestFlight beta testing period (1 week, 10 users)
-- Performance profiling (Instruments: Time Profiler, Allocations)
-- App Store review preparation (demo video, reviewer notes)
+- App Store Connect submission (screenshots, description, keywords) — blocked on Apple Developer enrollment
+- Privacy policy drafted (GDPR-compliant, covers location, chat, analytics) — bundled in app
+- TestFlight beta testing period (1 week, 10 users) — blocked on Apple Developer enrollment
+- Performance profiling via Firebase Performance Monitoring (automatic traces) and Instruments (Time Profiler, Allocations)
+- App Store review preparation (demo video, reviewer notes) — blocked on Apple Developer enrollment
 
 **Success Criteria:**
 - App Store approval (no rejections)
@@ -337,7 +339,7 @@ The application uses the following Firestore collections. Each ping has a one-to
 | Metric | Target | Measurement |
 |--------|--------|-------------|
 | **Crash-Free Rate** | >99% | Firebase Crashlytics |
-| **Response Time (p95)** | <2 seconds | Firebase Performance Monitoring |
+| **Response Time (p95)** | <2 seconds | Firebase Performance Monitoring (integrated via `PerformanceService`) |
 | **Offline Functionality** | 100% (read cached data) | Manual testing checklist |
 | **Zero Critical Bugs** | 0 bugs | Production monitoring |
 
@@ -347,6 +349,7 @@ The application uses the following Firestore collections. Each ping has a one-to
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.2 | May 7, 2026 | Robert Leustean + Claude | Spec-to-implementation alignment: updated data model to reflect actual Firestore collections (removed unimplemented userPreferences, cities, notifications, pingMedia, follows collections; added implementation notes). Updated tech stack (GeoFirestore deferred, FirebasePerformance added). Updated content review queue to reflect Firebase Console + runbook approach. Added Performance Monitoring as 11th Phase 2 feature. Clarified Apple Developer enrollment blockers. |
 | 1.1 | May 6, 2026 | Robert Leustean + Codex | Updated for server-authoritative ping cleanup, boosts, chat participants, reports, username reservations, and hardened Firestore rules |
 | 1.0 | March 28, 2026 | Robert Leustean | Initial specification (MVP, Phase 1-2, tech stack finalized) |
 

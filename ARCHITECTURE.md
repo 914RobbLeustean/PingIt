@@ -31,7 +31,7 @@ Infrastructure diagram lives in `project_spec.md` Section 2.2.
 ┌──────────────────▼───────────────────────────────┐
 │              Firebase / External APIs             │
 │  Firestore, Auth, Storage, FCM, Analytics,        │
-│  Crashlytics, Vision API                          │
+│  Crashlytics, Performance, Vision API             │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -57,6 +57,7 @@ PingIt/
 │   ├── Map/
 │   ├── Ping/
 │   ├── Chat/
+│   ├── Onboarding/
 │   ├── Profile/
 │   └── Settings/
 └── Resources/               Assets, GeoJSON, config files
@@ -64,13 +65,13 @@ PingIt/
 
 **Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
 
-### Actual File Listing (as of 2026-05-06)
+### Actual File Listing (as of 2026-05-07)
 
 ```
 PingIt/
 ├── App/
-│   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection, notification routing, analytics + crashlytics user tracking
-│   ├── RootView.swift               Auth gate with suspension check: LoginView or SuspendedAccountView or MainTabView
+│   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection, notification routing, analytics + crashlytics + performance user tracking
+│   ├── RootView.swift               Auth gate with suspension + onboarding checks: Auth or Suspended or Onboarding or MainTabView
 │   ├── MainTabView.swift            Tab bar (Map, Profile, Settings) with tab selection for notification navigation
 │   └── NavigationRouter.swift       @Observable router for push notification → ping navigation
 ├── Core/
@@ -98,7 +99,8 @@ PingIt/
 │   │   ├── ReportServicing.swift                        Submit report via callable
 │   │   ├── NotificationServicing.swift                  FCM token + location update contract
 │   │   ├── AnalyticsServicing.swift                     Event logging + user ID tracking
-│   │   └── CrashReportingServicing.swift                Crash/error reporting + user ID
+│   │   ├── CrashReportingServicing.swift                Crash/error reporting + user ID
+│   │   └── PerformanceServicing.swift                   Custom trace creation + metrics
 │   ├── Services/
 │   │   ├── AuthService.swift            Firebase Auth wrapper, auth state listener, email verification
 │   │   ├── PingService.swift            Ping creation/read/listen, callable delete and boost
@@ -111,7 +113,8 @@ PingIt/
 │   │   ├── ReportService.swift          Calls submitReport callable and maps duplicate report errors
 │   │   ├── NotificationService.swift   FCM token registration, APNs permission, foreground banners, location update
 │   │   ├── AnalyticsService.swift       Wraps FirebaseAnalytics event logging and user ID
-│   │   └── CrashReportingService.swift  Wraps FirebaseCrashlytics crash/error reporting and user ID
+│   │   ├── CrashReportingService.swift  Wraps FirebaseCrashlytics crash/error reporting and user ID
+│   │   └── PerformanceService.swift    Wraps FirebasePerformance custom traces and metrics
 │   └── Utilities/
 │       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts, usernames)
 │       ├── PingItError.swift            Typed error enum (+ emailNotVerified, contentModerated, blockFailed, reportFailed, rateLimited, etc.)
@@ -121,7 +124,7 @@ PingIt/
 ├── Features/
 │   ├── Authentication/
 │   │   ├── Models/
-│   │   │   ├── AuthRoute.swift             Navigation route enum
+│   │   │   ├── AuthRoute.swift             Navigation route enum (+ privacyPolicy)
 │   │   │   └── PasswordValidator.swift     Pure password strength/rule validation
 │   │   ├── ViewModels/
 │   │   │   ├── LoginViewModel.swift        Sign-in form state, email validation
@@ -134,7 +137,9 @@ PingIt/
 │   │       ├── RegisterView.swift          Full registration form with strength indicator
 │   │       ├── ForgotPasswordView.swift    Password reset request
 │   │       ├── SuspendedAccountView.swift   Full-screen suspension gate (shows expiry, contact, sign-out)
-│   │       ├── TermsOfServiceView.swift    Placeholder (Phase 2: WebView)
+│   │       ├── TermsOfServiceView.swift    Terms of Service (WKWebView loading terms.html)
+│   │       ├── PrivacyPolicyView.swift    Privacy Policy (WKWebView loading privacy.html)
+│   │       ├── WebContentView.swift       UIViewRepresentable WKWebView wrapper for bundled HTML
 │   │       └── Components/
 │   │           ├── AuthTextField.swift         Styled field with icon + validation indicator
 │   │           ├── AuthSecureField.swift        Password field with show/hide toggle
@@ -166,6 +171,12 @@ PingIt/
 │   │   └── Views/
 │   │       ├── ChatView.swift              Real-time message list + input, report sheet, ping unavailable dismiss
 │   │       └── MessageBubbleView.swift     Sender avatar + username, grouped bubbles, report/block context menu
+│   ├── Onboarding/
+│   │   ├── ViewModels/
+│   │   │   └── OnboardingViewModel.swift  3-page tutorial state, completes via UserService + Analytics
+│   │   └── Views/
+│   │       ├── OnboardingView.swift       TabView(.page) container with Skip/Next/Get Started buttons
+│   │       └── OnboardingPageView.swift   Reusable page: SF Symbol, title, subtitle
 │   ├── Report/
 │   │   ├── ViewModels/
 │   │   │   └── ReportViewModel.swift       Reason selection, submit, block offer after success
@@ -182,12 +193,14 @@ PingIt/
 │       ├── ViewModels/
 │       │   └── BlockedUsersViewModel.swift  Loads blocked users with profiles, unblock action
 │       └── Views/
-│           ├── SettingsView.swift           Sign out, notifications + privacy toggles, Privacy & Safety
+│           ├── SettingsView.swift           Sign out, notifications + privacy toggles, Privacy & Safety, Legal (Terms + Privacy)
 │           └── BlockedUsersView.swift       List of blocked users with unblock confirmation
 
 └── Resources/
     ├── ClujNapoca.geojson           Cluj-Napoca admin boundary (OSM)
-    └── moderation_wordlist.txt      Client-side profanity filter wordlist (one word per line)
+    ├── moderation_wordlist.txt      Client-side profanity filter wordlist (one word per line)
+    ├── terms.html                   Terms of Service (bundled HTML, loaded by WebContentView)
+    └── privacy.html                 Privacy Policy (bundled HTML, loaded by WebContentView)
 
 PingItTests/
 ├── Mocks/
@@ -203,7 +216,8 @@ PingItTests/
 │   ├── MockReportService.swift               Tracks submitReport calls, injectable error
 │   ├── MockNotificationService.swift         Tracks permission/token/location calls
 │   ├── MockAnalyticsService.swift            Records logged events for test assertions
-│   └── MockCrashReportingService.swift       Records reported errors for test assertions
+│   ├── MockCrashReportingService.swift       Records reported errors for test assertions
+│   └── MockPerformanceService.swift          Stub traces for test assertions
 ├── ViewModelTests/
 │   ├── CreatePingViewModelTests.swift        (+ email verification, moderation, rate limit tests)
 │   ├── ChatViewModelTests.swift              (+ email verification, blocking, moderation tests)
@@ -215,7 +229,8 @@ PingItTests/
 │   ├── RegisterViewModelTests.swift
 │   ├── ForgotPasswordViewModelTests.swift
 │   ├── PasswordValidatorTests.swift
-│   └── ProfileViewModelTests.swift
+│   ├── ProfileViewModelTests.swift
+│   └── OnboardingViewModelTests.swift
 └── PingItTests.swift                         Boundary, dates, constants, models
 ```
 
@@ -369,13 +384,16 @@ PingItApp ── .task ──▶ NotificationService.requestPermission + registe
           └─ .onReceive(PingItOpenPing) ──▶ NavigationRouter.pendingPingId
           └─ .onChange(of: auth.uid) ──▶ AnalyticsService.setUserId + CrashReportingService.setUserId
 
-RootView ── checks ──▶ UserService.fetchUser (suspension gate)
+RootView ── checks ──▶ UserService.fetchUser (suspension + onboarding gate)
          └─ if suspended ──▶ SuspendedAccountView
-         └─ if not suspended ──▶ MainTabView
+         └─ if not onboarded ──▶ OnboardingView ──observes──▶ OnboardingViewModel ──calls──▶ UserService + AnalyticsService
+         └─ if onboarded ──▶ MainTabView
 
 NavigationRouter ──observed by──▶ MainTabView (tab switch) + MapView (ping navigation)
 
-AuthenticationCoordinatorView ──routes──▶ LoginView / RegisterView / ForgotPasswordView
+AuthenticationCoordinatorView ──routes──▶ LoginView / RegisterView / ForgotPasswordView / TermsOfServiceView / PrivacyPolicyView
+
+SettingsView ── Legal section ──▶ TermsOfServiceView / PrivacyPolicyView (WebContentView + bundled HTML)
 LoginView ──observes──▶ LoginViewModel ──calls──▶ AuthService ──calls──▶ Firebase Auth
 RegisterView ──observes──▶ RegisterViewModel ──calls──▶ AuthService + UserService (username check)
 ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls──▶ AuthService.sendPasswordReset
