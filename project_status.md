@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current Phase
-**Phase 1 — Safety & Discovery** — Complete (16/16 features). All 4 sprints shipped: client-side safety, engagement, Cloud Functions, and moderation pipeline (Vision API image moderation + admin emergency removal). Post-audit server-authoritative hardening is complete for ping deletion, boosts, chat participants, reports, username reservations, and Firestore rules.
+**Phase 2 — Polish & Launch** — Code complete (10/11 features). All code features shipped across 3 sessions: Custom Ping Duration, Firebase Analytics, Crashlytics, Privacy Policy & Terms, Onboarding Flow, App Icon, Performance Monitoring. Only **Beta Testing** remains, blocked on Apple Developer Program enrollment ($99/yr). See `docs/BETA_TESTING.md` for the full setup checklist.
 
 ## Completed
 - Project specification and documentation setup
@@ -73,8 +73,14 @@
   - **Ping Lifecycle Awareness:** PingDetailView and ChatView observe the ping document via Firestore listener. Deleted or expired pings show "Ping Unavailable" alert and dismiss viewers back to map. Creator's own deletes skip the alert.
   - **Chat Sender Identity:** MessageBubbleView shows sender avatar (AsyncImage + initial-letter fallback) and username. Consecutive messages from same sender grouped (avatar/name on first only). ChatViewModel caches User profiles per sender ID.
 
-## In Progress
+## Completed (Phase 2 — Session 1: Custom Ping Duration + Analytics + Crashlytics)
 - **Phase 2 Session 1 (2026-05-06):** Custom Ping Duration, Firebase Analytics, Crashlytics — code complete and verified.
+
+## Completed (Phase 2 — Session 2: Privacy Policy + Onboarding)
+- **Phase 2 Session 2 (2026-05-06):** Privacy Policy & Terms of Service, Onboarding Flow — code complete and verified (196 tests, 0 failures).
+  - **Privacy Policy & Terms:** Bundled HTML content (`terms.html`, `privacy.html`) displayed in WKWebView via `WebContentView`. `TermsOfServiceView` placeholder replaced. `PrivacyPolicyView` added. `AuthRoute.privacyPolicy` case. RegisterView now links both Terms and Privacy Policy. SettingsView has "Legal" section.
+  - **Onboarding Flow:** 3-page `TabView(.page)` tutorial (OnboardingView + OnboardingPageView). `OnboardingViewModel` manages page state, completion, skip. Writes `hasCompletedOnboarding = true` to Firestore user doc. Logs `onboarding_completed` analytics event. RootView gates onboarding between suspension check and MainTabView.
+  - **Firestore rules:** `hasCompletedOnboarding` added to `safeUserCreate` and `safeUserUpdate` allowed fields.
 
 ## Completed (Phase 2 — Audit Remediation)
 - **Audit remediation (2026-05-02):** Addressed critical, high, and medium audit findings across 9 implementation units.
@@ -99,8 +105,15 @@
   - **Username reservations:** Added `usernames/{normalizedUsername}` documents for public username availability checks without listing `users`.
   - **Hot notifications:** Participant trigger now listens to writes so rejoin transitions can re-check hot status while preserving `hotNotificationSent`.
 
+## Completed (Phase 2 — Session 3: App Icon + Performance Monitoring + Beta Testing Docs)
+- **Phase 2 Session 3 (2026-05-07):** App icon configured, Firebase Performance Monitoring integrated, Beta Testing guide created, project spec aligned with implementation.
+  - **App Icon:** Resized `logo.png` to 1024x1024 `AppIcon.png`. Configured `AppIcon.appiconset/Contents.json` with filename references for light, dark, and tinted slots.
+  - **Firebase Performance Monitoring:** `PerformanceServicing` protocol, `PerformanceService` wrapping `FirebasePerformance`, `MockPerformanceService` for tests. Automatic app startup, network, and screen rendering traces. SPM dependency added.
+  - **Beta Testing Guide:** `docs/BETA_TESTING.md` — Apple Developer enrollment prerequisites, APNs setup, Xcode signing, TestFlight workflow, tester onboarding, feedback process, timeline.
+  - **Spec Alignment:** `project_spec.md` v1.2 — data model updated to reflect actual collections, tech stack corrected, feature count updated to 41.
+
 ## Up Next
-- **Phase 2: Polish & Launch** (remaining): Onboarding flow, privacy policy & terms, app icon, beta testing
+- **Beta Testing implementation:** Blocked on Apple Developer Program enrollment ($99/yr, 2-5 day approval). See `docs/BETA_TESTING.md` for full checklist.
 
 ## Known Technical Debt
 - Push notifications cannot be tested — requires personal Apple Developer Program membership ($99/yr) to generate APNs key for Firebase Console. Corporate developer account is restricted.
@@ -154,16 +167,17 @@
 - [x] Privacy Settings
 - [x] Blocked Users Management
 
-### Phase 2: Polish & Launch (10 features)
+### Phase 2: Polish & Launch (11 features)
 - [x] Custom Ping Duration
-- [ ] Onboarding Flow
+- [x] Onboarding Flow
 - [x] Empty States
 - [x] Error States
 - [x] Performance Optimization
 - [x] Firebase Analytics
 - [x] Crash Reporting
-- [ ] App Icon & Splash Screen
-- [ ] Privacy Policy & Terms
+- [x] Performance Monitoring
+- [x] App Icon & Splash Screen
+- [x] Privacy Policy & Terms
 - [ ] Beta Testing
 
 ---

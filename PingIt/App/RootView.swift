@@ -20,11 +20,18 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if authService.currentUser != nil {
+            if let currentUser = authService.currentUser {
                 if isCheckingSuspension {
                     ProgressView()
                 } else if isSuspended {
                     SuspendedAccountView(expiresAt: currentUserProfile?.suspensionExpiresAt)
+                } else if currentUserProfile?.hasCompletedOnboarding != true {
+                    OnboardingView(
+                        userId: currentUser.uid,
+                        onComplete: {
+                            currentUserProfile?.hasCompletedOnboarding = true
+                        }
+                    )
                 } else {
                     MainTabView()
                 }
@@ -32,7 +39,7 @@ struct RootView: View {
                 AuthenticationCoordinatorView()
             }
         }
-        .animation(.default, value: authService.currentUser != nil)
+        .animation(.default, value: authService.currentUser?.uid)
         .task(id: authService.currentUser?.uid) {
             await checkSuspension()
         }

@@ -14,6 +14,7 @@ struct User: Codable, Identifiable, Sendable {
     var notifyHotPings: Bool = true
     var fcmToken: String?
     var lastKnownLocation: [String: Double]?
+    var hasCompletedOnboarding: Bool?
     var suspensionStatus: String?
     var suspensionExpiresAt: Date?
 }

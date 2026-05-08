@@ -145,12 +145,21 @@ struct RegisterView: View {
             .labelStyle(.iconOnly)
             .foregroundStyle(viewModel.hasAcceptedTerms ? Color.accentColor : .secondary)
 
-            HStack(spacing: 4) {
-                Text("I agree to the")
-                    .font(.subheadline)
-                NavigationLink("Terms of Service", value: AuthRoute.termsOfService)
-                    .font(.subheadline)
-                    .underline()
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Text("I agree to the")
+                        .font(.subheadline)
+                    NavigationLink("Terms of Service", value: AuthRoute.termsOfService)
+                        .font(.subheadline)
+                        .underline()
+                }
+                HStack(spacing: 4) {
+                    Text("and the")
+                        .font(.subheadline)
+                    NavigationLink("Privacy Policy", value: AuthRoute.privacyPolicy)
+                        .font(.subheadline)
+                        .underline()
+                }
             }
         }
     }

@@ -16,6 +16,8 @@ struct AuthenticationCoordinatorView: View {
                         ForgotPasswordView()
                     case .termsOfService:
                         TermsOfServiceView()
+                    case .privacyPolicy:
+                        PrivacyPolicyView()
                     }
                 }
         }
