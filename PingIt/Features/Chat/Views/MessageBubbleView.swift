@@ -5,6 +5,7 @@ struct MessageBubbleView: View {
     let isCurrentUser: Bool
     let sender: User?
     let showSenderInfo: Bool
+    let isSenderPrivate: Bool
     let onReport: () -> Void
     let onBlock: () -> Void
 
@@ -18,7 +19,7 @@ struct MessageBubbleView: View {
 
             VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 2) {
                 if showSenderInfo && !isCurrentUser {
-                    Text(sender?.username ?? "Unknown")
+                    Text(isSenderPrivate ? "Anonymous" : (sender?.username ?? "Unknown"))
                         .font(.caption)
                         .bold()
                         .foregroundStyle(.secondary)
@@ -56,25 +57,35 @@ struct MessageBubbleView: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        let senderName = isCurrentUser ? "You" : (isSenderPrivate ? "Anonymous" : (sender?.username ?? "Unknown"))
+        return "\(senderName): \(message.text)"
     }
 
     @ViewBuilder
     private var avatarView: some View {
         if showSenderInfo {
-            AsyncImage(url: sender?.profileImageUrl.flatMap { URL(string: $0) }) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure:
-                    senderInitialView
-                default:
-                    senderInitialView
+            if isSenderPrivate {
+                anonymousAvatarView
+            } else {
+                AsyncImage(url: sender?.profileImageUrl.flatMap { URL(string: $0) }) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        senderInitialView
+                    default:
+                        senderInitialView
+                    }
                 }
+                .frame(width: 28, height: 28)
+                .clipShape(.circle)
             }
-            .frame(width: 28, height: 28)
-            .clipShape(.circle)
         } else {
             // Invisible spacer to keep alignment with messages that have avatars
             Color.clear
@@ -90,6 +101,17 @@ struct MessageBubbleView: View {
                 Text(String((sender?.username ?? "?").prefix(1)).uppercased())
                     .font(.caption2)
                     .bold()
+                    .foregroundStyle(.secondary)
+            }
+    }
+
+    private var anonymousAvatarView: some View {
+        Circle()
+            .fill(Color(.systemGray4))
+            .frame(width: 28, height: 28)
+            .overlay {
+                Image(systemName: "person.fill")
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
             }
     }

@@ -55,6 +55,7 @@ struct ChatView: View {
                             isCurrentUser: message.senderId == viewModel.currentUserId,
                             sender: viewModel.userCache[message.senderId],
                             showSenderInfo: viewModel.isFirstInGroup(message),
+                            isSenderPrivate: viewModel.isSenderPrivate(for: message),
                             onReport: {
                                 if let id = message.id {
                                     reportTarget = ReportTarget(

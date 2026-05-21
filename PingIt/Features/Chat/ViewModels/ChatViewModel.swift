@@ -240,6 +240,11 @@ final class ChatViewModel {
         return messages[index - 1].senderId != message.senderId
     }
 
+    func isSenderPrivate(for message: ChatMessage) -> Bool {
+        guard message.senderId != currentUserId else { return false }
+        return userCache[message.senderId]?.isPrivateProfile == true
+    }
+
     deinit {
         listenerRegistration?.remove()
         pingListener?.remove()
