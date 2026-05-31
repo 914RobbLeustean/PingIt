@@ -3,7 +3,11 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AuthService.self) private var authService
     @Environment(UserService.self) private var userService
+    @Environment(DataExportService.self) private var dataExportService
     @State private var showSignOutConfirmation = false
+    @State private var isExportingData = false
+    @State private var exportedFileURL: URL?
+    @State private var showShareSheet = false
     @State private var errorMessage: String?
     @State private var isPrivateProfile = UserDefaults.standard.bool(forKey: "pref_isPrivateProfile")
     @State private var notifyNearbyPings = UserDefaults.standard.object(forKey: "pref_notifyNearbyPings") as? Bool ?? true
@@ -41,6 +45,8 @@ struct SettingsView: View {
                 Section("Privacy & Safety") {
                     Toggle("Private Profile", isOn: $isPrivateProfile)
                     NavigationLink("Blocked Users", destination: BlockedUsersView())
+                    Button("Export My Data", systemImage: "square.and.arrow.up", action: handleExportData)
+                        .disabled(isExportingData)
                 }
                 .onChange(of: isPrivateProfile) { _, newValue in
                     guard hasLoadedPreferences else { return }
@@ -87,6 +93,11 @@ struct SettingsView: View {
                     deletePassword = ""
                 }
             }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = exportedFileURL {
+                    ActivityViewRepresentable(items: [url])
+                }
+            }
         }
     }
 
@@ -101,6 +112,24 @@ struct SettingsView: View {
             try authService.signOut()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func handleExportData() {
+        isExportingData = true
+        errorMessage = nil
+        Task {
+            do {
+                let jsonData = try await dataExportService.exportUserData()
+                let tempDir = FileManager.default.temporaryDirectory
+                let fileURL = tempDir.appending(path: "PingIt-data-export.json")
+                try jsonData.write(to: fileURL)
+                exportedFileURL = fileURL
+                showShareSheet = true
+            } catch {
+                errorMessage = "Data export failed. Please try again."
+            }
+            isExportingData = false
         }
     }
 

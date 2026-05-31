@@ -4,6 +4,7 @@ import PhotosUI
 struct ProfileView: View {
     @Environment(AuthService.self) private var authService
     @Environment(UserService.self) private var userService
+    @Environment(ImageStorageService.self) private var imageStorageService
     @State private var viewModel = ProfileViewModel()
     @FocusState private var isUsernameFocused: Bool
 
@@ -74,7 +75,7 @@ struct ProfileView: View {
                 }
             }
             .task {
-                viewModel.configure(authService: authService, userService: userService)
+                viewModel.configure(authService: authService, userService: userService, imageStorageService: imageStorageService)
                 await viewModel.loadProfile()
             }
             .onChange(of: viewModel.selectedPhotoItem) { _, newItem in

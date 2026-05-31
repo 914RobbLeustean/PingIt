@@ -18,6 +18,7 @@ struct MapView: View {
     @State private var showVerificationBanner = true
     @State private var isResendingVerification = false
     @State private var showPingUnavailableAlert = false
+    @State private var lastUploadedLocation: CLLocation?
 
     private static let clujRegion = MKCoordinateRegion(
         center: Constants.Cluj.center,
@@ -164,7 +165,9 @@ struct MapView: View {
                 viewModel.applyBlockFilter()
             }
             .onChange(of: viewModel.userLocation?.coordinate.latitude) { _, _ in
-                moveToUserLocation(viewModel.userLocation)
+                guard let location = viewModel.userLocation else { return }
+                moveToUserLocation(location)
+                uploadLocationIfNeeded(location)
             }
             .onChange(of: viewModel.authorizationStatus) { _, newStatus in
                 handleAuthorizationChange(newStatus)
@@ -275,8 +278,8 @@ struct MapView: View {
         }
     }
 
-    private func moveToUserLocation(_ location: CLLocation?) {
-        guard !hasMovedToUserLocation, let location else { return }
+    private func moveToUserLocation(_ location: CLLocation) {
+        guard !hasMovedToUserLocation else { return }
         hasMovedToUserLocation = true
         withAnimation {
             cameraPosition = .region(MKCoordinateRegion(
@@ -284,6 +287,15 @@ struct MapView: View {
                 span: MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)
             ))
         }
+        uploadLocationIfNeeded(location)
+    }
+
+    private func uploadLocationIfNeeded(_ location: CLLocation) {
+        let threshold: CLLocationDistance = 500
+        if let last = lastUploadedLocation, last.distance(from: location) < threshold {
+            return
+        }
+        lastUploadedLocation = location
         Task {
             await notificationService.updateLastKnownLocation(
                 latitude: location.coordinate.latitude,

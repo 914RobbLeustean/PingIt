@@ -5,6 +5,13 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
 
     static func == (lhs: Ping, rhs: Ping) -> Bool {
         lhs.id == rhs.id
+        && lhs.creatorId == rhs.creatorId
+        && lhs.text == rhs.text
+        && lhs.status == rhs.status
+        && lhs.boostCount == rhs.boostCount
+        && lhs.participantCount == rhs.participantCount
+        && lhs.imageUrl == rhs.imageUrl
+        && lhs.expiresAt == rhs.expiresAt
     }
 
     func hash(into hasher: inout Hasher) {
@@ -21,6 +28,7 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
     var boostCount: Int = 0
     var participantCount: Int = 0
     var chatId: String?
+    var imageUrl: String?
     @ServerTimestamp var createdAt: Date?
 
     var hotScore: Double {

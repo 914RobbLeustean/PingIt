@@ -45,8 +45,22 @@ enum Constants {
 
     enum Storage {
         static let profilePicturesPath = "profile_pictures"
-        static let maxProfileImageSizeBytes: Int64 = 5 * 1024 * 1024
+        static let pingImagesPath = "ping_images"
+        static let maxImageSizeBytes: Int64 = 5 * 1024 * 1024
         static let imageCompressionQuality: Double = 0.8
+        static let pingImageMaxDimension: Double = 1024
+    }
+
+    enum Reaction {
+        static let available: [(key: String, emoji: String)] = [
+            ("thumbsUp", "👍"), ("heart", "❤️"), ("laugh", "😂"), ("wow", "😮"),
+            ("sad", "😢"), ("fire", "🔥"), ("thumbsDown", "👎"), ("party", "🎉")
+        ]
+    }
+
+    enum MessageType {
+        static let text = "text"
+        static let location = "location"
     }
 
     enum Firestore {

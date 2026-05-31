@@ -43,9 +43,25 @@ final class MockPingService: PingServicing {
         if let error = errorToThrow { throw error }
     }
 
+    var uploadPingImageCalled = false
+    var uploadPingImageUrl = "https://example.com/mock.jpg"
+    var lastCreatePingId: String?
+
     func createPingWithChat(_ ping: Ping) async throws {
         createPingWithChatCalled = true
         if let error = errorToThrow { throw error }
+    }
+
+    func createPingWithChat(_ ping: Ping, pingId: String) async throws {
+        createPingWithChatCalled = true
+        lastCreatePingId = pingId
+        if let error = errorToThrow { throw error }
+    }
+
+    func uploadPingImage(pingId: String, imageData: Data) async throws -> String {
+        uploadPingImageCalled = true
+        if let error = errorToThrow { throw error }
+        return uploadPingImageUrl
     }
 
     func observeActivePings(

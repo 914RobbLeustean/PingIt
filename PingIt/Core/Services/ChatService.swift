@@ -119,6 +119,27 @@ final class ChatService: ChatServicing {
         return ListenerHandle(registration)
     }
 
+    func toggleReaction(messageId: String, emoji: String, userId: String) async throws {
+        let docRef = db.collection(Constants.Firestore.chatMessagesCollection).document(messageId)
+        do {
+            let snapshot = try await docRef.getDocument()
+            let reactions = snapshot.data()?["reactions"] as? [String: [String]] ?? [:]
+            let userIds = reactions[emoji] ?? []
+
+            if userIds.contains(userId) {
+                try await docRef.updateData([
+                    "reactions.\(emoji)": FieldValue.arrayRemove([userId])
+                ])
+            } else {
+                try await docRef.updateData([
+                    "reactions.\(emoji)": FieldValue.arrayUnion([userId])
+                ])
+            }
+        } catch {
+            throw PingItError.reactionFailed(underlying: error)
+        }
+    }
+
     private static func intValue(_ value: Any?) -> Int? {
         if let value = value as? Int {
             return value

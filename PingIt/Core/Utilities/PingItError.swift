@@ -60,6 +60,16 @@ enum PingItError: LocalizedError {
     // Account Deletion
     case accountDeletionFailed(underlying: Error)
 
+    // Reactions
+    case reactionFailed(underlying: Error)
+
+    // Location Sharing
+    case locationSharingFailed
+
+    // Ping Images
+    case pingImageTooLarge
+    case pingImageUploadFailed(underlying: Error)
+
     // Profile
     case usernameTooShort
     case usernameTooLong
@@ -161,6 +171,14 @@ enum PingItError: LocalizedError {
             "You have already reported this content."
         case .accountDeletionFailed:
             "Failed to delete your account. Please try again."
+        case .reactionFailed:
+            "Failed to update reaction. Please try again."
+        case .locationSharingFailed:
+            "Failed to share location. Please try again."
+        case .pingImageTooLarge:
+            "Image must be under 5 MB."
+        case .pingImageUploadFailed:
+            "Failed to upload image. Please try again."
         }
     }
 

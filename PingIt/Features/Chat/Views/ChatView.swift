@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 private struct ReportTarget: Identifiable {
     let id = UUID()
@@ -18,6 +19,7 @@ struct ChatView: View {
     @Environment(RateLimitService.self) private var rateLimitService
     @Environment(ReportService.self) private var reportService
     @Environment(AnalyticsService.self) private var analyticsService
+    @Environment(LocationService.self) private var locationService
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
@@ -56,6 +58,7 @@ struct ChatView: View {
                             sender: viewModel.userCache[message.senderId],
                             showSenderInfo: viewModel.isFirstInGroup(message),
                             isSenderPrivate: viewModel.isSenderPrivate(for: message),
+                            currentUserId: viewModel.currentUserId,
                             onReport: {
                                 if let id = message.id {
                                     reportTarget = ReportTarget(
@@ -70,6 +73,12 @@ struct ChatView: View {
                                 Task {
                                     try? await blockService.blockUser(message.senderId)
                                     viewModel.applyBlockFilter()
+                                }
+                            },
+                            onReaction: { emoji in
+                                guard let messageId = message.id else { return }
+                                Task {
+                                    await viewModel.toggleReaction(on: messageId, emoji: emoji)
                                 }
                             }
                         )
@@ -101,6 +110,11 @@ struct ChatView: View {
             Divider()
 
             HStack(spacing: 8) {
+                Button("Share Location", systemImage: "location", action: handleShareLocation)
+                    .labelStyle(.iconOnly)
+                    .font(.title2)
+                    .accessibilityHint("Shares your current location in the chat")
+
                 TextField("Message...", text: $viewModel.messageText, axis: .vertical)
                     .lineLimit(1...4)
                     .textFieldStyle(.roundedBorder)
@@ -155,6 +169,28 @@ struct ChatView: View {
     }
 
     // MARK: - Actions
+
+    private func handleShareLocation() {
+        guard let location = locationService.currentLocation else {
+            viewModel.setError(PingItError.locationUnavailable.localizedDescription)
+            return
+        }
+        Task {
+            let geocoder = CLGeocoder()
+            let locationName: String? = try? await {
+                let placemarks = try await geocoder.reverseGeocodeLocation(location)
+                guard let placemark = placemarks.first else { return nil }
+                return [placemark.name, placemark.locality]
+                    .compactMap { $0 }
+                    .joined(separator: ", ")
+            }()
+            await viewModel.sendLocationMessage(
+                latitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude,
+                locationName: locationName
+            )
+        }
+    }
 
     private func handleSend() {
         Task {

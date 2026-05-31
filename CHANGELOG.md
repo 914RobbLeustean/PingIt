@@ -6,6 +6,195 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-05-31] — Tech Debt Remediation: Privacy Descriptions, Image Storage Protocol, Location Updates, GDPR Data Export
+
+### Summary
+Fixed App Store submission blockers (missing privacy descriptions), extracted `ImageStorageServicing` protocol for testability, improved location tracking for notifications, and implemented GDPR Article 20 data portability via Cloud Function + iOS UI.
+
+### Fixed — App Store Privacy Descriptions (Critical)
+- Added `NSPhotoLibraryUsageDescription` to Xcode build settings (was missing — Apple auto-rejects without it)
+- Updated `NSCameraUsageDescription` to cover both profile pictures and ping photos (was profile-only)
+
+### Changed — ImageStorageServicing Protocol (Item 7)
+- Extracted `ImageStorageServicing` protocol from direct `FirebaseStorage` calls in `ProfileViewModel`
+- Created `ImageStorageService` (`@MainActor @Observable`) wrapping Firebase Storage upload/delete
+- Created `MockImageStorageService` for test assertions
+- `ProfileViewModel` now accepts `ImageStorageServicing` via `configure()` — fully testable without Firebase
+- Removed `import FirebaseStorage` from `ProfileViewModel`
+- `ImageStorageService` injected via `.environment()` from `PingItApp`
+
+### Changed — Location Update Frequency (Item 8)
+- `lastKnownLocation` now updates on every significant location change (500m+ movement), not just first map load
+- Added `lastUploadedLocation` tracking in `MapView` with distance threshold
+- Nearby push notifications now target current user positions instead of stale first-load coordinates
+
+### Added — GDPR Data Export (Item 10)
+- `exportUserData` Cloud Function: collects all user data (profile, pings, messages, boosts, blocks, reports, chat participations) and returns JSON
+- `DataExportServicing` protocol + `DataExportService` wrapping the callable
+- "Export My Data" button in Settings → Privacy & Safety section
+- Exports as `PingIt-data-export.json` via iOS share sheet (`UIActivityViewController`)
+- `DataExportService` injected via `.environment()` from `PingItApp`
+
+### Noted for Future PRs (Post-Apple Release)
+- Node.js 20 → 22 upgrade (decommission 2026-10-30)
+- `firebase-functions` package upgrade (breaking changes)
+- Server-side rate limiting (current client-side only)
+- Offline mode UI indicators
+
+### Files Created
+- `PingIt/Core/Protocols/ImageStorageServicing.swift`
+- `PingIt/Core/Services/ImageStorageService.swift`
+- `PingIt/Core/Protocols/DataExportServicing.swift`
+- `PingIt/Core/Services/DataExportService.swift`
+- `PingIt/Core/Utilities/ActivityViewRepresentable.swift`
+- `PingItTests/Mocks/MockImageStorageService.swift`
+- `functions/src/exportUserData.ts`
+
+### Files Modified
+- `PingIt.xcodeproj/project.pbxproj` — Added NSPhotoLibraryUsageDescription, updated NSCameraUsageDescription
+- `PingIt/Features/Profile/ViewModels/ProfileViewModel.swift` — Uses ImageStorageServicing, added @MainActor, removed FirebaseStorage import
+- `PingIt/Features/Profile/Views/ProfileView.swift` — Injects ImageStorageService
+- `PingIt/Features/Map/Views/MapView.swift` — Periodic location upload on 500m+ movement
+- `PingIt/Features/Settings/Views/SettingsView.swift` — Export My Data button + share sheet
+- `PingIt/App/PingItApp.swift` — Added ImageStorageService + DataExportService to environment
+- `PingItTests/ViewModelTests/ProfileViewModelTests.swift` — Updated for ImageStorageServicing parameter
+- `functions/src/index.ts` — Added exportUserData export
+
+---
+
+## [2026-05-26] — Bonus Feature Bug Fixes & Audit Remediation
+
+### Summary
+Comprehensive audit and fix session for the 4 bonus features (media attachments, discovery feed, message reactions, location sharing). 9 issues fixed across backend, iOS client, and concurrency correctness.
+
+### Fixed — Cascading Deletion (Critical)
+- `pingCleanup.ts`: Added Firebase Storage cleanup — deletes `ping_images/{pingId}/` when pings are deleted or expired
+- `deleteAccount` flow now inherits ping image cleanup via updated `cleanupPing`
+
+### Fixed — Real-Time Reactions (High)
+- `ChatViewModel.observeNewMessages` listener now merges updated messages into `allMessages` instead of only appending new unique messages
+- Reaction changes, moderation flags, and any field updates on existing messages now reflect in real time
+
+### Fixed — Discovery Feed Live Updates (High)
+- Removed `FeedView.onDisappear { stopObserving() }` which killed the Firestore listener when navigating to PingDetailView within the NavigationStack
+- Listener cleanup is now handled by `FeedViewModel.deinit` when the view is truly destroyed
+- Fixed `Ping.Equatable` to compare all relevant fields (`boostCount`, `participantCount`, `status`, `imageUrl`, `expiresAt`) — was only comparing `id`, so SwiftUI's `ForEach` never re-rendered feed cards when counts changed
+- Added `FeedView.onChange(of: blockService.blockedUserIds)` to re-apply filters when user blocks someone from within the feed
+
+### Fixed — Media Attachment UI (High)
+- Extracted photo section into `PingPhotoSectionView` (new file) — fixes compiler type-checking timeout in `CreatePingView.body`
+- Image preview is now non-interactive — tapping the image no longer triggers removal
+- Remove button replaced with red X icon overlay on image corner (`.symbolRenderingMode(.palette)` with white/red)
+- Added camera option: `Menu` with "Choose from Library" and "Take Photo" (reuses `CameraPickerView`)
+- Added `CreatePingViewModel.handleCameraImage(_:)` for camera-captured images
+- Fixed photo picker dismissal on scroll: moved `.photosPicker` modifier to NavigationStack level (away from conditional Section content that caused SwiftUI re-renders)
+- Decoupled `pickerItem` state to View level to prevent sheet dismissal from `@Observable` ViewModel re-renders
+
+### Fixed — Concurrency Correctness (Medium)
+- Added `@MainActor` to `CreatePingViewModel`, `ChatViewModel`, `FeedViewModel`
+- Changed `deinit` to `isolated deinit` in `ChatViewModel` and `FeedViewModel` for safe listener cleanup
+
+### Fixed — Location Sharing (Low)
+- `ChatView.handleShareLocation()` now performs reverse geocoding via `CLGeocoder` before sending
+- Location messages display actual address (e.g., "Strada Napoca, Cluj-Napoca") instead of "Shared location"
+
+### Fixed — Constant Naming (Low)
+- Renamed `Constants.Storage.maxProfileImageSizeBytes` → `maxImageSizeBytes` (used for both profile and ping images)
+- Updated all references in `CreatePingViewModel`, `ProfileViewModel`
+
+### Files Modified
+- `functions/src/pingCleanup.ts` — Storage import, image deletion after Firestore cleanup
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift` — Reaction merge logic, @MainActor, isolated deinit
+- `PingIt/Features/Feed/Views/FeedView.swift` — Removed aggressive onDisappear listener teardown
+- `PingIt/Features/Feed/ViewModels/FeedViewModel.swift` — @MainActor, isolated deinit
+- `PingIt/Features/Ping/Views/CreatePingView.swift` — Body broken into sections, .photosPicker at NavigationStack level
+- `PingIt/Features/Ping/Views/PingPhotoSectionView.swift` — **NEW**: Extracted photo section (image preview, X overlay, Menu with Library/Camera)
+- `PingIt/Core/Models/Ping.swift` — Equatable expanded to compare boostCount, participantCount, status, imageUrl, expiresAt
+- `PingIt/Features/Ping/ViewModels/CreatePingViewModel.swift` — @MainActor, handleCameraImage, constant rename
+- `PingIt/Features/Chat/Views/ChatView.swift` — Reverse geocoding in location share
+- `PingIt/Core/Utilities/Constants.swift` — Renamed maxProfileImageSizeBytes → maxImageSizeBytes
+- `PingIt/Features/Profile/ViewModels/ProfileViewModel.swift` — Constant rename
+
+---
+
+## [2026-05-21] — Message Reactions, Location Sharing, Media Attachments, Discovery Feed
+
+### Summary
+Four new features added: message reactions in chat, location sharing in chat, optional image attachments on pings, and a scrollable discovery feed tab.
+
+### Added — Message Reactions (Feature 1)
+- `ChatMessage.reactions` field (optional `[String: [String]]` — emoji key → user IDs)
+- `Constants.Reaction.available` — 8 emoji reactions (👍 ❤️ 😂 😮 😢 🔥 👎 🎉)
+- `PingItError.reactionFailed(underlying:)` error case
+- `ChatServicing.toggleReaction(messageId:emoji:userId:)` protocol method
+- `ChatService.toggleReaction` implementation (Firestore arrayUnion/arrayRemove)
+- `ChatViewModel.toggleReaction(on:emoji:)` with analytics logging
+- `ReactionSummaryView` — tappable emoji capsules below message bubbles
+- `MessageBubbleView` updated: `currentUserId`, `onReaction` params; reactions in context menu
+- `AnalyticsService.EventName.reactionToggled`
+- `MockChatService` updated with toggle tracking
+- 2 new tests: `toggleReactionCallsService`, `toggleReactionSetsErrorOnFailure`
+- Firestore rule: `safeReactionUpdate()` — only `reactions` field modifiable
+
+### Added — Location Sharing in Chat (Feature 2)
+- `ChatMessage.messageType`, `latitude`, `longitude`, `locationName` fields
+- `Constants.MessageType` enum (`text`, `location`)
+- `PingItError.locationSharingFailed` error case
+- `ChatViewModel.sendLocationMessage(latitude:longitude:locationName:)` and `setError()`
+- `LocationMessageView` — inline mini-map with Marker, tap to open Apple Maps
+- `MessageBubbleView` refactored: `messageBubbleContent` routes text vs location
+- `ChatView` — location share button + `LocationService` environment
+- `AnalyticsService.EventName.locationShared`
+- Firestore rule: `safeMessageCreate()` updated with location fields and type validation
+- 2 new tests: `sendLocationMessageSucceeds`, `sendLocationMessageBlockedWhenUnverified`
+
+### Added — Media Attachments on Pings (Feature 3)
+- `Ping.imageUrl` optional field
+- `Constants.Storage.pingImagesPath`, `pingImageMaxDimension`
+- `PingItError.pingImageTooLarge`, `pingImageUploadFailed(underlying:)` error cases
+- `PingServicing.createPingWithChat(_:pingId:)` overload and `uploadPingImage(pingId:imageData:)`
+- `PingService` implementations: pre-generated ping ID batch write, Firebase Storage upload
+- `CreatePingViewModel`: PhotosPicker handling, image compression/resize, upload-before-create flow
+- `CreatePingView`: Photo section with PhotosPicker, thumbnail preview, remove button
+- `PingDetailView`: AsyncImage display for ping images
+- `AnalyticsService.ParameterName.hasImage`
+- Firestore rule: `safePingCreate()` updated with `imageUrl` whitelist
+- `MockPingService` updated with upload tracking
+- 2 new tests: `createPingWithImageCallsUpload`, `createPingWithoutImageSkipsUpload`
+
+### Added — Discovery Feed (Feature 4)
+- `FeedSortOption` enum (newest, hottest, nearest, expiringSoon)
+- `FeedViewModel` — independent Firestore listener, block/expiry filtering, creator cache, distance formatting
+- `FeedView` — NavigationStack with sort menu, lazy card list, empty state
+- `PingFeedCardView` — card with text, creator, countdown, distance, boost/participant counts, hot badge, image thumbnail
+- `MainTabView` updated: 4th "Feed" tab with `FeedView`
+- `AnalyticsService.EventName.feedViewed`, `feedSortChanged`
+- 4 new tests: `sortedPingsByNewest`, `sortedPingsByHottest`, `filtersExpiredPings`, `filtersBlockedCreators`
+
+### New Files
+- `PingIt/Features/Chat/Views/ReactionSummaryView.swift`
+- `PingIt/Features/Chat/Views/LocationMessageView.swift`
+- `PingIt/Features/Feed/ViewModels/FeedViewModel.swift`
+- `PingIt/Features/Feed/Views/FeedView.swift`
+- `PingIt/Features/Feed/Views/PingFeedCardView.swift`
+- `PingItTests/ViewModelTests/FeedViewModelTests.swift`
+
+### Modified Files
+- `PingIt/Core/Models/ChatMessage.swift`, `Ping.swift`
+- `PingIt/Core/Utilities/Constants.swift`, `PingItError.swift`
+- `PingIt/Core/Protocols/ChatServicing.swift`, `PingServicing.swift`
+- `PingIt/Core/Services/ChatService.swift`, `PingService.swift`, `AnalyticsService.swift`
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift`
+- `PingIt/Features/Chat/Views/ChatView.swift`, `MessageBubbleView.swift`
+- `PingIt/Features/Ping/ViewModels/CreatePingViewModel.swift`
+- `PingIt/Features/Ping/Views/CreatePingView.swift`, `PingDetailView.swift`
+- `PingIt/App/MainTabView.swift`
+- `firestore.rules`
+- `PingItTests/Mocks/MockChatService.swift`, `MockPingService.swift`
+- `PingItTests/ViewModelTests/ChatViewModelTests.swift`, `CreatePingViewModelTests.swift`
+
+---
+
 ## [2026-05-07] — App Icon, Performance Monitoring, Beta Testing Docs, Spec Alignment
 
 ### Summary

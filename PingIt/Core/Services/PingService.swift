@@ -1,6 +1,7 @@
 import Foundation
 import FirebaseFirestore
 import FirebaseFunctions
+import FirebaseStorage
 
 @Observable
 final class PingService: PingServicing {
@@ -53,6 +54,40 @@ final class PingService: PingServicing {
             try await batch.commit()
         } catch {
             throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
+    func createPingWithChat(_ ping: Ping, pingId: String) async throws {
+        let pingRef = db.collection(Constants.Firestore.pingsCollection).document(pingId)
+        let chatRef = db.collection(Constants.Firestore.chatsCollection).document()
+
+        var pingWithChat = ping
+        pingWithChat.chatId = chatRef.documentID
+
+        let chat = Chat(pingId: pingRef.documentID)
+
+        let batch = db.batch()
+        do {
+            try batch.setData(from: pingWithChat, forDocument: pingRef)
+            try batch.setData(from: chat, forDocument: chatRef)
+            try await batch.commit()
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
+    func uploadPingImage(pingId: String, imageData: Data) async throws -> String {
+        let path = "\(Constants.Storage.pingImagesPath)/\(pingId)/\(UUID().uuidString).jpg"
+        let ref = Storage.storage().reference().child(path)
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+
+        do {
+            _ = try await ref.putDataAsync(imageData, metadata: metadata)
+            let url = try await ref.downloadURL()
+            return url.absoluteString
+        } catch {
+            throw PingItError.pingImageUploadFailed(underlying: error)
         }
     }
 

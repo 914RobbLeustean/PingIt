@@ -95,9 +95,9 @@ The application uses the following Firestore collections. Each ping has a one-to
 |------------|---------|------------|
 | **users** | User profiles, preferences, engagement metrics | userId, username, email, profileImageUrl, createdAt, hasCompletedOnboarding, notifyNearbyPings, notifyHotPings, isPrivateProfile, suspensionStatus, suspensionExpiresAt, lastKnownLocation |
 | **usernames** | Username reservation and public availability checks | normalizedUsername, userId, createdAt |
-| **pings** | Content, location, timing, moderation status, denormalized counts | pingId, creatorId, text, location, geohash, expiresAt, status, boostCount, participantCount, chatId |
+| **pings** | Content, location, timing, moderation status, denormalized counts | pingId, creatorId, text, location, geohash, expiresAt, status, boostCount, participantCount, chatId, imageUrl |
 | **chats** | One-to-one with ping, metrics, settings | chatId, pingId, participantCount, lastMessageAt, createdAt |
-| **chatMessages** | Text messages with moderation status | messageId, chatId, senderId, text, createdAt, isModerated |
+| **chatMessages** | Text and location messages with moderation status, reactions | messageId, chatId, senderId, text, createdAt, isModerated, reactions, messageType, latitude, longitude, locationName |
 | **chatParticipants** | Join/leave tracking, permissions | participantId `{chatId}_{userId}`, chatId, userId, joinedAt, leftAt, status |
 | **boosts** | Ping engagement tracking | boostId `{pingId}_{userId}`, pingId, userId, createdAt |
 | **blocks** | User safety | blockId, blockerId, blockedUserId, createdAt |
@@ -243,12 +243,12 @@ The application uses the following Firestore collections. Each ping has a one-to
 
 
 - ❌ **Social Login** (Apple Sign-In, Google Sign-In) — Email/password sufficient for MVP
-- ❌ **Media Attachments** (photos/videos on pings) — Text-only pings for Phase 0-1
+- ✅ **Media Attachments** (photos on pings) — Implemented: optional image via PhotosPicker, Firebase Storage upload, moderated by `moderateImage`
 - ❌ **Follow Users** — Discovery via map only, no social graph
-- ❌ **Message Reactions** — Core chat functionality enough
-- ❌ **Location Sharing in Chat** — Not required for MVP
+- ✅ **Message Reactions** — Implemented: 8-emoji reactions on chat messages with tappable capsules
+- ✅ **Location Sharing in Chat** — Implemented: inline mini-map card, tap to open Apple Maps
 - ❌ **Custom Map Layers** — Standard MapKit styling sufficient
-- ❌ **Discovery Feed** — Map is the primary discovery interface
+- ✅ **Discovery Feed** — Implemented: "Feed" tab with sorted ping cards (newest/hottest/nearest/expiring soon)
 - ❌ **Multi-City Support** — Cluj-only for thesis scope
 - ❌ **Advanced Analytics Dashboard** — Firebase Analytics console sufficient
 - ❌ **In-App Purchases** — Boost is free, no monetization in v1

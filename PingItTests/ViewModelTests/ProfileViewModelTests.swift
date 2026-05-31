@@ -14,10 +14,11 @@ struct ProfileViewModelTests {
 
     private func makeVM(
         authService: MockAuthService,
-        userService: MockUserService
+        userService: MockUserService,
+        imageStorageService: MockImageStorageService = MockImageStorageService()
     ) -> ProfileViewModel {
         let vm = ProfileViewModel()
-        vm.configure(authService: authService, userService: userService)
+        vm.configure(authService: authService, userService: userService, imageStorageService: imageStorageService)
         return vm
     }
 

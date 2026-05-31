@@ -1,3 +1,5 @@
+import Foundation
+
 struct BoostPingResult: Equatable, Sendable {
     let boostCount: Int
     let didBoost: Bool
@@ -16,6 +18,8 @@ protocol PingServicing {
         id: String,
         onUpdate: @escaping @Sendable (Ping?) -> Void
     ) -> ListenerHandle
+    func createPingWithChat(_ ping: Ping, pingId: String) async throws
+    func uploadPingImage(pingId: String, imageData: Data) async throws -> String
     func boostPing(pingId: String) async throws -> BoostPingResult
     func hasUserBoostedPing(pingId: String, userId: String) async throws -> Bool
 }

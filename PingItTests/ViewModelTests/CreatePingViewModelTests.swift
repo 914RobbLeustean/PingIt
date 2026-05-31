@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import CoreLocation
 import FirebaseFirestore
+import UIKit
 @testable import PingIt
 
 @Suite("CreatePingViewModel")
@@ -281,6 +282,42 @@ struct CreatePingViewModelTests {
         vm.isCustomDuration = true
         vm.customExpiryDate = Date.now.addingTimeInterval(100 * 3600) // 100h in future, above 48h max
         #expect(vm.selectedExpiration == 48 * 3600)
+    }
+
+    // MARK: - Image Attachments
+
+    @Test func createPingWithImageCallsUpload() async {
+        let auth = authenticatedAuth()
+        let ping = MockPingService()
+        let location = MockLocationService()
+        location.boundaryResult = true
+        let vm = makeVM(authService: auth, pingService: ping, locationService: location)
+        vm.text = "Ping with photo"
+        vm.selectedLocation = clujCoordinate
+        let tinyImage = UIImage(systemName: "circle.fill")!
+        vm.handleCameraImage(tinyImage)
+
+        await vm.createPing()
+
+        #expect(vm.didCreatePing)
+        #expect(ping.uploadPingImageCalled)
+        #expect(ping.createPingWithChatCalled)
+    }
+
+    @Test func createPingWithoutImageSkipsUpload() async {
+        let auth = authenticatedAuth()
+        let ping = MockPingService()
+        let location = MockLocationService()
+        location.boundaryResult = true
+        let vm = makeVM(authService: auth, pingService: ping, locationService: location)
+        vm.text = "Ping without photo"
+        vm.selectedLocation = clujCoordinate
+
+        await vm.createPing()
+
+        #expect(vm.didCreatePing)
+        #expect(ping.uploadPingImageCalled == false)
+        #expect(ping.createPingWithChatCalled)
     }
 
     // MARK: - Rate Limiting

@@ -1,3 +1,5 @@
+import { getStorage } from "firebase-admin/storage";
+
 const MAX_BATCH_WRITES = 450;
 
 export class ChunkedWriteBatch {
@@ -93,6 +95,15 @@ export async function cleanupPing(
   }
 
   await writer.commit();
+
+  if (typeof pingData.imageUrl === "string" && pingData.imageUrl.length > 0) {
+    try {
+      const bucket = getStorage().bucket();
+      await bucket.deleteFiles({ prefix: `ping_images/${pingDoc.id}/` });
+    } catch (error) {
+      console.warn(`Failed to delete ping images for ${pingDoc.id}:`, error);
+    }
+  }
 }
 
 async function deleteChatChildren(

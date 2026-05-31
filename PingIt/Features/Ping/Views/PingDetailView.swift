@@ -33,6 +33,10 @@ struct PingDetailView: View {
                 Text(viewModel.ping.text)
                     .font(.title3)
 
+                if let imageUrl = viewModel.ping.imageUrl, let url = URL(string: imageUrl) {
+                    RetryableAsyncImage(url: url, maxHeight: 300, cornerRadius: 12)
+                }
+
                 Divider()
 
                 if let createdAt = viewModel.ping.createdAt {

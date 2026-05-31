@@ -6,8 +6,10 @@ struct MessageBubbleView: View {
     let sender: User?
     let showSenderInfo: Bool
     let isSenderPrivate: Bool
+    let currentUserId: String?
     let onReport: () -> Void
     let onBlock: () -> Void
+    let onReaction: (String) -> Void
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -26,22 +28,34 @@ struct MessageBubbleView: View {
                         .padding(.leading, 4)
                 }
 
-                Text(message.text)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(isCurrentUser ? Color.accentColor : Color(.systemGray5))
-                    .foregroundStyle(isCurrentUser ? .white : .primary)
-                    .clipShape(.rect(cornerRadius: 16))
+                messageBubbleContent
                     .contextMenu {
-                        if !isCurrentUser {
-                            Button("Report Message", systemImage: "exclamationmark.bubble") {
-                                onReport()
+                        Section("React") {
+                            ForEach(Constants.Reaction.available, id: \.key) { reaction in
+                                Button(reaction.emoji) {
+                                    onReaction(reaction.emoji)
+                                }
                             }
-                            Button("Block User", systemImage: "hand.raised", role: .destructive) {
-                                onBlock()
+                        }
+                        if !isCurrentUser {
+                            Section {
+                                Button("Report Message", systemImage: "exclamationmark.bubble") {
+                                    onReport()
+                                }
+                                Button("Block User", systemImage: "hand.raised", role: .destructive) {
+                                    onBlock()
+                                }
                             }
                         }
                     }
+
+                if let reactions = message.reactions, !reactions.isEmpty {
+                    ReactionSummaryView(
+                        reactions: reactions,
+                        currentUserId: currentUserId,
+                        onToggle: onReaction
+                    )
+                }
 
                 if let createdAt = message.createdAt {
                     Text(createdAt.formatted(date: .omitted, time: .shortened))
@@ -58,6 +72,27 @@ struct MessageBubbleView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var messageBubbleContent: some View {
+        if message.messageType == Constants.MessageType.location,
+           let latitude = message.latitude,
+           let longitude = message.longitude {
+            LocationMessageView(
+                latitude: latitude,
+                longitude: longitude,
+                locationName: message.locationName,
+                isCurrentUser: isCurrentUser
+            )
+        } else {
+            Text(message.text)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(isCurrentUser ? Color.accentColor : Color(.systemGray5))
+                .foregroundStyle(isCurrentUser ? .white : .primary)
+                .clipShape(.rect(cornerRadius: 16))
+        }
     }
 
     private var accessibilityLabel: String {

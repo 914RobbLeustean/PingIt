@@ -21,4 +21,5 @@ protocol ChatServicing {
         after: Date,
         onUpdate: @escaping @Sendable (Result<[ChatMessage], Error>) -> Void
     ) -> ListenerHandle
+    func toggleReaction(messageId: String, emoji: String, userId: String) async throws
 }

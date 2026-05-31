@@ -1,8 +1,10 @@
 import Foundation
 import CoreLocation
 import FirebaseFirestore
+import PhotosUI
+import SwiftUI
 
-@Observable
+@MainActor @Observable
 final class CreatePingViewModel {
     private var authService: (any AuthServicing)?
     private var pingService: (any PingServicing)?
@@ -19,6 +21,8 @@ final class CreatePingViewModel {
     var customExpiryDate = Calendar.current.date(byAdding: .hour, value: 6, to: Date.now) ?? Date.now
     var selectedLocation: CLLocationCoordinate2D?
     var selectedLocationName: String?
+    private(set) var selectedImageData: Data?
+    private(set) var isProcessingImage = false
     private(set) var isCreating = false
     private(set) var errorMessage: String?
     private(set) var didCreatePing = false
@@ -82,6 +86,41 @@ final class CreatePingViewModel {
         isConfigured = true
     }
 
+    func handleSelectedPhoto(item: PhotosPickerItem) async {
+        isProcessingImage = true
+        defer { isProcessingImage = false }
+
+        do {
+            guard let imageData = try await item.loadTransferable(type: Data.self) else {
+                return
+            }
+            guard let compressed = compressImage(imageData) else { return }
+            guard compressed.count <= Constants.Storage.maxImageSizeBytes else {
+                errorMessage = PingItError.pingImageTooLarge.localizedDescription
+                return
+            }
+            selectedImageData = compressed
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func handleCameraImage(_ image: UIImage) {
+        let resized = resizeImage(image, maxDimension: Constants.Storage.pingImageMaxDimension)
+        guard let data = resized.jpegData(compressionQuality: Constants.Storage.imageCompressionQuality) else { return }
+        guard data.count <= Constants.Storage.maxImageSizeBytes else {
+            errorMessage = PingItError.pingImageTooLarge.localizedDescription
+            return
+        }
+        selectedImageData = data
+        errorMessage = nil
+    }
+
+    func removeSelectedImage() {
+        selectedImageData = nil
+    }
+
     func createPing() async {
         guard let authService, let pingService, let locationService else { return }
 
@@ -129,6 +168,13 @@ final class CreatePingViewModel {
                 throw PingItError.locationOutsideBoundary
             }
 
+            let pingId = Firestore.firestore().collection(Constants.Firestore.pingsCollection).document().documentID
+
+            var imageUrl: String?
+            if let imageData = selectedImageData {
+                imageUrl = try await pingService.uploadPingImage(pingId: pingId, imageData: imageData)
+            }
+
             let ping = Ping(
                 creatorId: currentUser.uid,
                 text: trimmed,
@@ -138,20 +184,40 @@ final class CreatePingViewModel {
                 ),
                 geohash: "",
                 expiresAt: ServerTime.now.addingTimeInterval(selectedExpiration),
-                status: .active
+                status: .active,
+                imageUrl: imageUrl
             )
 
-            try await pingService.createPingWithChat(ping)
+            try await pingService.createPingWithChat(ping, pingId: pingId)
             didCreatePing = true
             rateLimitService?.recordPingCreation()
 
             let durationHours = Int(selectedExpiration / 3600)
             analyticsService?.logEvent(AnalyticsService.EventName.pingCreated, parameters: [
                 AnalyticsService.ParameterName.durationType: isCustomDuration ? "custom" : "preset",
-                AnalyticsService.ParameterName.durationHours: durationHours
+                AnalyticsService.ParameterName.durationHours: durationHours,
+                AnalyticsService.ParameterName.hasImage: imageUrl != nil
             ])
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func compressImage(_ data: Data) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let resized = resizeImage(image, maxDimension: Constants.Storage.pingImageMaxDimension)
+        return resized.jpegData(compressionQuality: Constants.Storage.imageCompressionQuality)
+    }
+
+    private func resizeImage(_ image: UIImage, maxDimension: Double) -> UIImage {
+        let size = image.size
+        guard size.width > maxDimension || size.height > maxDimension else { return image }
+
+        let scale = maxDimension / max(size.width, size.height)
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
 }

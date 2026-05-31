@@ -23,6 +23,8 @@ struct PingItApp: App {
     @State private var analyticsService = AnalyticsService()
     @State private var crashReportingService = CrashReportingService()
     @State private var performanceService = PerformanceService()
+    @State private var imageStorageService = ImageStorageService()
+    @State private var dataExportService = DataExportService()
     @State private var navigationRouter = NavigationRouter()
 
     var body: some Scene {
@@ -41,6 +43,8 @@ struct PingItApp: App {
                 .environment(analyticsService)
                 .environment(crashReportingService)
                 .environment(performanceService)
+                .environment(imageStorageService)
+                .environment(dataExportService)
                 .environment(navigationRouter)
                 .onChange(of: authService.currentUser?.uid) { _, newUid in
                     if let uid = newUid {

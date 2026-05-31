@@ -1,6 +1,6 @@
 import Foundation
 
-@Observable
+@MainActor @Observable
 final class ChatViewModel {
     private var authService: (any AuthServicing)?
     private var chatService: (any ChatServicing)?
@@ -107,13 +107,23 @@ final class ChatViewModel {
             Task { @MainActor [self] in
                 switch result {
                 case .success(let newMessages):
-                    let existingIds = Set(self.allMessages.compactMap(\.id))
-                    let unique = newMessages.filter { msg in
-                        guard let id = msg.id else { return true }
-                        return !existingIds.contains(id)
+                    var changed = false
+                    let existingById = Dictionary(
+                        self.allMessages.enumerated().compactMap { (idx, msg) in
+                            msg.id.map { ($0, idx) }
+                        },
+                        uniquingKeysWith: { _, last in last }
+                    )
+                    for msg in newMessages {
+                        if let id = msg.id, let idx = existingById[id] {
+                            self.allMessages[idx] = msg
+                            changed = true
+                        } else {
+                            self.allMessages.append(msg)
+                            changed = true
+                        }
                     }
-                    if !unique.isEmpty {
-                        self.allMessages.append(contentsOf: unique)
+                    if changed {
                         self.applyBlockFilter()
                     }
                     self.errorMessage = nil
@@ -234,6 +244,51 @@ final class ChatViewModel {
         }
     }
 
+    func toggleReaction(on messageId: String, emoji: String) async {
+        guard let chatService, let currentUserId else { return }
+        do {
+            try await chatService.toggleReaction(messageId: messageId, emoji: emoji, userId: currentUserId)
+            analyticsService?.logEvent(AnalyticsService.EventName.reactionToggled, parameters: ["emoji": emoji])
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func setError(_ message: String) {
+        errorMessage = message
+    }
+
+    func sendLocationMessage(latitude: Double, longitude: Double, locationName: String?) async {
+        guard let chatService, let currentUserId else { return }
+
+        guard !pingUnavailable else { return }
+
+        guard authService?.isEmailVerified == true else {
+            errorMessage = PingItError.emailNotVerified.localizedDescription
+            return
+        }
+
+        isSending = true
+        defer { isSending = false }
+
+        let message = ChatMessage(
+            chatId: chatId,
+            senderId: currentUserId,
+            text: locationName ?? "Shared location",
+            messageType: Constants.MessageType.location,
+            latitude: latitude,
+            longitude: longitude,
+            locationName: locationName
+        )
+
+        do {
+            try await chatService.sendMessage(message)
+            analyticsService?.logEvent(AnalyticsService.EventName.locationShared, parameters: nil)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func isFirstInGroup(_ message: ChatMessage) -> Bool {
         guard let index = messages.firstIndex(where: { $0.id == message.id }) else { return true }
         if index == 0 { return true }
@@ -245,7 +300,7 @@ final class ChatViewModel {
         return userCache[message.senderId]?.isPrivateProfile == true
     }
 
-    deinit {
+    isolated deinit {
         listenerRegistration?.remove()
         pingListener?.remove()
     }

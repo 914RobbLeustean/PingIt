@@ -145,7 +145,9 @@ service cloud.firestore {
           "participantCount",
           "chatId",
           "createdAt",
+          "imageUrl",
         ])
+        && (!hasField(request.resource.data, "imageUrl") || request.resource.data.imageUrl is string)
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 280
@@ -181,16 +183,32 @@ service cloud.firestore {
         && notSuspended(request.auth.uid)
         && request.auth.uid == request.resource.data.senderId
         && request.resource.data.keys().hasAll(["chatId", "senderId", "text"])
-        && request.resource.data.keys().hasOnly(["chatId", "senderId", "text", "createdAt", "isModerated"])
+        && request.resource.data.keys().hasOnly(["chatId", "senderId", "text", "createdAt", "isModerated", "messageType", "latitude", "longitude", "locationName"])
         && request.resource.data.chatId is string
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 1000
         && (!hasField(request.resource.data, "isModerated") || request.resource.data.isModerated == false)
+        && (!hasField(request.resource.data, "messageType") || request.resource.data.messageType == "text" || request.resource.data.messageType == "location")
+        && (
+          !hasField(request.resource.data, "messageType")
+          || request.resource.data.messageType != "location"
+          || (request.resource.data.latitude is number && request.resource.data.longitude is number)
+        )
         && exists(/databases/$(database)/documents/chats/$(request.resource.data.chatId))
         && exists(/databases/$(database)/documents/pings/$(get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.pingId))
         && get(/databases/$(database)/documents/pings/$(get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.pingId)).data.status == "active"
         && createdAtIsServerTime(request.resource.data);
+    }
+
+    function safeReactionUpdate() {
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return signedIn()
+        && notSuspended(request.auth.uid)
+        && changedKeys.hasOnly(["reactions"])
+        && request.resource.data.chatId == resource.data.chatId
+        && request.resource.data.senderId == resource.data.senderId
+        && request.resource.data.text == resource.data.text;
     }
 
     function safeBlockCreate() {
@@ -242,7 +260,8 @@ service cloud.firestore {
     match /chatMessages/{messageId} {
       allow read: if signedIn();
       allow create: if safeMessageCreate();
-      allow update, delete: if false;
+      allow update: if safeReactionUpdate();
+      allow delete: if false;
     }
 
     match /chatParticipants/{participantId} {

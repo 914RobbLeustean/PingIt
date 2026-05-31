@@ -205,6 +205,66 @@ struct ChatViewModelTests {
         #expect(vm.messages.first?.text == "Hi")
     }
 
+    // MARK: - Reactions
+
+    @Test func toggleReactionCallsService() async {
+        let auth = authenticatedAuth()
+        let chat = MockChatService()
+        let analytics = MockAnalyticsService()
+        let vm = ChatViewModel(chatId: "chat-1", pingId: "ping-1")
+        vm.configure(authService: auth, chatService: chat, analyticsService: analytics)
+
+        await vm.toggleReaction(on: "msg-1", emoji: "👍")
+
+        #expect(chat.toggleReactionCalled)
+        #expect(chat.lastReactionEmoji == "👍")
+        #expect(chat.lastReactionMessageId == "msg-1")
+        #expect(analytics.loggedEvents.contains { $0.name == AnalyticsService.EventName.reactionToggled })
+    }
+
+    @Test func toggleReactionSetsErrorOnFailure() async {
+        let auth = authenticatedAuth()
+        let chat = MockChatService()
+        chat.errorToThrow = PingItError.reactionFailed(underlying: URLError(.notConnectedToInternet))
+        let vm = makeVM(authService: auth, chatService: chat)
+
+        await vm.toggleReaction(on: "msg-1", emoji: "❤️")
+
+        #expect(vm.errorMessage != nil)
+    }
+
+    // MARK: - Location Sharing
+
+    @Test func sendLocationMessageSucceeds() async {
+        let auth = authenticatedAuth()
+        let chat = MockChatService()
+        let analytics = MockAnalyticsService()
+        let vm = ChatViewModel(chatId: "chat-1", pingId: "ping-1")
+        vm.configure(authService: auth, chatService: chat, analyticsService: analytics)
+
+        await vm.sendLocationMessage(latitude: 46.77, longitude: 23.62, locationName: "Test Location")
+
+        #expect(chat.sendMessageCalled)
+        #expect(chat.lastSentMessage?.messageType == Constants.MessageType.location)
+        #expect(chat.lastSentMessage?.latitude == 46.77)
+        #expect(chat.lastSentMessage?.longitude == 23.62)
+        #expect(analytics.loggedEvents.contains { $0.name == AnalyticsService.EventName.locationShared })
+    }
+
+    @Test func sendLocationMessageBlockedWhenUnverified() async {
+        let mockAuth = MockAuthService()
+        mockAuth.currentUser = MockAuthUser(uid: "user1", isEmailVerified: false)
+        mockAuth.isEmailVerified = false
+        let mockChat = MockChatService()
+        let vm = ChatViewModel(chatId: "chat-1", pingId: "ping-1")
+        vm.configure(authService: mockAuth, chatService: mockChat)
+
+        await vm.sendLocationMessage(latitude: 46.77, longitude: 23.62, locationName: nil)
+
+        #expect(vm.errorMessage != nil)
+        #expect(mockChat.sendMessageCalled == false)
+    }
+
     // MARK: - Content Moderation
 
     @Test("Moderated text prevents sending message")

@@ -74,6 +74,17 @@ final class MockChatService: ChatServicing {
         }
     }
 
+    var toggleReactionCalled = false
+    var lastReactionEmoji: String?
+    var lastReactionMessageId: String?
+
+    func toggleReaction(messageId: String, emoji: String, userId: String) async throws {
+        toggleReactionCalled = true
+        lastReactionEmoji = emoji
+        lastReactionMessageId = messageId
+        if let error = errorToThrow { throw error }
+    }
+
     func simulateNewMessage(_ message: ChatMessage) {
         newMessagesCallback?(.success([message]))
     }

@@ -112,22 +112,36 @@
   - **Beta Testing Guide:** `docs/BETA_TESTING.md` — Apple Developer enrollment prerequisites, APNs setup, Xcode signing, TestFlight workflow, tester onboarding, feedback process, timeline.
   - **Spec Alignment:** `project_spec.md` v1.2 — data model updated to reflect actual collections, tech stack corrected, feature count updated to 41.
 
+## Completed (Post-Phase 2 — Bonus Features)
+- **4 Bonus Features (2026-05-21):** Message reactions, location sharing, media attachments, and discovery feed.
+  - **Message Reactions:** 8-emoji reaction system on chat messages with tappable capsules, context menu, Firestore `safeReactionUpdate()` rule.
+  - **Location Sharing in Chat:** Share current location as inline mini-map card, tap to open Apple Maps. Firestore message type validation.
+  - **Media Attachments on Pings:** Optional image on ping creation via PhotosPicker. Upload to Firebase Storage before batch write. Moderated by existing `moderateImage` Cloud Function.
+  - **Discovery Feed:** New "Feed" tab with scrollable ping cards sorted by newest/hottest/nearest/expiring soon. Independent Firestore listener, block/expiry filtering, creator cache.
+
+## Completed (Post-Phase 2 — Bonus Feature Bug Fixes)
+- **9 Bug Fixes (2026-05-26):** Comprehensive audit and remediation of all 4 bonus features.
+  - **Ping image Storage cleanup:** `pingCleanup.ts` now deletes `ping_images/{pingId}/` from Storage on delete/expire/account-delete.
+  - **Real-time reactions:** Chat listener merges updated messages instead of dropping reaction changes.
+  - **Feed listener lifecycle:** Removed aggressive `onDisappear` that killed Firestore listener during NavigationStack push.
+  - **Media attachment UI:** Image preview non-interactive, red X overlay for removal, Menu with Library + Camera options.
+  - **Concurrency:** `@MainActor` on `CreatePingViewModel`, `ChatViewModel`, `FeedViewModel`; `isolated deinit` for listener cleanup.
+  - **Location share reverse geocoding:** Shared locations now display actual addresses.
+  - **Constant naming:** `maxProfileImageSizeBytes` → `maxImageSizeBytes`.
+
 ## Up Next
 - **Beta Testing implementation:** Blocked on Apple Developer Program enrollment ($99/yr, 2-5 day approval). See `docs/BETA_TESTING.md` for full checklist.
 
 ## Known Technical Debt
 - Push notifications cannot be tested — requires personal Apple Developer Program membership ($99/yr) to generate APNs key for Firebase Console. Corporate developer account is restricted.
 - Geohash field is empty string (geospatial radius queries need GeoFirestore for production scale)
-- No offline mode handling (Firestore caches automatically but no explicit UI for offline state)
+- No offline mode handling (Firestore caches automatically but no explicit UI for offline state) — noted for post-release PR
 - Simulator networking blocked by Netskope (corporate SSL interception) — must test on physical iPhone
-- ProfileViewModel directly calls Firebase Storage — should be extracted to `ImageStorageServicing` protocol for full testability
-- `lastKnownLocation` only updated on first map load; could be stale if user moves significantly
 - `moderateImage` uses `gs://` URI instead of signed URLs due to missing `iam.serviceAccounts.signBlob` permission on default compute service account
-- Node.js 20 runtime deprecated (2026-04-30) — upgrade to Node 22 before decommission (2026-10-30)
-- `firebase-functions` package is outdated — upgrade has breaking changes, needs dedicated PR
-- No server-side rate limiting (client-side only — can be bypassed)
+- Node.js 20 runtime deprecated (2026-04-30) — upgrade to Node 22 before decommission (2026-10-30) — noted for post-release PR
+- `firebase-functions` package is outdated — upgrade has breaking changes, needs dedicated PR — noted for post-release
+- No server-side rate limiting (client-side only — can be bypassed) — noted for post-release PR
 - No admin web dashboard (Firebase Console + runbook only)
-- No GDPR data export (deletion exists but no export)
 
 ---
 
@@ -179,6 +193,12 @@
 - [x] App Icon & Splash Screen
 - [x] Privacy Policy & Terms
 - [ ] Beta Testing
+
+### Post-Phase 2: Bonus Features (4 features)
+- [x] Message Reactions
+- [x] Location Sharing in Chat
+- [x] Media Attachments on Pings
+- [x] Discovery Feed
 
 ---
 

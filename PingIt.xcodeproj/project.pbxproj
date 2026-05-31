@@ -455,8 +455,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PingIt/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "PingIt needs camera access to take a profile picture.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "PingIt needs camera access to take photos for your profile or pings.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "PingIt needs your location to show nearby pings and let you create pings on the map.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "PingIt needs access to your photo library to attach photos to pings or set a profile picture.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -491,8 +492,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PingIt/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "PingIt needs camera access to take a profile picture.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "PingIt needs camera access to take photos for your profile or pings.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "PingIt needs your location to show nearby pings and let you create pings on the map.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "PingIt needs access to your photo library to attach photos to pings or set a profile picture.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;

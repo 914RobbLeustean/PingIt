@@ -11,6 +11,9 @@ struct MainTabView: View {
             Tab("Map", systemImage: "map", value: .map) {
                 MapView()
             }
+            Tab("Feed", systemImage: "list.bullet", value: .feed) {
+                FeedView()
+            }
             Tab("Profile", systemImage: "person.circle", value: .profile) {
                 ProfileView()
             }
@@ -32,6 +35,7 @@ struct MainTabView: View {
 
 private enum AppTab {
     case map
+    case feed
     case profile
     case settings
 }

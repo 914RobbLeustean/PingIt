@@ -1,12 +1,12 @@
 import Foundation
 import PhotosUI
 import SwiftUI
-import FirebaseStorage
 
-@Observable
+@MainActor @Observable
 final class ProfileViewModel {
     private var authService: (any AuthServicing)?
     private var userService: (any UserServicing)?
+    private var imageStorageService: (any ImageStorageServicing)?
     private var isConfigured = false
 
     private(set) var user: User?
@@ -40,10 +40,15 @@ final class ProfileViewModel {
         authService?.currentUser?.uid
     }
 
-    func configure(authService: any AuthServicing, userService: any UserServicing) {
+    func configure(
+        authService: any AuthServicing,
+        userService: any UserServicing,
+        imageStorageService: any ImageStorageServicing
+    ) {
         guard !isConfigured else { return }
         self.authService = authService
         self.userService = userService
+        self.imageStorageService = imageStorageService
         isConfigured = true
     }
 
@@ -98,7 +103,7 @@ final class ProfileViewModel {
     }
 
     func handleSelectedPhoto() async {
-        guard let selectedPhotoItem, let currentUserId, let userService else { return }
+        guard let selectedPhotoItem, let currentUserId, let userService, let imageStorageService else { return }
 
         isUploadingImage = true
         errorMessage = nil
@@ -113,22 +118,17 @@ final class ProfileViewModel {
                 return
             }
 
-            // Compress image
             guard let compressedData = compressImage(imageData) else {
                 errorMessage = "Could not process the selected image."
                 return
             }
 
-            // Check size
-            guard compressedData.count <= Constants.Storage.maxProfileImageSizeBytes else {
+            guard compressedData.count <= Constants.Storage.maxImageSizeBytes else {
                 errorMessage = PingItError.profileImageTooLarge.localizedDescription
                 return
             }
 
-            // Upload to Firebase Storage
-            let downloadURL = try await uploadToStorage(data: compressedData, userId: currentUserId)
-
-            // Save URL to Firestore
+            let downloadURL = try await imageStorageService.uploadProfileImage(data: compressedData, userId: currentUserId)
             try await userService.updateUser(id: currentUserId, data: ["profileImageUrl": downloadURL])
             user?.profileImageUrl = downloadURL
             successMessage = "Profile picture updated"
@@ -138,21 +138,14 @@ final class ProfileViewModel {
     }
 
     func removeProfilePicture() async {
-        guard let currentUserId, let userService, user?.profileImageUrl != nil else { return }
+        guard let currentUserId, let userService, let imageStorageService, user?.profileImageUrl != nil else { return }
 
         isUploadingImage = true
         errorMessage = nil
         defer { isUploadingImage = false }
 
         do {
-            // Delete from Storage (best-effort — file may not exist)
-            let storageRef = Storage.storage().reference()
-                .child(Constants.Storage.profilePicturesPath)
-                .child(currentUserId)
-                .child("profile.jpg")
-            try? await storageRef.delete()
-
-            // Clear URL in Firestore
+            try? await imageStorageService.deleteProfileImage(userId: currentUserId)
             try await userService.updateUser(id: currentUserId, data: ["profileImageUrl": ""])
             user?.profileImageUrl = nil
             successMessage = "Profile picture removed"
@@ -162,7 +155,7 @@ final class ProfileViewModel {
     }
 
     func handleCameraImage(_ image: UIImage) async {
-        guard let currentUserId, let userService else { return }
+        guard let currentUserId, let userService, let imageStorageService else { return }
 
         isUploadingImage = true
         errorMessage = nil
@@ -175,12 +168,12 @@ final class ProfileViewModel {
                 return
             }
 
-            guard compressedData.count <= Constants.Storage.maxProfileImageSizeBytes else {
+            guard compressedData.count <= Constants.Storage.maxImageSizeBytes else {
                 errorMessage = PingItError.profileImageTooLarge.localizedDescription
                 return
             }
 
-            let downloadURL = try await uploadToStorage(data: compressedData, userId: currentUserId)
+            let downloadURL = try await imageStorageService.uploadProfileImage(data: compressedData, userId: currentUserId)
             try await userService.updateUser(id: currentUserId, data: ["profileImageUrl": downloadURL])
             user?.profileImageUrl = downloadURL
             successMessage = "Profile picture updated"
@@ -208,19 +201,5 @@ final class ProfileViewModel {
         return renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: newSize))
         }
-    }
-
-    private func uploadToStorage(data: Data, userId: String) async throws -> String {
-        let storageRef = Storage.storage().reference()
-            .child(Constants.Storage.profilePicturesPath)
-            .child(userId)
-            .child("profile.jpg")
-
-        let metadata = StorageMetadata()
-        metadata.contentType = "image/jpeg"
-
-        _ = try await storageRef.putDataAsync(data, metadata: metadata)
-        let url = try await storageRef.downloadURL()
-        return url.absoluteString
     }
 }

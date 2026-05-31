@@ -72,14 +72,14 @@ PingIt/
 ├── App/
 │   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection, notification routing, analytics + crashlytics + performance user tracking
 │   ├── RootView.swift               Auth gate with suspension + onboarding checks: Auth or Suspended or Onboarding or MainTabView
-│   ├── MainTabView.swift            Tab bar (Map, Profile, Settings) with tab selection for notification navigation
+│   ├── MainTabView.swift            Tab bar (Map, Feed, Profile, Settings) with tab selection for notification navigation
 │   └── NavigationRouter.swift       @Observable router for push notification → ping navigation
 ├── Core/
 │   ├── Models/
 │   │   ├── User.swift               Firestore: users collection
-│   │   ├── Ping.swift               Firestore: pings collection (+ PingStatus enum)
+│   │   ├── Ping.swift               Firestore: pings collection (+ PingStatus enum, imageUrl)
 │   │   ├── Chat.swift               Firestore: chats collection
-│   │   ├── ChatMessage.swift        Firestore: chatMessages collection
+│   │   ├── ChatMessage.swift        Firestore: chatMessages collection (+ reactions, messageType, latitude, longitude, locationName)
 │   │   ├── ChatParticipant.swift    Firestore: chatParticipants collection
 │   │   ├── Block.swift              Firestore: blocks collection
 │   │   ├── Boost.swift             Firestore: boosts collection
@@ -89,8 +89,8 @@ PingIt/
 │   │   ├── AuthUserRepresentable.swift                  Minimal user identity (uid, isEmailVerified)
 │   │   ├── FirebaseUser+AuthUserRepresentable.swift     Firebase conformance
 │   │   ├── AuthServicing.swift                          Auth service contract (+ isEmailVerified, sendEmailVerification, reloadUser)
-│   │   ├── PingServicing.swift                          Ping service contract (+ callable-backed delete/boost)
-│   │   ├── ChatServicing.swift                          Chat service contract (+ callable-backed join/leave)
+│   │   ├── PingServicing.swift                          Ping service contract (+ callable-backed delete/boost, image upload, pre-ID create)
+│   │   ├── ChatServicing.swift                          Chat service contract (+ callable-backed join/leave, toggleReaction)
 │   │   ├── UserServicing.swift                          User profile + username reservation contract
 │   │   ├── LocationServicing.swift                      Location service contract
 │   │   ├── BlockServicing.swift                         Block/unblock, real-time bidirectional listeners
@@ -100,11 +100,13 @@ PingIt/
 │   │   ├── NotificationServicing.swift                  FCM token + location update contract
 │   │   ├── AnalyticsServicing.swift                     Event logging + user ID tracking
 │   │   ├── CrashReportingServicing.swift                Crash/error reporting + user ID
-│   │   └── PerformanceServicing.swift                   Custom trace creation + metrics
+│   │   ├── PerformanceServicing.swift                   Custom trace creation + metrics
+│   │   ├── ImageStorageServicing.swift                  Profile image upload/delete
+│   │   └── DataExportServicing.swift                    GDPR data export via callable
 │   ├── Services/
 │   │   ├── AuthService.swift            Firebase Auth wrapper, auth state listener, email verification
-│   │   ├── PingService.swift            Ping creation/read/listen, callable delete and boost
-│   │   ├── ChatService.swift            Messages, callable join/leave, snapshot listener
+│   │   ├── PingService.swift            Ping creation/read/listen, callable delete and boost, image upload
+│   │   ├── ChatService.swift            Messages, callable join/leave, snapshot listener, toggleReaction
 │   │   ├── UserService.swift            User profile CRUD + usernames reservation documents
 │   │   ├── LocationService.swift        CLLocationManager, GeoJSON boundary check
 │   │   ├── BlockService.swift           @Observable @MainActor; two Firestore snapshot listeners for real-time bidirectional blocking
@@ -114,11 +116,14 @@ PingIt/
 │   │   ├── NotificationService.swift   FCM token registration, APNs permission, foreground banners, location update
 │   │   ├── AnalyticsService.swift       Wraps FirebaseAnalytics event logging and user ID
 │   │   ├── CrashReportingService.swift  Wraps FirebaseCrashlytics crash/error reporting and user ID
-│   │   └── PerformanceService.swift    Wraps FirebasePerformance custom traces and metrics
+│   │   ├── PerformanceService.swift    Wraps FirebasePerformance custom traces and metrics
+│   │   ├── ImageStorageService.swift    Wraps Firebase Storage for profile image upload/delete
+│   │   └── DataExportService.swift      Calls exportUserData callable, returns JSON data
 │   └── Utilities/
-│       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts, usernames)
-│       ├── PingItError.swift            Typed error enum (+ emailNotVerified, contentModerated, blockFailed, reportFailed, rateLimited, etc.)
+│       ├── Constants.swift              Cluj coords, limits, Firestore collection names (+ blocks, reports, boosts, usernames, Reaction, MessageType, Storage additions)
+│       ├── PingItError.swift            Typed error enum (+ reactionFailed, locationSharingFailed, pingImageTooLarge, pingImageUploadFailed, etc.)
 │       ├── Date+Extensions.swift        Countdown (ServerTime-corrected), relative formatting
+│       ├── ActivityViewRepresentable.swift  UIActivityViewController wrapper for share sheet
 │       ├── ServerTime.swift             Firebase RTDB .info/serverTimeOffset for clock sync
 │       └── GeoJSONBoundaryValidator.swift  Ray casting point-in-polygon
 ├── Features/
@@ -159,7 +164,8 @@ PingIt/
 │   │   │   ├── CreatePingViewModel.swift   Validation, moderation, rate limit, location, Firestore write
 │   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete, ping document listener, boost
 │   │   └── Views/
-│   │       ├── CreatePingView.swift        Form: text, location picker, expiration
+│   │       ├── CreatePingView.swift        Form: text, photo, location picker, expiration
+│   │       ├── PingPhotoSectionView.swift  Extracted photo section: image preview, remove overlay, Library/Camera menu
 │   │       ├── PingDetailView.swift        Detail with creator, countdown, actions, report/block buttons
 │   │       ├── LocationPickerView.swift    GPS / search / map pin selection
 │   │       ├── MapPinPickerView.swift      Drag-pin-on-map picker
@@ -167,10 +173,18 @@ PingIt/
 │   │       └── PingDetailActionSection.swift   Join chat + delete buttons
 │   ├── Chat/
 │   │   ├── ViewModels/
-│   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked; ping doc listener; user profile cache
+│   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked; ping doc listener; user profile cache; toggleReaction; sendLocationMessage
 │   │   └── Views/
-│   │       ├── ChatView.swift              Real-time message list + input, report sheet, ping unavailable dismiss
-│   │       └── MessageBubbleView.swift     Sender avatar + username, grouped bubbles, report/block context menu
+│   │       ├── ChatView.swift              Real-time message list + input, report sheet, ping unavailable dismiss, location share button
+│   │       ├── MessageBubbleView.swift     Sender avatar + username, grouped bubbles, report/block context menu, reactions display, location routing
+│   │       ├── ReactionSummaryView.swift   Tappable emoji capsule badges below message bubbles
+│   │       └── LocationMessageView.swift   Inline mini-map card for shared locations, tap to open Apple Maps
+│   ├── Feed/
+│   │   ├── ViewModels/
+│   │   │   └── FeedViewModel.swift      Independent ping listener, sort/filter, creator cache, distance formatting
+│   │   └── Views/
+│   │       ├── FeedView.swift           NavigationStack with sort menu, lazy card list, empty state
+│   │       └── PingFeedCardView.swift   Card: text, creator, countdown, distance, boost/participant counts, hot badge, image thumbnail
 │   ├── Onboarding/
 │   │   ├── ViewModels/
 │   │   │   └── OnboardingViewModel.swift  3-page tutorial state, completes via UserService + Analytics
@@ -217,7 +231,8 @@ PingItTests/
 │   ├── MockNotificationService.swift         Tracks permission/token/location calls
 │   ├── MockAnalyticsService.swift            Records logged events for test assertions
 │   ├── MockCrashReportingService.swift       Records reported errors for test assertions
-│   └── MockPerformanceService.swift          Stub traces for test assertions
+│   ├── MockPerformanceService.swift          Stub traces for test assertions
+│   └── MockImageStorageService.swift         Tracks upload/delete calls for test assertions
 ├── ViewModelTests/
 │   ├── CreatePingViewModelTests.swift        (+ email verification, moderation, rate limit tests)
 │   ├── ChatViewModelTests.swift              (+ email verification, blocking, moderation tests)
@@ -230,7 +245,8 @@ PingItTests/
 │   ├── ForgotPasswordViewModelTests.swift
 │   ├── PasswordValidatorTests.swift
 │   ├── ProfileViewModelTests.swift
-│   └── OnboardingViewModelTests.swift
+│   ├── OnboardingViewModelTests.swift
+│   └── FeedViewModelTests.swift
 └── PingItTests.swift                         Boundary, dates, constants, models
 ```
 
@@ -260,6 +276,7 @@ Creator taps "Delete"
   → Cloud Function verifies auth + creator ownership
   → Shared cleanup marks ping status="removed"
   → Shared cleanup deletes associated chat, messages, participants, and boosts in chunked batches
+  → Shared cleanup deletes ping images from Firebase Storage (ping_images/{pingId}/)
   → Firestore listeners remove the ping from map/detail/chat screens
 ```
 
@@ -297,7 +314,7 @@ User submits report
 Cloud Function runs every 5 minutes (cron)
   → Queries pings where expiresAt <= now AND status == active
   → Updates status to "expired"
-  → Shared cleanup deletes associated chat, chatMessages, chatParticipants, and boosts
+  → Shared cleanup deletes associated chat, chatMessages, chatParticipants, boosts, and ping images from Storage
   → Firestore listener on MapViewModel fires → pin removed from map
 ```
 
@@ -389,6 +406,13 @@ RootView ── checks ──▶ UserService.fetchUser (suspension + onboarding 
          └─ if not onboarded ──▶ OnboardingView ──observes──▶ OnboardingViewModel ──calls──▶ UserService + AnalyticsService
          └─ if onboarded ──▶ MainTabView
 
+FeedView ──observes──▶ FeedViewModel ──calls──▶ PingService (real-time active pings listener)
+                                                  LocationService (distance calculation)
+                                                  BlockService (filters blocked creators)
+                                                  UserService (creator profile cache)
+                                                  AnalyticsService (logs feed_viewed, feed_sort_changed)
+         └─ navigates to PingDetailView on card tap
+
 NavigationRouter ──observed by──▶ MainTabView (tab switch) + MapView (ping navigation)
 
 AuthenticationCoordinatorView ──routes──▶ LoginView / RegisterView / ForgotPasswordView / TermsOfServiceView / PrivacyPolicyView
@@ -416,8 +440,10 @@ ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls�
 | **ReportService** | Calls `submitReport`, maps duplicate report callable error to user-visible `reportAlreadySubmitted` | Implemented |
 | **ServerTime** | Firebase RTDB `.info/serverTimeOffset` for clock-skew correction; `ServerTime.now` | Implemented (utility enum) |
 | **NotificationService** | FCM token registration, APNs permission, foreground notification display, lastKnownLocation update | Implemented |
-| **AnalyticsService** | Wraps FirebaseAnalytics for event logging (`ping_created`, `chat_joined`, `boost_used`, `onboarding_completed`) and user ID tracking | Implemented |
+| **AnalyticsService** | Wraps FirebaseAnalytics for event logging (`ping_created`, `chat_joined`, `boost_used`, `onboarding_completed`, `reaction_toggled`, `location_shared`, `feed_viewed`, `feed_sort_changed`) and user ID tracking | Implemented |
 | **CrashReportingService** | Wraps FirebaseCrashlytics for crash/non-fatal error reporting and user ID tracking | Implemented |
+| **ImageStorageService** | Wraps Firebase Storage for profile image upload/delete; protocol-abstracted for testability | Implemented |
+| **DataExportService** | Calls `exportUserData` callable, returns JSON data for GDPR Article 20 portability | Implemented |
 
 ### Service Injection Pattern
 
@@ -442,7 +468,8 @@ functions/src/
 ├── sendNearbyNotification.ts     Firestore trigger: pings onCreate → 2km Haversine filter → FCM push
 ├── sendHotPingNotification.ts    Firestore triggers: boosts onCreate + chatParticipants onWrite → hot score check → FCM push
 ├── moderateImage.ts              Storage trigger: onObjectFinalized → Vision API SafeSearch → auto-remove or flag for review
-└── removeContent.ts              Callable: admin emergency content removal (ping, message, user suspension) with audit trail
+├── removeContent.ts              Callable: admin emergency content removal (ping, message, user suspension) with audit trail
+└── exportUserData.ts             Callable: GDPR data export — collects all user data and returns JSON
 ```
 
 ### Cloud Function Data Flows
@@ -451,7 +478,7 @@ functions/src/
 Ping Expiration (cron every 5min):
   expirePings → query pings where status=="active" AND expiresAt<=now
     → batch update status="expired"
-    → shared cleanup deletes: chat, chatMessages, chatParticipants, boosts
+    → shared cleanup deletes: chat, chatMessages, chatParticipants, boosts, ping images from Storage
 
 Ping Deletion (callable):
   deletePing({ pingId })
@@ -460,6 +487,7 @@ Ping Deletion (callable):
     → ignore client-supplied related IDs
     → shared cleanup sets status="removed"
     → delete related chat, chatMessages, chatParticipants, boosts in chunked batches
+    → delete ping images from Storage (ping_images/{pingId}/)
 
 Boost (callable):
   boostPing({ pingId })
@@ -522,6 +550,12 @@ Emergency Content Removal (callable):
     → targetType "message": delete chatMessages doc
     → targetType "user": set suspensionStatus="suspended", 24hr expiry
     → create moderationActions audit doc
+
+Data Export (callable):
+  exportUserData(auth.uid)
+    → require auth
+    → collect: user profile, pings, messages, boosts, blocks, reports, chat participations
+    → return JSON object with all user data (GDPR Article 20 portability)
 ```
 
 ---
