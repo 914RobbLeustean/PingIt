@@ -1,4 +1,6 @@
 import SwiftUI
+import MapKit
+import CoreLocation
 
 struct MessageBubbleView: View {
     let message: ChatMessage
@@ -11,24 +13,33 @@ struct MessageBubbleView: View {
     let onBlock: () -> Void
     let onReaction: (String) -> Void
 
+    private var isLocationMessage: Bool {
+        message.messageType == Constants.MessageType.location
+            && message.latitude != nil
+            && message.longitude != nil
+    }
+
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
             if isCurrentUser {
-                Spacer(minLength: 48)
+                Spacer(minLength: 60)
             } else {
-                avatarView
+                BubbleAvatar(
+                    sender: sender,
+                    isAnonymous: isSenderPrivate,
+                    visible: showSenderInfo
+                )
             }
 
-            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 2) {
+            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
                 if showSenderInfo && !isCurrentUser {
-                    Text(isSenderPrivate ? "Anonymous" : (sender?.username ?? "Unknown"))
-                        .font(.caption)
-                        .bold()
-                        .foregroundStyle(.secondary)
+                    Text(displayName)
+                        .font(.dmSans(.regular, size: 11, relativeTo: .caption))
+                        .foregroundStyle(Color.pingTextSecondary)
                         .padding(.leading, 4)
                 }
 
-                messageBubbleContent
+                bubbleContent
                     .contextMenu {
                         Section("React") {
                             ForEach(Constants.Reaction.available, id: \.key) { reaction in
@@ -55,19 +66,19 @@ struct MessageBubbleView: View {
                         currentUserId: currentUserId,
                         onToggle: onReaction
                     )
+                    .padding(isCurrentUser ? .trailing : .leading, 4)
                 }
 
                 if let createdAt = message.createdAt {
                     Text(createdAt.formatted(date: .omitted, time: .shortened))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .font(.dmSans(.regular, size: 10, relativeTo: .caption2))
+                        .foregroundStyle(Color.pingTextSecondary)
+                        .padding(isCurrentUser ? .trailing : .leading, 4)
                 }
             }
 
-            if isCurrentUser {
-                // No avatar on right side for current user — matches iMessage/WhatsApp
-            } else {
-                Spacer(minLength: 48)
+            if !isCurrentUser {
+                Spacer(minLength: 60)
             }
         }
         .accessibilityElement(children: .combine)
@@ -75,79 +86,186 @@ struct MessageBubbleView: View {
     }
 
     @ViewBuilder
-    private var messageBubbleContent: some View {
-        if message.messageType == Constants.MessageType.location,
+    private var bubbleContent: some View {
+        if isLocationMessage,
            let latitude = message.latitude,
            let longitude = message.longitude {
-            LocationMessageView(
+            ChatLocationBubble(
                 latitude: latitude,
                 longitude: longitude,
                 locationName: message.locationName,
                 isCurrentUser: isCurrentUser
             )
         } else {
-            Text(message.text)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(isCurrentUser ? Color.accentColor : Color(.systemGray5))
-                .foregroundStyle(isCurrentUser ? .white : .primary)
-                .clipShape(.rect(cornerRadius: 16))
+            ChatTextBubble(text: message.text, isCurrentUser: isCurrentUser)
         }
+    }
+
+    private var displayName: String {
+        if isSenderPrivate { return "Anonymous" }
+        if let username = sender?.username { return "@\(username)" }
+        return "@unknown"
     }
 
     private var accessibilityLabel: String {
-        let senderName = isCurrentUser ? "You" : (isSenderPrivate ? "Anonymous" : (sender?.username ?? "Unknown"))
+        let senderName = isCurrentUser
+            ? "You"
+            : (isSenderPrivate ? "Anonymous" : (sender?.username ?? "Unknown"))
         return "\(senderName): \(message.text)"
     }
+}
 
-    @ViewBuilder
-    private var avatarView: some View {
-        if showSenderInfo {
-            if isSenderPrivate {
-                anonymousAvatarView
-            } else {
-                AsyncImage(url: sender?.profileImageUrl.flatMap { URL(string: $0) }) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    case .failure:
-                        senderInitialView
-                    default:
-                        senderInitialView
-                    }
-                }
-                .frame(width: 28, height: 28)
-                .clipShape(.circle)
-            }
+// MARK: - Text Bubble
+
+private struct ChatTextBubble: View {
+    let text: String
+    let isCurrentUser: Bool
+
+    var body: some View {
+        Text(text)
+            .font(.dmSans(.regular, size: 14, relativeTo: .body))
+            .foregroundStyle(isCurrentUser ? .black : Color.pingTextPrimary)
+            .lineSpacing(3)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isCurrentUser ? Color.pingAccent : Color.pingSurface)
+            .clipShape(bubbleShape)
+            .overlay(
+                bubbleShape
+                    .stroke(Color.white.opacity(isCurrentUser ? 0 : 0.07), lineWidth: 1)
+            )
+    }
+
+    private var bubbleShape: ChatBubbleShape {
+        if isCurrentUser {
+            ChatBubbleShape(topLeading: 18, topTrailing: 18, bottomLeading: 18, bottomTrailing: 4)
         } else {
-            // Invisible spacer to keep alignment with messages that have avatars
-            Color.clear
-                .frame(width: 28, height: 28)
+            ChatBubbleShape(topLeading: 4, topTrailing: 18, bottomLeading: 18, bottomTrailing: 18)
+        }
+    }
+}
+
+// MARK: - Location Bubble
+
+private struct ChatLocationBubble: View {
+    let latitude: Double
+    let longitude: Double
+    let locationName: String?
+    let isCurrentUser: Bool
+
+    private var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    var body: some View {
+        Button(action: openInMaps) {
+            VStack(alignment: .leading, spacing: 0) {
+                Map(initialPosition: .region(MKCoordinateRegion(
+                    center: coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                ))) {
+                    Marker(locationName ?? "Shared location", coordinate: coordinate)
+                }
+                .frame(width: 220, height: 140)
+                .allowsHitTesting(false)
+                .clipShape(.rect(cornerRadius: 14))
+                .padding(4)
+
+                if let locationName {
+                    HStack(spacing: 6) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 12))
+                        Text(locationName)
+                            .font(.dmSans(.medium, size: 13, relativeTo: .footnote))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(isCurrentUser ? .black.opacity(0.7) : Color.pingTextSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 8)
+                    .padding(.top, 2)
+                }
+            }
+            .background(isCurrentUser ? Color.pingAccent : Color.pingSurface)
+            .clipShape(bubbleShape)
+            .overlay(
+                bubbleShape
+                    .stroke(Color.white.opacity(isCurrentUser ? 0 : 0.07), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Location: \(locationName ?? "Shared location"). Double tap to open in Maps.")
+    }
+
+    private var bubbleShape: ChatBubbleShape {
+        if isCurrentUser {
+            ChatBubbleShape(topLeading: 18, topTrailing: 18, bottomLeading: 18, bottomTrailing: 4)
+        } else {
+            ChatBubbleShape(topLeading: 4, topTrailing: 18, bottomLeading: 18, bottomTrailing: 18)
         }
     }
 
-    private var senderInitialView: some View {
-        Circle()
-            .fill(Color(.systemGray4))
-            .frame(width: 28, height: 28)
-            .overlay {
-                Text(String((sender?.username ?? "?").prefix(1)).uppercased())
-                    .font(.caption2)
-                    .bold()
-                    .foregroundStyle(.secondary)
+    private func openInMaps() {
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = locationName ?? "Shared location"
+        mapItem.openInMaps()
+    }
+}
+
+// MARK: - Avatar
+
+private struct BubbleAvatar: View {
+    let sender: User?
+    let isAnonymous: Bool
+    let visible: Bool
+
+    var body: some View {
+        Group {
+            if visible {
+                if isAnonymous {
+                    avatarBase
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.pingTextSecondary)
+                        )
+                } else if let urlString = sender?.profileImageUrl,
+                          let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            initialOverlay
+                        }
+                    }
+                    .frame(width: 28, height: 28)
+                    .clipShape(.circle)
+                } else {
+                    initialOverlay
+                }
+            } else {
+                Color.clear.frame(width: 28, height: 28)
             }
+        }
+        .accessibilityHidden(true)
     }
 
-    private var anonymousAvatarView: some View {
+    private var avatarBase: some View {
         Circle()
-            .fill(Color(.systemGray4))
+            .fill(Color.pingSurface)
             .frame(width: 28, height: 28)
-            .overlay {
-                Image(systemName: "person.fill")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
+            .overlay(
+                Circle().strokeBorder(Color.pingBorder, lineWidth: 1)
+            )
+    }
+
+    private var initialOverlay: some View {
+        avatarBase
+            .overlay(
+                Text(String((sender?.username ?? "?").prefix(1)).uppercased())
+                    .font(.dmSans(.bold, size: 11, relativeTo: .caption2))
+                    .foregroundStyle(Color.pingTextSecondary)
+            )
     }
 }

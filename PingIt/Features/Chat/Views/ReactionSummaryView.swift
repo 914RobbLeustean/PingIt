@@ -19,17 +19,11 @@ struct ReactionSummaryView: View {
                     Button {
                         onToggle(reaction.emoji)
                     } label: {
-                        HStack(spacing: 2) {
-                            Text(reaction.emoji)
-                                .font(.caption)
-                            Text(reaction.userIds.count, format: .number)
-                                .font(.caption2)
-                                .foregroundStyle(currentUserReacted(reaction.userIds) ? .white : .secondary)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(currentUserReacted(reaction.userIds) ? Color.accentColor.opacity(0.3) : Color(.systemGray5))
-                        .clipShape(.capsule)
+                        ReactionChip(
+                            emoji: reaction.emoji,
+                            count: reaction.userIds.count,
+                            isSelected: currentUserReacted(reaction.userIds)
+                        )
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(reaction.emoji) \(reaction.userIds.count) reaction\(reaction.userIds.count == 1 ? "" : "s")")
@@ -42,5 +36,34 @@ struct ReactionSummaryView: View {
     private func currentUserReacted(_ userIds: [String]) -> Bool {
         guard let currentUserId else { return false }
         return userIds.contains(currentUserId)
+    }
+}
+
+private struct ReactionChip: View {
+    let emoji: String
+    let count: Int
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Text(emoji)
+                .font(.system(size: 12))
+            Text(count, format: .number)
+                .font(.dmSans(.semiBold, size: 11, relativeTo: .caption2))
+                .foregroundStyle(isSelected ? Color.pingAccent : Color.pingTextSecondary)
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(
+            isSelected ? Color.pingAccent.opacity(0.18) : Color.pingSurface,
+            in: .capsule
+        )
+        .overlay(
+            Capsule()
+                .strokeBorder(
+                    isSelected ? Color.pingAccent.opacity(0.45) : Color.pingBorder,
+                    lineWidth: 1
+                )
+        )
     }
 }
