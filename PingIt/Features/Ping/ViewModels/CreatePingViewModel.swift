@@ -16,6 +16,7 @@ final class CreatePingViewModel {
     private var isConfigured = false
 
     var text = ""
+    var descriptionText = ""
     var selectedCategory: PingCategory?
     var selectedExpirationIndex = 1 // Default: 24hr
     var isCustomDuration = false
@@ -30,10 +31,12 @@ final class CreatePingViewModel {
 
     var characterCount: Int { text.count }
     var isOverLimit: Bool { text.count > Constants.Ping.maxTextLength }
+    var descriptionCharacterCount: Int { descriptionText.count }
+    var isDescriptionOverLimit: Bool { descriptionText.count > Constants.Ping.maxDescriptionLength }
 
     var canCreate: Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && !isOverLimit && !isCreating && selectedCategory != nil
+        return !trimmed.isEmpty && !isOverLimit && !isDescriptionOverLimit && !isCreating && selectedCategory != nil
     }
 
     var locationDisplayText: String {
@@ -198,10 +201,21 @@ final class CreatePingViewModel {
                 throw PingItError.pingTextTooLong
             }
 
+            let trimmedDescription = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedDescription.count > Constants.Ping.maxDescriptionLength {
+                throw PingItError.pingTextTooLong
+            }
+
             if let moderationService = contentModerationService {
                 let result = moderationService.check(trimmed)
                 if case .blocked(let reason) = result {
                     throw PingItError.contentModerated(reason: reason)
+                }
+                if !trimmedDescription.isEmpty {
+                    let descResult = moderationService.check(trimmedDescription)
+                    if case .blocked(let reason) = descResult {
+                        throw PingItError.contentModerated(reason: reason)
+                    }
                 }
             }
 
@@ -223,6 +237,7 @@ final class CreatePingViewModel {
             let ping = Ping(
                 creatorId: currentUser.uid,
                 text: trimmed,
+                description: trimmedDescription.isEmpty ? nil : trimmedDescription,
                 category: selectedCategory?.rawValue,
                 location: GeoPoint(
                     latitude: coordinate.latitude,

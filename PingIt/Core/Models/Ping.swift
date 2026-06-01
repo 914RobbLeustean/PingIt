@@ -7,6 +7,7 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
         lhs.id == rhs.id
         && lhs.creatorId == rhs.creatorId
         && lhs.text == rhs.text
+        && lhs.description == rhs.description
         && lhs.status == rhs.status
         && lhs.boostCount == rhs.boostCount
         && lhs.participantCount == rhs.participantCount
@@ -21,6 +22,7 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
     @DocumentID var id: String?
     var creatorId: String
     var text: String
+    var description: String?
     var category: String?
     var location: GeoPoint
     var geohash: String

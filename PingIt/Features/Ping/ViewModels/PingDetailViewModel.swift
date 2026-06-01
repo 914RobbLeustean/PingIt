@@ -31,6 +31,14 @@ final class PingDetailViewModel {
         authService?.currentUser?.uid == ping.creatorId
     }
 
+    var pingCategory: PingCategory? {
+        ping.category.flatMap(PingCategory.init(rawValue:))
+    }
+
+    var urgency: PingUrgency {
+        .from(expiresAt: ping.expiresAt)
+    }
+
     var shouldHideCreatorIdentity: Bool {
         guard let creator, creator.isPrivateProfile else { return false }
         return !isCreator

@@ -207,12 +207,22 @@ private struct TitleRow: View {
     let ping: Ping
 
     var body: some View {
-        Text(ping.text)
-            .font(.syne(.bold, size: 17, relativeTo: .headline))
-            .foregroundStyle(Color.pingTextPrimary)
-            .lineSpacing(2)
-            .lineLimit(2)
-            .padding(.leading, 34)
+        VStack(alignment: .leading, spacing: 3) {
+            Text(ping.text)
+                .font(.syne(.bold, size: 17, relativeTo: .headline))
+                .foregroundStyle(Color.pingTextPrimary)
+                .lineSpacing(2)
+                .lineLimit(2)
+
+            if let description = ping.description,
+               !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(description)
+                    .font(.dmSans(.regular, size: 13, relativeTo: .footnote))
+                    .foregroundStyle(Color.pingTextSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.leading, 34)
     }
 }
 

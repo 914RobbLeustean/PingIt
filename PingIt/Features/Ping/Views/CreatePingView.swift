@@ -36,6 +36,12 @@ struct CreatePingView: View {
                         isOverLimit: viewModel.isOverLimit
                     )
 
+                    CreatePingDescriptionSection(
+                        text: $viewModel.descriptionText,
+                        characterCount: viewModel.descriptionCharacterCount,
+                        isOverLimit: viewModel.isDescriptionOverLimit
+                    )
+
                     CreatePingPhotoSection(
                         selectedImageData: viewModel.selectedImageData,
                         isProcessingImage: viewModel.isProcessingImage,

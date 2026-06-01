@@ -9,11 +9,16 @@ struct MapView: View {
     @Environment(BlockService.self) private var blockService
     @Environment(NotificationService.self) private var notificationService
     @Environment(NavigationRouter.self) private var navigationRouter
+    @Environment(UserService.self) private var userService
     @State private var viewModel = MapViewModel()
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
     @State private var showCreatePing = false
     @State private var selectedPing: Ping?
+    @State private var sheetPing: Ping?
+    @State private var sheetCreator: User?
+    @State private var detailPing: Ping?
+    @State private var chatPing: Ping?
     @State private var createdPingLocation: CLLocationCoordinate2D?
     @State private var showVerificationBanner = true
     @State private var isResendingVerification = false
@@ -45,7 +50,7 @@ struct MapView: View {
                                 ping: ping,
                                 isHot: viewModel.hotPingIds.contains(ping.id ?? "")
                             ) {
-                                selectedPing = ping
+                                showPingSheet(ping)
                             }
                         }
                         .annotationTitles(.hidden)
@@ -160,9 +165,27 @@ struct MapView: View {
                 .padding(.bottom, 20)
                 .accessibilityLabel("Create Ping")
             }
-            .navigationDestination(item: $selectedPing) { ping in
+            .navigationDestination(item: $detailPing) { ping in
                 PingDetailView(ping: ping)
             }
+            .navigationDestination(item: $chatPing) { ping in
+                if let chatId = ping.chatId {
+                    ChatView(chatId: chatId, pingId: ping.id ?? "", pingCreatorId: ping.creatorId)
+                }
+            }
+            .overlay {
+                if let ping = sheetPing {
+                    MapPingSheet(
+                        ping: ping,
+                        creator: sheetCreator,
+                        onJoinChat: { handleSheetJoinChat(ping: ping) },
+                        onViewDetails: { handleSheetViewDetails(ping: ping) },
+                        onDismiss: { dismissPingSheet() }
+                    )
+                    .transition(.identity)
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: sheetPing != nil)
             .sheet(isPresented: $showCreatePing, onDismiss: handleCreatePingDismiss) {
                 CreatePingView(createdPingLocation: $createdPingLocation)
                     .presentationDetents([.large])
@@ -220,7 +243,7 @@ struct MapView: View {
         do {
             let ping = try await pingService.fetchPing(id: pingId)
             if ping.status == .active {
-                selectedPing = ping
+                detailPing = ping
             } else {
                 showPingUnavailableAlert = true
             }
@@ -323,5 +346,36 @@ struct MapView: View {
         if status == .authorizedWhenInUse || status == .authorizedAlways {
             viewModel.startLocationUpdates()
         }
+    }
+
+    // MARK: - Ping Sheet
+
+    private func showPingSheet(_ ping: Ping) {
+        sheetCreator = nil
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            sheetPing = ping
+        }
+        Task {
+            sheetCreator = try? await userService.fetchUser(id: ping.creatorId)
+        }
+    }
+
+    private func dismissPingSheet() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+            sheetPing = nil
+        }
+        sheetCreator = nil
+    }
+
+    private func handleSheetJoinChat(ping: Ping) {
+        dismissPingSheet()
+        if ping.chatId != nil {
+            chatPing = ping
+        }
+    }
+
+    private func handleSheetViewDetails(ping: Ping) {
+        dismissPingSheet()
+        detailPing = ping
     }
 }

@@ -13,6 +13,7 @@ enum Constants {
 
     enum Ping {
         static let maxTextLength = 280
+        static let maxDescriptionLength = 500
         static let expirationPresets: [TimeInterval] = [
             6 * 3600,   // 6 hours
             24 * 3600,  // 24 hours
