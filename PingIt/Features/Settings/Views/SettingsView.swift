@@ -267,12 +267,11 @@ struct SettingsView: View {
     private func handleConfirmDelete() {
         Task {
             let succeeded = await deleteViewModel.confirmDelete()
-            if succeeded {
-                // Farewell card auto-dismisses when AuthService signs the user out
-                // and the root navigates back to Welcome. Keep it visible until then.
-                try? await Task.sleep(for: .seconds(3.5))
-                showDeleteFlow = false
-            }
+            guard succeeded else { return }
+            // Linger on the farewell card before the auth listener
+            // tears the session down and navigates back to Welcome.
+            try? await Task.sleep(for: .seconds(4))
+            deleteViewModel.finalizeSignOut()
         }
     }
 

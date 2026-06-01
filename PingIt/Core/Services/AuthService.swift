@@ -139,6 +139,15 @@ final class AuthService: AuthServicing {
     }
 
     func deleteAccount() async throws {
+        try await deleteAccountRecord()
+        try? Auth.auth().signOut()
+    }
+
+    /// Deletes the user's account record via the Cloud Function without
+    /// signing the user out. Lets the UI show a goodbye state before the
+    /// auth listener tears the session down. Call `Auth.auth().signOut()`
+    /// (or `signOut()`) once the UI has finished its farewell.
+    func deleteAccountRecord() async throws {
         guard Auth.auth().currentUser != nil else {
             throw PingItError.notAuthenticated
         }
@@ -146,7 +155,6 @@ final class AuthService: AuthServicing {
         do {
             let functions = Functions.functions(region: "europe-west3")
             let _ = try await functions.httpsCallable("deleteAccount").call()
-            try? Auth.auth().signOut()
         } catch {
             throw PingItError.accountDeletionFailed(underlying: error)
         }

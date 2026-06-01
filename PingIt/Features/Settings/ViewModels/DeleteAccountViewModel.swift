@@ -45,7 +45,7 @@ final class DeleteAccountViewModel {
 
         do {
             try await authService.reauthenticate(password: password)
-            try await authService.deleteAccount()
+            try await authService.deleteAccountRecord()
             isDeleting = false
             step = .farewell
             return true
@@ -54,5 +54,9 @@ final class DeleteAccountViewModel {
             isDeleting = false
             return false
         }
+    }
+
+    func finalizeSignOut() {
+        try? authService?.signOut()
     }
 }
