@@ -36,6 +36,7 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 OnboardingTopBar(
                     isLastPage: viewModel.currentPage == OnboardingViewModel.pageCount - 1,
+                    isSubmitting: viewModel.isSubmitting,
                     onSkip: handleSkip
                 )
                 .padding(.top, 12)
@@ -60,13 +61,25 @@ struct OnboardingView: View {
                 )
                 .padding(.bottom, 24)
 
+                if let error = viewModel.errorMessage {
+                    OnboardingErrorCard(
+                        message: error,
+                        onContinue: handleForceContinue
+                    )
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 14)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+
                 OnboardingPrimaryButton(
                     isLastPage: viewModel.currentPage == OnboardingViewModel.pageCount - 1,
+                    isSubmitting: viewModel.isSubmitting,
                     action: handleAdvance
                 )
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.errorMessage)
         }
         .preferredColorScheme(.dark)
         .onChange(of: viewModel.isComplete) {
@@ -79,6 +92,10 @@ struct OnboardingView: View {
                 userId: userId
             )
         }
+    }
+
+    private func handleForceContinue() {
+        viewModel.forceLocalComplete()
     }
 
     private func handleAdvance() {
@@ -103,6 +120,7 @@ private struct OnboardingPageContent {
 
 private struct OnboardingTopBar: View {
     let isLastPage: Bool
+    let isSubmitting: Bool
     let onSkip: () -> Void
 
     var body: some View {
@@ -122,6 +140,8 @@ private struct OnboardingTopBar: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .disabled(isSubmitting)
+                .opacity(isSubmitting ? 0.5 : 1)
                 .accessibilityLabel("Skip onboarding")
             }
         }
@@ -154,17 +174,24 @@ private struct OnboardingPageIndicator: View {
 
 private struct OnboardingPrimaryButton: View {
     let isLastPage: Bool
+    let isSubmitting: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Text(isLastPage ? "Get Started" : "Next")
-                    .font(.syne(.extraBold, size: 15))
-                    .tracking(-0.3)
-                if !isLastPage {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 14, weight: .bold))
+                if isSubmitting {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.black)
+                } else {
+                    Text(isLastPage ? "Get Started" : "Next")
+                        .font(.syne(.extraBold, size: 15))
+                        .tracking(-0.3)
+                    if !isLastPage {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 14, weight: .bold))
+                    }
                 }
             }
             .foregroundStyle(.black)
@@ -174,6 +201,56 @@ private struct OnboardingPrimaryButton: View {
             .shadow(color: Color.pingAccent.opacity(0.4), radius: 16, y: 4)
         }
         .buttonStyle(.plain)
+        .disabled(isSubmitting)
         .accessibilityLabel(isLastPage ? "Get started" : "Next page")
+    }
+}
+
+// MARK: - Error Card
+
+private struct OnboardingErrorCard: View {
+    let message: String
+    let onContinue: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.pingHot)
+                    .frame(width: 22)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("We couldn't save your progress")
+                        .font(.dmSans(.semiBold, size: 13, relativeTo: .footnote))
+                        .foregroundStyle(Color.pingTextPrimary)
+
+                    Text(message)
+                        .font(.dmSans(.regular, size: 12, relativeTo: .caption))
+                        .foregroundStyle(Color.pingTextSecondary)
+                        .lineSpacing(2)
+                }
+            }
+
+            Button(action: onContinue) {
+                Text("Continue Anyway")
+                    .font(.dmSans(.semiBold, size: 13, relativeTo: .footnote))
+                    .foregroundStyle(Color.pingTextPrimary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 38)
+                    .background(Color.pingSurfaceElevated, in: .capsule)
+                    .overlay(
+                        Capsule().strokeBorder(Color.pingBorder, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Continue anyway")
+        }
+        .padding(14)
+        .background(Color.pingSurface, in: .rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.pingHot.opacity(0.3), lineWidth: 1)
+        )
     }
 }
