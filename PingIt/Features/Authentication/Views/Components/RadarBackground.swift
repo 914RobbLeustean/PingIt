@@ -21,42 +21,52 @@ struct RadarBackground: View {
     private static let ringDelays: [TimeInterval] = [0.0, 1.666, 3.333]
     private static let ringLineWidth: CGFloat = 2.0
 
+    /// Origin in canvas-local coordinates. (0, 0) = top-left of the radar layer.
+    private static let origin = CGPoint.zero
+
     @ViewBuilder
     private func rings(in size: CGSize) -> some View {
-        // Pulse origin: top-left corner of the screen. Each ring expands until
-        // its radius covers the screen's diagonal — guaranteeing the wave sweeps
-        // past the bottom-right corner regardless of device aspect.
-        let origin = CGPoint.zero
         let maxRadius = hypot(size.width, size.height)
         if reduceMotion {
-            ForEach(Self.ringDelays.indices, id: \.self) { _ in
-                Self.ringShape(progress: 0.5, origin: origin, maxRadius: maxRadius)
-            }
+            ringsCanvas(progresses: Self.ringDelays.map { _ in 0.5 }, maxRadius: maxRadius)
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: false)) { context in
                 let now = context.date.timeIntervalSinceReferenceDate
-                ForEach(Self.ringDelays.indices, id: \.self) { i in
-                    let local = (now - Self.ringDelays[i]).truncatingRemainder(dividingBy: Self.ringPeriod)
-                    let p = max(0, local) / Self.ringPeriod
-                    Self.ringShape(progress: p, origin: origin, maxRadius: maxRadius)
+                let progresses = Self.ringDelays.map { delay in
+                    let local = (now - delay).truncatingRemainder(dividingBy: Self.ringPeriod)
+                    return max(0, local) / Self.ringPeriod
                 }
+                ringsCanvas(progresses: progresses, maxRadius: maxRadius)
             }
         }
     }
 
-    private static func ringShape(progress p: Double, origin: CGPoint, maxRadius: CGFloat) -> some View {
-        // Linear progression — the visible arc sweeps across the screen at a
-        // steady speed, the way a real radar pulse would. Cubic ease-out made
-        // the ring slam through the bottom-left region in the last 20% of the
-        // loop, which read as a second pulse origin.
-        let radius = maxRadius * p
-        let diameter = max(radius * 2, 1)
-        let opacity = lerp(0.9, 0.0, p)
-        return Circle()
-            .stroke(Color.pingAccent, lineWidth: ringLineWidth)
-            .frame(width: diameter, height: diameter)
-            .opacity(opacity)
-            .position(origin)
+    /// Draws all rings into a single Canvas so they share a coordinate space and
+    /// can't be displaced by any SwiftUI layout quirks. Every ring is centered
+    /// at `(0, 0)` in the Canvas's local coordinates, which is the top-left of
+    /// the radar layer.
+    private func ringsCanvas(progresses: [Double], maxRadius: CGFloat) -> some View {
+        Canvas { context, _ in
+            for p in progresses {
+                let radius = maxRadius * p
+                let opacity = lerp(0.9, 0.0, p)
+                let rect = CGRect(
+                    x: Self.origin.x - radius,
+                    y: Self.origin.y - radius,
+                    width: radius * 2,
+                    height: radius * 2
+                )
+                let path = Path(ellipseIn: rect)
+                context.stroke(
+                    path,
+                    with: .color(Color.pingAccent.opacity(opacity)),
+                    lineWidth: Self.ringLineWidth
+                )
+            }
+        }
+        // Critically: the Canvas itself must fill the entire radar layer so its
+        // local (0,0) coincides with the radar layer's top-left.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: Dots
