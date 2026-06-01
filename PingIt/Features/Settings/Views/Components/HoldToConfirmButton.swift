@@ -6,7 +6,7 @@ struct HoldToConfirmButton: View {
     let holdDuration: Double
     let onComplete: () -> Void
 
-    init(_ title: String, holdDuration: Double = 1.6, onComplete: @escaping () -> Void) {
+    init(_ title: String, holdDuration: Double = 7.5, onComplete: @escaping () -> Void) {
         self.title = title
         self.holdDuration = holdDuration
         self.onComplete = onComplete
@@ -17,7 +17,7 @@ struct HoldToConfirmButton: View {
     @State private var didComplete = false
     @State private var holdStartedAt: Date?
     @State private var shake: CGFloat = 0
-    @State private var midPulseFired = false
+    @State private var milestonesFired: Set<Int> = []
 
     private let cornerRadius: CGFloat = 24
     private let height: CGFloat = 48
@@ -77,16 +77,16 @@ struct HoldToConfirmButton: View {
     }
 
     private var label: some View {
-        ZStack {
-            Text(title)
-                .opacity(1 - progress)
-            Text(holdingLabel)
-                .opacity(progress)
-        }
-        .font(.syne(.bold, size: 15))
-        .tracking(-0.2)
-        .foregroundStyle(textColor)
-        .animation(.easeInOut(duration: 0.15), value: progress > 0.05)
+        Text(currentLabel)
+            .font(.syne(.bold, size: 15))
+            .tracking(-0.2)
+            .foregroundStyle(textColor)
+            .id(currentLabel)
+            .transition(.asymmetric(
+                insertion: .opacity.combined(with: .move(edge: .bottom)),
+                removal: .opacity.combined(with: .move(edge: .top))
+            ))
+            .animation(.easeInOut(duration: 0.25), value: currentLabel)
     }
 
     private var holdGesture: some Gesture {
@@ -103,20 +103,27 @@ struct HoldToConfirmButton: View {
             }
     }
 
-    private var holdingLabel: String {
-        if progress >= 1 { return "Releasing..." }
-        if progress > 0.7 { return "Keep holding..." }
-        return "Hold to delete"
+    private var currentLabel: String {
+        if didComplete                  { return "Goodbye." }
+        if !isHolding && progress < 0.01 { return title }
+        if progress < 0.10 { return "Keep holding..." }
+        if progress < 0.25 { return "You sure about this?" }
+        if progress < 0.42 { return "All your pings will be gone." }
+        if progress < 0.60 { return "Your chats will vanish too." }
+        if progress < 0.75 { return "Last chance to let go..." }
+        if progress < 0.88 { return "We'll really miss you." }
+        if progress < 0.97 { return "Almost there..." }
+        return "Goodbye."
     }
 
     private var textColor: Color {
-        progress > 0.5 ? Color.white : Color.pingHot
+        progress > 0.45 ? Color.white : Color.pingHot
     }
 
     private func beginHold() {
         isHolding = true
         holdStartedAt = Date()
-        midPulseFired = false
+        milestonesFired = []
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         tick()
     }
@@ -128,7 +135,7 @@ struct HoldToConfirmButton: View {
             progress = 0
         }
         shake = 0
-        midPulseFired = false
+        milestonesFired = []
     }
 
     private func complete() {
@@ -145,7 +152,7 @@ struct HoldToConfirmButton: View {
             progress = 0
             didComplete = false
             shake = 0
-            midPulseFired = false
+            milestonesFired = []
         }
     }
 
@@ -158,16 +165,20 @@ struct HoldToConfirmButton: View {
         let eased = 1 - pow(1 - raw, 3)
         progress = eased
 
-        if eased > 0.7 {
-            let intensity = (eased - 0.7) / 0.3
-            let magnitude = CGFloat.random(in: -1...1) * (1.5 + intensity * 5.5)
+        // Milestone haptics: a light tap every 10% of progress
+        let milestone = Int(eased * 10)
+        if milestone > 0 && !milestonesFired.contains(milestone) {
+            milestonesFired.insert(milestone)
+            let style: UIImpactFeedbackGenerator.FeedbackStyle = milestone >= 8 ? .medium : .light
+            UIImpactFeedbackGenerator(style: style).impactOccurred()
+        }
+
+        if eased > 0.55 {
+            // Shake ramps in over a longer window now (55% → 100%)
+            let intensity = (eased - 0.55) / 0.45
+            let magnitude = CGFloat.random(in: -1...1) * (1.0 + intensity * 6.0)
             withAnimation(.linear(duration: 0.03)) {
                 shake = magnitude
-            }
-
-            if eased > 0.85 && !midPulseFired {
-                midPulseFired = true
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
         } else {
             shake = 0
