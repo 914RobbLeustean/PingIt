@@ -6,6 +6,26 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Chat reactions overlay + smoother location bubble
+
+### Added
+- `Features/Chat/Views/Components/MessageActionOverlay.swift`: long-press overlay for chat bubbles. Translucent backdrop (`black` 55% over `.ultraThinMaterial`), an amber-bordered reaction pill with the 8 emoji reactions (each bouncing in with a stagger via spring), and a stacked action card (Report / Block, only for other users' messages). Spring entrance + ease-out dismiss, both gated on `accessibilityReduceMotion`.
+
+### Changed
+- `Features/Chat/Views/MessageBubbleView.swift`: dropped the system `.contextMenu`. Bubbles now use `.onLongPressGesture(minimumDuration: 0.35)` and fire a medium `UIImpactFeedbackGenerator` haptic before calling an `onLongPress` callback. The bubble's `onReport` / `onBlock` parameters collapsed into a single `onLongPress` since the overlay handles those actions itself. `ChatLocationBubble` was rewritten to fill the bubble edge-to-edge: the inner `clipShape(.rect)` and 4pt padding are gone, the `Map` now sits directly inside the bubble's `ChatBubbleShape`, the location name floats on a dark gradient overlay at the bottom, and the preview matches the main Map screen's style (`pointsOfInterest: .excludingAll`, flat elevation).
+- `Features/Chat/Views/ChatView.swift`: owns `actionOverlayMessage` state so the overlay can sit above the whole chat screen, not just the bubble. Bubble `onLongPress` sets the message; the overlay routes Report → `handleReportTap`, Block → `handleBlockTap`, react → `handleReaction`. Backdrop tap clears the state. Animation gated on `actionOverlayMessage?.id`.
+
+### Files created
+- `PingIt/Features/Chat/Views/Components/MessageActionOverlay.swift`
+
+### Files significantly modified
+- `PingIt/Features/Chat/Views/MessageBubbleView.swift`
+- `PingIt/Features/Chat/Views/ChatView.swift`
+- `ARCHITECTURE.md`
+- `project_status.md`
+
+---
+
 ## [2026-06-01] — Chat screen UI overhaul
 
 ### Added

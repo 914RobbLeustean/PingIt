@@ -266,13 +266,14 @@ PingIt/
 │   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked; ping doc listener (also stores currentPing for the header); user profile cache; toggleReaction; sendLocationMessage
 │   │   └── Views/
 │   │       ├── ChatView.swift              Custom dark screen: ChatHeader on top, ScrollView with day-grouped LazyVStack, MessageInputBar via safeAreaInset, ChatStateView overlays for loading/error/empty
-│   │       ├── MessageBubbleView.swift     ChatBubbleShape tail bubbles, design-token colors, avatar on first-of-burst (28pt), anonymous label, context menu (react / report / block), routes location messages to inline ChatLocationBubble
+│   │       ├── MessageBubbleView.swift     ChatBubbleShape tail bubbles, design-token colors, avatar on first-of-burst (28pt), anonymous label, long-press fires haptic + onLongPress callback, routes location messages to inline ChatLocationBubble (map fills bubble, name on gradient overlay)
 │   │       ├── ReactionSummaryView.swift   Surface-capsule emoji badges with amber selection state
 │   │       └── Components/
 │   │           ├── ChatHeader.swift         Back button + ping emoji/title + TimelineView LIVE pulse + ChatUrgencyPill (color from PingUrgency)
 │   │           ├── MessageInputBar.swift    Capsule TextField w/ custom placeholder, share-location pill, amber paperplane send button w/ shadow & loading state
 │   │           ├── ChatDateSeparator.swift  Today / Yesterday / date label with hairlines on either side
-│   │           └── ChatBubbleShape.swift    Per-corner-radius `Shape` used to give one bubble corner a 4pt tail
+│   │           ├── ChatBubbleShape.swift    Per-corner-radius `Shape` used to give one bubble corner a 4pt tail
+│   │           └── MessageActionOverlay.swift  Long-press overlay: amber-bordered reaction pill (8 emoji, staggered bounce-in), Report/Block action card, ultraThinMaterial backdrop
 │   ├── Feed/
 │   │   ├── ViewModels/
 │   │   │   └── FeedViewModel.swift      Ping listener, sort/filter, creator cache, distance, urgency + expiry timer
