@@ -107,9 +107,10 @@ final class ChatViewModel {
         guard let chatService, listenerRegistration == nil else { return }
         // Subscribe from just before the oldest loaded message so reaction
         // updates (and any other modifications) on existing messages reach
-        // the client — otherwise Firestore filters them out.
-        let oldestLoaded = allMessages.first?.createdAt
-        let after = oldestLoaded.map { $0.addingTimeInterval(-0.001) } ?? Date.distantPast
+        // the client — otherwise Firestore filters them out. Fall back to
+        // "now" when the chat is empty; Date.distantPast overflows
+        // Firestore's Timestamp range and crashes the SDK.
+        let after = allMessages.first?.createdAt?.addingTimeInterval(-0.001) ?? Date.now
 
         listenerRegistration = chatService.observeNewMessages(chatId: chatId, after: after) { [weak self] result in
             guard let self else { return }
