@@ -9,10 +9,14 @@ struct ChatBubbleShape: Shape {
     let bottomTrailing: CGFloat
 
     func path(in rect: CGRect) -> Path {
-        let tl = min(topLeading, min(rect.width, rect.height) / 2)
-        let tr = min(topTrailing, min(rect.width, rect.height) / 2)
-        let bl = min(bottomLeading, min(rect.width, rect.height) / 2)
-        let br = min(bottomTrailing, min(rect.width, rect.height) / 2)
+        // A bubble can briefly receive a zero-sized rect during layout;
+        // returning an empty path avoids drawing invalid arcs.
+        guard rect.width > 0, rect.height > 0 else { return Path() }
+        let cap = max(0, min(rect.width, rect.height) / 2)
+        let tl = max(0, min(topLeading, cap))
+        let tr = max(0, min(topTrailing, cap))
+        let bl = max(0, min(bottomLeading, cap))
+        let br = max(0, min(bottomTrailing, cap))
 
         var path = Path()
         path.move(to: CGPoint(x: rect.minX + tl, y: rect.minY))

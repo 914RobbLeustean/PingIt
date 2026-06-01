@@ -175,9 +175,11 @@ struct PingDetailView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.pingUnavailable)
         .task(id: viewModel.pingUnavailable) {
             guard viewModel.pingUnavailable else { return }
+            // Don't dismiss while the user is inside the chat that's pushed
+            // on top — popping this screen would tear down ChatView too.
+            guard !navigateToChat else { return }
             try? await Task.sleep(for: .seconds(2))
             if !Task.isCancelled {
-                navigateToChat = false
                 dismiss()
             }
         }

@@ -73,9 +73,20 @@ struct ChatView: View {
         .onDisappear {
             viewModel.stopObserving()
             viewModel.stopObservingPing()
+            // Fire-and-forget; never hop back to MainActor so termination
+            // can't be blocked waiting on a Cloud Function call.
             let vm = viewModel
-            Task.detached { @MainActor in
-                await vm.leaveChat()
+            Task.detached(priority: .background) {
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        await vm.leaveChat()
+                    }
+                    group.addTask {
+                        try? await Task.sleep(for: .seconds(5))
+                    }
+                    await group.next()
+                    group.cancelAll()
+                }
             }
         }
         .onChange(of: viewModel.messages.count) {
