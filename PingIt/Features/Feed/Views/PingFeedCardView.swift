@@ -14,7 +14,7 @@ struct PingFeedCardView: View {
             UrgencyEdgeBar(urgency: urgency, animate: !reduceMotion)
 
             VStack(alignment: .leading, spacing: 6) {
-                AuthorRow(creator: creator, isHot: isHot)
+                AuthorRow(creator: creator, isHot: isHot, category: ping.category)
                 TitleRow(ping: ping)
                 MetaRow(
                     ping: ping,
@@ -120,6 +120,7 @@ private struct UrgencyShimmer: View {
 private struct AuthorRow: View {
     let creator: User?
     let isHot: Bool
+    let category: String?
 
     var body: some View {
         HStack {
@@ -129,6 +130,10 @@ private struct AuthorRow: View {
                 Text("@\(displayName)")
                     .font(.dmSans(.medium, size: 12, relativeTo: .caption))
                     .foregroundStyle(Color.pingTextSecondary)
+
+                if let pingCategory = category.flatMap(PingCategory.init(rawValue:)) {
+                    FeedCategoryTag(category: pingCategory)
+                }
             }
 
             Spacer()
@@ -144,6 +149,22 @@ private struct AuthorRow: View {
             return creator.username
         }
         return "anonymous"
+    }
+}
+
+// MARK: - Feed Category Tag
+
+private struct FeedCategoryTag: View {
+    let category: PingCategory
+
+    var body: some View {
+        Text("\(category.emoji) \(category.label)")
+            .font(.dmSans(.medium, size: 10, relativeTo: .caption2))
+            .foregroundStyle(Color.pingAccent.opacity(0.85))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(Color.pingAccent.opacity(0.1))
+            .clipShape(.capsule)
     }
 }
 
