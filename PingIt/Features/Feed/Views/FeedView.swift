@@ -65,17 +65,16 @@ private struct FeedHeader: View {
     let analyticsService: AnalyticsService
 
     var body: some View {
-        HStack(alignment: .center) {
-            HStack(spacing: 10) {
-                Text("Feed")
-                    .font(.syne(.extraBold, size: 30))
-                    .foregroundStyle(Color.pingTextPrimary)
-                    .tracking(-0.5)
+        HStack(spacing: 8) {
+            Text("Feed")
+                .font(.syne(.extraBold, size: 28))
+                .foregroundStyle(Color.pingTextPrimary)
+                .tracking(-0.5)
+                .fixedSize()
 
-                FeedLivePulse()
-            }
+            FeedLivePulse()
 
-            Spacer()
+            Spacer(minLength: 4)
 
             HStack(spacing: 6) {
                 ForEach(FeedSortOption.allCases, id: \.self) { option in
@@ -91,8 +90,9 @@ private struct FeedHeader: View {
                     }
                 }
             }
+            .fixedSize()
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 16)
         .padding(.top, 4)
     }
 }
