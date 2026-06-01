@@ -8,11 +8,10 @@ struct PingFeedCardView: View {
     let isHot: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var urgencyPulse = false
 
     var body: some View {
         HStack(spacing: 0) {
-            UrgencyEdgeBar(urgency: urgency, reduceMotion: reduceMotion)
+            UrgencyEdgeBar(urgency: urgency, animate: !reduceMotion)
 
             VStack(alignment: .leading, spacing: 6) {
                 AuthorRow(creator: creator, isHot: isHot)
@@ -27,52 +26,48 @@ struct PingFeedCardView: View {
             .padding(.leading, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBackground)
+        .background(Color.pingSurface)
         .clipShape(.rect(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(cardBorderColor, lineWidth: isHot ? 1.5 : 1)
+                .strokeBorder(hotBorderColor, lineWidth: isHot ? 1.5 : 1)
         )
-        .shadow(color: cardShadowColor, radius: isHot ? 14 : 10)
-        .scaleEffect(urgencyScale)
-        .animation(urgencyAnimation, value: urgencyPulse)
-        .onAppear {
-            if urgency == .critical, !reduceMotion {
-                urgencyPulse = true
-            }
-        }
+        .shadow(color: isHot ? Color.pingHot.opacity(0.18) : .clear, radius: isHot ? 14 : 10)
+        .modifier(CriticalPulseModifier(isActive: urgency == .critical && !reduceMotion))
         .accessibilityElement(children: .combine)
     }
 
-    private var cardBackground: some ShapeStyle {
-        if urgency == .critical {
-            return AnyShapeStyle(
-                Color.pingSurface
-                    .shadow(.inner(color: .pingHot.opacity(urgencyPulse ? 0.12 : 0.04), radius: urgencyPulse ? 12 : 4))
-            )
-        }
-        return AnyShapeStyle(Color.pingSurface)
-    }
-
-    private var cardBorderColor: Color {
+    private var hotBorderColor: Color {
         if isHot { return .pingHot.opacity(0.35) }
-        if urgency == .critical { return .pingHot.opacity(urgencyPulse ? 0.25 : 0.1) }
         return .pingBorder
     }
+}
 
-    private var cardShadowColor: Color {
-        if isHot { return .pingHot.opacity(0.18) }
-        return .clear
-    }
+// MARK: - Critical Pulse Modifier
 
-    private var urgencyScale: CGFloat {
-        guard urgency == .critical, !reduceMotion else { return 1.0 }
-        return urgencyPulse ? 0.985 : 1.0
-    }
+private struct CriticalPulseModifier: ViewModifier {
+    let isActive: Bool
 
-    private var urgencyAnimation: Animation? {
-        guard urgency == .critical, !reduceMotion else { return nil }
-        return .easeInOut(duration: 2.8).repeatForever(autoreverses: true)
+    func body(content: Content) -> some View {
+        if isActive {
+            content
+                .phaseAnimator([false, true]) { view, phase in
+                    view
+                        .scaleEffect(phase ? 0.985 : 1.0)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.pingHot.opacity(phase ? 0.06 : 0.0))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(Color.pingHot.opacity(phase ? 0.25 : 0.08), lineWidth: 1)
+                        )
+                } animation: { phase in
+                    .easeInOut(duration: phase ? 2.4 : 2.0)
+                }
+        } else {
+            content
+        }
     }
 }
 
@@ -80,43 +75,43 @@ struct PingFeedCardView: View {
 
 private struct UrgencyEdgeBar: View {
     let urgency: PingUrgency
-    let reduceMotion: Bool
-
-    @State private var shimmer = false
+    let animate: Bool
 
     var body: some View {
         if urgency != .normal {
             Rectangle()
                 .fill(urgency.color)
                 .frame(width: 4)
-                .overlay(shimmerOverlay)
-                .onAppear {
-                    if urgency == .urgent, !reduceMotion {
-                        shimmer = true
+                .overlay(alignment: .top) {
+                    if urgency == .urgent, animate {
+                        UrgencyShimmer()
                     }
                 }
+                .clipped()
         }
     }
+}
 
-    @ViewBuilder
-    private var shimmerOverlay: some View {
-        if urgency == .urgent, !reduceMotion {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, .white.opacity(0.3), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+// MARK: - Urgency Shimmer
+
+private struct UrgencyShimmer: View {
+    var body: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [.clear, .white.opacity(0.4), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
-                .offset(y: shimmer ? 60 : -60)
-                .animation(
-                    .easeInOut(duration: 2.2)
-                    .repeatForever(autoreverses: false)
-                    .delay(1.0),
-                    value: shimmer
-                )
-        }
+            )
+            .frame(height: 30)
+            .phaseAnimator([false, true]) { view, phase in
+                view.offset(y: phase ? 80 : -30)
+            } animation: { phase in
+                phase
+                    ? .easeInOut(duration: 1.8)
+                    : .easeInOut(duration: 0.01)
+            }
     }
 }
 
