@@ -119,8 +119,8 @@ The Feed feature owns (added 2026-06-01):
 - `FeedHotBadge` — Red capsule badge ("HOT") with DM Sans Bold 10pt white text on `pingHot` background, 0.8pt letter tracking.
 - `FeedLivePulse` — 7pt pulsing green dot (scale 1→1.3, opacity 1→0.6 on 1.5s infinite animation) + "LIVE" label in DM Sans SemiBold 11pt `pingLive`.
 - `FeedEmptyState` — Pin emoji (40pt) + Syne Bold 18pt title + DM Sans Regular 14pt subtitle for zero-ping state.
-- `PingFeedCardView` — Composite card with: urgency edge bar (3pt red <1.5h / amber <6h), avatar circle with initial letter, `@username` label, hot badge, Syne Bold 17pt title, urgency-colored countdown label, boost/member counts, optional media indicator. Card border turns `pingHot` 20% when `isHot`, with subtle red shadow.
-- `PingUrgency` — Enum (`.critical` / `.urgent` / `.normal`) derived from time remaining; used by card edge bar and countdown label color.
+- `PingFeedCardView` — Composite card with: urgency edge bar (4pt red <1.5h / amber <6h), avatar circle with initial letter, `@username` label, hot badge, Syne Bold 17pt title, urgency-colored countdown label, boost/member counts, optional media indicator. Hot cards: `pingHot` 35% border (1.5pt) + 18% shadow. Critical cards: `phaseAnimator` breathing pulse (scale + red overlay + pulsing border). Urgent cards: amber shimmer sweeps down edge bar. All animations respect `accessibilityReduceMotion`.
+- `PingUrgency` — Enum (`.critical` / `.urgent` / `.normal`) derived from time remaining; used by card edge bar, countdown label color, and card animations.
 
 **Legal screens render natively.** `Features/Authentication/Models/LegalDocument.swift` parses the bundled `terms.html` / `privacy.html` resources into a small `LegalDocument` block model (`heading`, `sectionHeading`, `updated`, `paragraph`, `bullets`), and `Features/Authentication/Views/LegalDocumentView.swift` renders those blocks with the design tokens. The previous `WKWebView`-based `WebContentView` was removed.
 
