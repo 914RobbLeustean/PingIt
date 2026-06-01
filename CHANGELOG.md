@@ -6,6 +6,39 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Chat screen UI overhaul
+
+### Added
+- `Features/Chat/Views/Components/ChatHeader.swift`: dark custom chat header with `AuthBackButton`, ping emoji + title (Syne ExtraBold 16pt), `TimelineView`-driven LIVE pulse + label, and a `ChatUrgencyPill` that derives its color/copy from `PingUrgency`.
+- `Features/Chat/Views/Components/MessageInputBar.swift`: capsule `TextField` with a custom placeholder helper, a 44pt share-location pill on the left, and an amber 44pt paperplane send button that flips to `pingSurface` + secondary text when the field is empty. Shows a black `ProgressView` while a message is sending.
+- `Features/Chat/Views/Components/ChatDateSeparator.swift`: Today / Yesterday / abbreviated-date label between hairline rules. Inserted at the start of each new day in the message list.
+- `Features/Chat/Views/Components/ChatBubbleShape.swift`: per-corner-radius `Shape` used to give one bubble corner a 4pt tail while the others stay at 18pt.
+
+### Changed
+- `Features/Chat/ViewModels/ChatViewModel.swift`: stores `currentPing` from the ping document listener so the header can show emoji, title, and expiry. No service-call changes.
+- `Features/Chat/Views/MessageBubbleView.swift`: full rewrite. Own messages are `pingAccent` on black text with a bottom-right tail; other messages are `pingSurface` with `pingTextPrimary` and a white-7% hairline border, tail on the top-left. Avatars (28pt) still render on the first message of a contiguous sender block, with the anonymous variant using a `person.fill` glyph on a surface circle. Timestamps and `@username` labels use DM Sans on `pingTextSecondary`. Reactions and the report/block context menu are preserved. Location messages are rendered inline as `ChatLocationBubble` (mini Map preview + `mappin.circle.fill` name row), replacing the old `LocationMessageView`.
+- `Features/Chat/Views/ReactionSummaryView.swift`: reactions now use surface capsules with `pingBorder` and switch to a 18% amber tint + amber-border when the current user reacted.
+- `Features/Chat/Views/ChatView.swift`: drops the system navigation title and `.accentColor` send button. New layout is a vertical stack of `ChatHeader` + `ScrollView` (day-grouped `LazyVStack` of `ChatDateSeparator` + `MessageBubbleView`) with `MessageInputBar` pinned via `.safeAreaInset(.bottom)`. Loading / error / empty states use a new `ChatStateView` (SF Symbol + Syne title + DM Sans body). `Load earlier messages` pagination is a capsule pill. Scroll uses `.scrollDismissesKeyboard(.interactively)` and `.scrollIndicators(.hidden)`.
+
+### Removed
+- `Features/Chat/Views/LocationMessageView.swift`: replaced by the inline `ChatLocationBubble` inside `MessageBubbleView`.
+
+### Files created
+- `PingIt/Features/Chat/Views/Components/ChatBubbleShape.swift`
+- `PingIt/Features/Chat/Views/Components/ChatHeader.swift`
+- `PingIt/Features/Chat/Views/Components/ChatDateSeparator.swift`
+- `PingIt/Features/Chat/Views/Components/MessageInputBar.swift`
+
+### Files significantly modified
+- `PingIt/Features/Chat/Views/ChatView.swift`
+- `PingIt/Features/Chat/Views/MessageBubbleView.swift`
+- `PingIt/Features/Chat/Views/ReactionSummaryView.swift`
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift`
+- `ARCHITECTURE.md`
+- `project_status.md`
+
+---
+
 ## [2026-06-01] — Onboarding flow redesign + Report keyboard dismiss
 
 ### Changed

@@ -263,12 +263,16 @@ PingIt/
 │   │           └── CreatePingErrorBanner.swift     Warning icon + error text in pingHot
 │   ├── Chat/
 │   │   ├── ViewModels/
-│   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked; ping doc listener; user profile cache; toggleReaction; sendLocationMessage
+│   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked; ping doc listener (also stores currentPing for the header); user profile cache; toggleReaction; sendLocationMessage
 │   │   └── Views/
-│   │       ├── ChatView.swift              Real-time message list + input, report sheet, ping unavailable dismiss, location share button
-│   │       ├── MessageBubbleView.swift     Sender avatar + username, grouped bubbles, report/block context menu, reactions display, location routing
-│   │       ├── ReactionSummaryView.swift   Tappable emoji capsule badges below message bubbles
-│   │       └── LocationMessageView.swift   Inline mini-map card for shared locations, tap to open Apple Maps
+│   │       ├── ChatView.swift              Custom dark screen: ChatHeader on top, ScrollView with day-grouped LazyVStack, MessageInputBar via safeAreaInset, ChatStateView overlays for loading/error/empty
+│   │       ├── MessageBubbleView.swift     ChatBubbleShape tail bubbles, design-token colors, avatar on first-of-burst (28pt), anonymous label, context menu (react / report / block), routes location messages to inline ChatLocationBubble
+│   │       ├── ReactionSummaryView.swift   Surface-capsule emoji badges with amber selection state
+│   │       └── Components/
+│   │           ├── ChatHeader.swift         Back button + ping emoji/title + TimelineView LIVE pulse + ChatUrgencyPill (color from PingUrgency)
+│   │           ├── MessageInputBar.swift    Capsule TextField w/ custom placeholder, share-location pill, amber paperplane send button w/ shadow & loading state
+│   │           ├── ChatDateSeparator.swift  Today / Yesterday / date label with hairlines on either side
+│   │           └── ChatBubbleShape.swift    Per-corner-radius `Shape` used to give one bubble corner a 4pt tail
 │   ├── Feed/
 │   │   ├── ViewModels/
 │   │   │   └── FeedViewModel.swift      Ping listener, sort/filter, creator cache, distance, urgency + expiry timer
