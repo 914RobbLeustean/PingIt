@@ -21,6 +21,7 @@ struct MainTabView: View {
                 SettingsView()
             }
         }
+        .tint(Color.pingAccent)
         .task(id: blockService.currentUserId) {
             guard blockService.currentUserId != nil else { return }
             blockService.startObserving()
