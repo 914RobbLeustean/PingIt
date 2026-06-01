@@ -4,37 +4,44 @@ struct WelcomeView: View {
     @Binding var path: [AuthRoute]
 
     var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
+        ZStack {
+            Color.pingBackground
+                .ignoresSafeArea()
 
-            VStack(spacing: 8) {
-                Text("PingIt")
-                    .font(.largeTitle)
-                    .bold()
-                Text("Discover what's happening around you.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
+            RadarBackground()
+                .ignoresSafeArea()
 
-            Spacer()
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
 
-            VStack(spacing: 12) {
-                Button("Create Account") {
-                    path.append(.register)
+                VStack(alignment: .leading, spacing: 14) {
+                    PingItWordmark()
+                    Text("The city is live. Feel it.")
+                        .font(.dmSans(.regular, size: 16, relativeTo: .body))
+                        .foregroundStyle(Color.pingTextSecondary)
+                        .lineSpacing(4)
+                        .frame(maxWidth: 280, alignment: .leading)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 32)
 
-                Button("Sign In") {
-                    path.append(.login)
+                Spacer(minLength: 0)
+
+                VStack(spacing: 12) {
+                    Button("Create Account") {
+                        path.append(.register)
+                    }
+                    .buttonStyle(PrimaryPillButtonStyle())
+
+                    Button("Sign In") {
+                        path.append(.login)
+                    }
+                    .buttonStyle(SecondaryPillButtonStyle())
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 48)
             }
         }
-        .padding()
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
