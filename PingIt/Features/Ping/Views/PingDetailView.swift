@@ -579,32 +579,51 @@ private struct DetailActionLinks: View {
     let onBlock: () -> Void
 
     var body: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 10) {
             Button(action: onReport) {
-                HStack(spacing: 5) {
-                    Image(systemName: "exclamationmark.bubble")
-                        .font(.system(size: 13))
-                    Text("Report")
-                        .font(.dmSans(.medium, size: 13, relativeTo: .footnote))
-                }
-                .foregroundStyle(Color.pingTextSecondary)
+                DetailActionPillLabel(
+                    icon: "exclamationmark.bubble",
+                    text: "Report",
+                    foreground: Color.pingTextSecondary,
+                    border: Color.pingBorder
+                )
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Report this ping")
 
             Button(action: onBlock) {
-                HStack(spacing: 5) {
-                    Image(systemName: "hand.raised")
-                        .font(.system(size: 13))
-                    Text("Block User")
-                        .font(.dmSans(.medium, size: 13, relativeTo: .footnote))
-                }
-                .foregroundStyle(Color.pingHot.opacity(0.8))
+                DetailActionPillLabel(
+                    icon: "hand.raised",
+                    text: "Block User",
+                    foreground: Color.pingHot,
+                    border: Color.pingHot.opacity(0.35)
+                )
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Block this user")
-
-            Spacer()
         }
+    }
+}
+
+private struct DetailActionPillLabel: View {
+    let icon: String
+    let text: String
+    let foreground: Color
+    let border: Color
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+            Text(text)
+                .font(.dmSans(.semiBold, size: 13, relativeTo: .footnote))
+        }
+        .foregroundStyle(foreground)
+        .frame(maxWidth: .infinity)
+        .frame(height: 42)
+        .background(Color.pingSurface, in: .capsule)
+        .overlay(
+            Capsule().strokeBorder(border, lineWidth: 1)
+        )
     }
 }
