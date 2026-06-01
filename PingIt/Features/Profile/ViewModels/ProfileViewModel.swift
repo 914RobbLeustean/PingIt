@@ -16,6 +16,7 @@ final class ProfileViewModel {
     private(set) var isUploadingImage = false
     private(set) var errorMessage: String?
     private(set) var successMessage: String?
+    private var successDismissTask: Task<Void, Never>?
     private(set) var pingCount = 0
     private(set) var totalBoosts = 0
 
@@ -139,7 +140,7 @@ final class ProfileViewModel {
             user?.username = trimmed
             user?.usernameLowercase = trimmed.lowercased()
             isEditingUsername = false
-            successMessage = "Username updated"
+            showSuccess("Username updated")
         } catch PingItError.usernameAlreadyTaken {
             errorMessage = PingItError.usernameAlreadyTaken.localizedDescription
         } catch {
@@ -176,7 +177,7 @@ final class ProfileViewModel {
             let downloadURL = try await imageStorageService.uploadProfileImage(data: compressedData, userId: currentUserId)
             try await userService.updateUser(id: currentUserId, data: ["profileImageUrl": downloadURL])
             user?.profileImageUrl = downloadURL
-            successMessage = "Profile picture updated"
+            showSuccess("Profile picture updated")
         } catch {
             errorMessage = PingItError.profileImageUploadFailed(underlying: error).localizedDescription
         }
@@ -193,7 +194,7 @@ final class ProfileViewModel {
             try? await imageStorageService.deleteProfileImage(userId: currentUserId)
             try await userService.updateUser(id: currentUserId, data: ["profileImageUrl": ""])
             user?.profileImageUrl = nil
-            successMessage = "Profile picture removed"
+            showSuccess("Profile picture removed")
         } catch {
             errorMessage = PingItError.profileUpdateFailed(underlying: error).localizedDescription
         }
@@ -221,13 +222,23 @@ final class ProfileViewModel {
             let downloadURL = try await imageStorageService.uploadProfileImage(data: compressedData, userId: currentUserId)
             try await userService.updateUser(id: currentUserId, data: ["profileImageUrl": downloadURL])
             user?.profileImageUrl = downloadURL
-            successMessage = "Profile picture updated"
+            showSuccess("Profile picture updated")
         } catch {
             errorMessage = PingItError.profileImageUploadFailed(underlying: error).localizedDescription
         }
     }
 
     // MARK: - Private
+
+    private func showSuccess(_ message: String) {
+        successDismissTask?.cancel()
+        successMessage = message
+        successDismissTask = Task {
+            try? await Task.sleep(for: .seconds(3.5))
+            guard !Task.isCancelled else { return }
+            successMessage = nil
+        }
+    }
 
     private func compressImage(_ data: Data) -> Data? {
         guard let image = UIImage(data: data) else { return nil }

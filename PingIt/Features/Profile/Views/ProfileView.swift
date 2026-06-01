@@ -54,9 +54,10 @@ struct ProfileView: View {
                             Text(successMessage)
                                 .font(.dmSans(.medium, size: 13, relativeTo: .footnote))
                                 .foregroundStyle(Color.pingLive)
-                                .transition(.opacity)
+                                .transition(.opacity.combined(with: .blurReplace))
                         }
                     }
+                    .animation(.easeInOut(duration: 0.35), value: viewModel.successMessage)
                     .padding(.top, 4)
                     .padding(.bottom, 90)
                 }
