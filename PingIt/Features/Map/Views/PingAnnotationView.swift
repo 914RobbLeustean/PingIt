@@ -102,22 +102,21 @@ private struct PingPulseRing: View {
     let duration: Double
     let delay: Double
 
-    @State private var phase = 0
-
     var body: some View {
-        Circle()
-            .fill(color)
-            .frame(width: 36, height: 36)
-            .scaleEffect(phase == 0 ? 0.7 : 2.4)
-            .opacity(phase == 0 ? 0.55 : 0)
-            .task {
-                try? await Task.sleep(for: .seconds(delay))
-                withAnimation(
-                    .easeOut(duration: duration).repeatForever(autoreverses: false)
-                ) {
-                    phase = 1
-                }
-            }
+        TimelineView(.animation) { context in
+            let elapsed = context.date.timeIntervalSinceReferenceDate - delay
+            let progress = elapsed > 0
+                ? (elapsed.truncatingRemainder(dividingBy: duration)) / duration
+                : 0
+            let eased = 1 - pow(1 - progress, 2)
+            let scale = 0.7 + (2.4 - 0.7) * eased
+
+            Circle()
+                .fill(color)
+                .frame(width: 36, height: 36)
+                .scaleEffect(scale)
+                .opacity(elapsed > 0 ? 0.55 * (1 - progress) : 0)
+        }
     }
 }
 
@@ -127,22 +126,23 @@ private struct CriticalShake: ViewModifier {
     let isActive: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var offset: CGFloat = 0
 
     func body(content: Content) -> some View {
-        content
-            .offset(x: offset)
-            .task(id: isActive) {
-                guard isActive, !reduceMotion else {
-                    offset = 0
-                    return
-                }
-                withAnimation(
-                    .easeInOut(duration: 0.18).repeatForever(autoreverses: true)
-                ) {
-                    offset = 1.5
-                }
-            }
+        if isActive && !reduceMotion {
+            content.modifier(CriticalShakeActive())
+        } else {
+            content
+        }
+    }
+}
+
+private struct CriticalShakeActive: ViewModifier {
+    func body(content: Content) -> some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let offset = sin(t * 2 * .pi / 0.36) * 1.5
+            content.offset(x: offset)
+        }
     }
 }
 
