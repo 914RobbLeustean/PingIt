@@ -9,6 +9,7 @@ struct FeedSortChip: View {
         Button(action: action) {
             Text(label)
                 .font(.dmSans(.medium, size: 12, relativeTo: .caption))
+                .fixedSize()
                 .foregroundStyle(isSelected ? Color.pingAccent : .pingTextSecondary)
                 .padding(.horizontal, 12)
                 .frame(height: 30)
