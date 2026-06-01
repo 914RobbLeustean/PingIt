@@ -63,6 +63,7 @@ struct PingItApp: App {
                     }
                 }
                 .task {
+                    FontRegistrationCheck.run()
                     UNUserNotificationCenter.current().delegate = notificationService
                     Messaging.messaging().delegate = notificationService
                     let granted = await notificationService.requestPermission()
@@ -70,6 +71,7 @@ struct PingItApp: App {
                         await notificationService.registerFCMToken()
                     }
                 }
+                .preferredColorScheme(.dark)
         }
     }
 }
