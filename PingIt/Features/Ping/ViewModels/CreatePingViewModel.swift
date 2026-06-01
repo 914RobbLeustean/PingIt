@@ -19,7 +19,7 @@ final class CreatePingViewModel {
     var selectedCategory: PingCategory?
     var selectedExpirationIndex = 1 // Default: 24hr
     var isCustomDuration = false
-    var customDurationHours: Double = 2.0
+    var customExpirySlotIndex: Int = 0
     var selectedLocation: CLLocationCoordinate2D?
     var selectedLocationName: String?
     private(set) var selectedImageData: Data?
@@ -50,13 +50,37 @@ final class CreatePingViewModel {
 
     var selectedExpiration: TimeInterval {
         if isCustomDuration {
-            return customDurationHours * 3600
+            return customExpiryDate.timeIntervalSince(Date.now)
         }
         return Constants.Ping.expirationPresets[selectedExpirationIndex]
     }
 
-    var customExpiryDisplayLabel: String {
-        let totalMinutes = Int(customDurationHours * 60)
+    var customExpirySlots: [Date] {
+        Self.buildExpirySlots(from: Date.now)
+    }
+
+    var customExpiryDate: Date {
+        let slots = customExpirySlots
+        guard !slots.isEmpty else { return Date.now.addingTimeInterval(3600) }
+        let clamped = min(max(customExpirySlotIndex, 0), slots.count - 1)
+        return slots[clamped]
+    }
+
+    var customExpiryTimeLabel: String {
+        let date = customExpiryDate
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return date.formatted(date: .omitted, time: .shortened)
+        }
+        if calendar.isDateInTomorrow(date) {
+            return "Tomorrow, \(date.formatted(date: .omitted, time: .shortened))"
+        }
+        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
+    }
+
+    var customExpiryDurationLabel: String {
+        let seconds = customExpiryDate.timeIntervalSince(Date.now)
+        let totalMinutes = max(Int(seconds / 60), 0)
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
         if minutes == 0 {
@@ -65,9 +89,22 @@ final class CreatePingViewModel {
         return "\(hours)h \(minutes)m"
     }
 
-    var customExpiryAbsoluteLabel: String {
-        let expiryDate = Date.now.addingTimeInterval(customDurationHours * 3600)
-        return expiryDate.formatted(date: .omitted, time: .shortened)
+    static func buildExpirySlots(from now: Date) -> [Date] {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .hour], from: now)
+        guard let currentHourStart = calendar.date(from: components) else { return [] }
+
+        let nextFullHour = currentHourStart.addingTimeInterval(3600)
+        let earliest = nextFullHour.addingTimeInterval(3600)
+        let latest = now.addingTimeInterval(Constants.Ping.customDurationMax)
+
+        var slots: [Date] = []
+        var slot = earliest
+        while slot <= latest {
+            slots.append(slot)
+            slot = slot.addingTimeInterval(900)
+        }
+        return slots
     }
 
     func expirationLabel(for index: Int) -> String {

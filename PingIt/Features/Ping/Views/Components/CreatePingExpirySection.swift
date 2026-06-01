@@ -3,9 +3,10 @@ import SwiftUI
 struct CreatePingExpirySection: View {
     @Binding var selectedIndex: Int
     @Binding var isCustomDuration: Bool
-    @Binding var customDurationHours: Double
-    let durationDisplayLabel: String
-    let absoluteTimeLabel: String
+    @Binding var customExpirySlotIndex: Int
+    let slotCount: Int
+    let timeLabel: String
+    let durationLabel: String
 
     private let presetLabels = ["6h", "24h", "48h", "Custom"]
 
@@ -26,9 +27,10 @@ struct CreatePingExpirySection: View {
 
             if isCustomDuration {
                 CustomDurationSlider(
-                    durationHours: $customDurationHours,
-                    displayLabel: durationDisplayLabel,
-                    absoluteTimeLabel: absoluteTimeLabel
+                    slotIndex: $customExpirySlotIndex,
+                    slotCount: slotCount,
+                    timeLabel: timeLabel,
+                    durationLabel: durationLabel
                 )
                 .padding(.horizontal, 20)
                 .transition(.opacity.combined(with: .move(edge: .top)))

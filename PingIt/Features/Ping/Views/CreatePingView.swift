@@ -47,9 +47,10 @@ struct CreatePingView: View {
                     CreatePingExpirySection(
                         selectedIndex: $viewModel.selectedExpirationIndex,
                         isCustomDuration: $viewModel.isCustomDuration,
-                        customDurationHours: $viewModel.customDurationHours,
-                        durationDisplayLabel: viewModel.customExpiryDisplayLabel,
-                        absoluteTimeLabel: viewModel.customExpiryAbsoluteLabel
+                        customExpirySlotIndex: $viewModel.customExpirySlotIndex,
+                        slotCount: viewModel.customExpirySlots.count,
+                        timeLabel: viewModel.customExpiryTimeLabel,
+                        durationLabel: viewModel.customExpiryDurationLabel
                     )
 
                     CreatePingLocationSection(
