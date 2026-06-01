@@ -290,7 +290,7 @@ PingIt/
 │   │   ├── ViewModels/
 │   │   │   └── ReportViewModel.swift       Reason selection, submit, block offer after success
 │   │   └── Views/
-│   │       └── ReportView.swift            Form: reason picker, details text field, block offer
+│   │       └── ReportView.swift            Design-system sheet: drag-handle header, reason cards w/ amber radio, styled TextEditor for details, capsule submit, success + block-offer cards
 │   ├── Profile/
 │   │   ├── ViewModels/
 │   │   │   └── ProfileViewModel.swift      Profile CRUD, stats computation, username edit mode, Storage upload

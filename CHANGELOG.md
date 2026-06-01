@@ -6,6 +6,28 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Report and Block UI overhaul
+
+### Changed
+- `Features/Ping/Views/PingDetailView.swift`: `DetailActionLinks` no longer renders as inline text links. Report and Block are now side-by-side equal-width capsule pills with `pingSurface` fill and hairline borders. Block uses `pingHot` foreground and a 35% red border so the destructive intent reads at a glance.
+- `Features/Report/Views/ReportView.swift`: full rewrite. Replaces the system `Form` with a dark sheet matching the rest of the design system:
+  - `ReportSheetHeader`: drag handle + centered Syne ExtraBold 18pt title + 38pt close X.
+  - `ReportReasonCard`: one card per `Report.ReportReason` with an SF Symbol icon (`megaphone` / `exclamationmark.bubble` / `eye.slash` / `ellipsis.circle`), DM Sans SemiBold label, and an amber-filled radio indicator on the right. Selected state uses an amber border + accent icon.
+  - `ReportDetailsSection`: styled `TextEditor` on `pingSurfaceElevated` with placeholder and 500-char counter (matches `CreatePingDescriptionSection`).
+  - `ReportSubmitButton`: full-width amber capsule with `pingAccent` glow shadow. Shows a black `ProgressView` while submitting. Disabled state drops opacity to 35%.
+  - `ReportErrorChip`: design-token red-tinted chip with icon for validation errors.
+  - `ReportSubmittedCard`: green checkmark + Syne ExtraBold title + DM Sans subtitle on a surface card.
+  - `ReportBlockOfferCard`: surface card prompting the reporter to also block, with "No thanks" secondary pill and red `Block` pill (with shadow).
+- Sheet presentation uses `.presentationDetents([.large])`, hidden drag indicator, and 28pt corner radius for visual parity with the Create Ping sheet.
+
+### Files significantly modified
+- `PingIt/Features/Ping/Views/PingDetailView.swift`
+- `PingIt/Features/Report/Views/ReportView.swift`
+- `ARCHITECTURE.md`
+- `project_status.md`
+
+---
+
 ## [2026-06-01] — Map screen UI overhaul
 
 ### Added
