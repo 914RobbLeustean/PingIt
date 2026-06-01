@@ -5,42 +5,9 @@ struct MapPingSheet: View {
     let creator: User?
     let onJoinChat: () -> Void
     let onViewDetails: () -> Void
-    let onDismiss: () -> Void
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            Color.black.opacity(0.001)
-                .ignoresSafeArea()
-                .onTapGesture(perform: onDismiss)
-
-            SheetCard(
-                ping: ping,
-                creator: creator,
-                onJoinChat: onJoinChat,
-                onViewDetails: onViewDetails
-            )
-            .padding(.horizontal, 12)
-            .padding(.bottom, 82)
-            .transition(
-                .move(edge: .bottom)
-                .combined(with: .opacity)
-            )
-        }
-    }
-}
-
-// MARK: - Sheet Card
-
-private struct SheetCard: View {
-    let ping: Ping
-    let creator: User?
-    let onJoinChat: () -> Void
-    let onViewDetails: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            DragHandle()
-
             SheetAuthorRow(ping: ping, creator: creator)
                 .padding(.bottom, 10)
 
@@ -61,34 +28,13 @@ private struct SheetCard: View {
 
             SheetButtonRow(onJoinChat: onJoinChat, onViewDetails: onViewDetails)
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
-        )
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.pingSurface)
-        )
-        .clipShape(.rect(cornerRadius: 24))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.6), radius: 20, y: -8)
-    }
-
-}
-
-// MARK: - Drag Handle
-
-private struct DragHandle: View {
-    var body: some View {
-        Capsule()
-            .fill(.white.opacity(0.12))
-            .frame(width: 36, height: 4)
-            .padding(.bottom, 16)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 20)
+        .presentationDetents([.height(280), .medium, .large])
+        .presentationBackgroundInteraction(.enabled(upThrough: .height(280)))
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(24)
     }
 }
 

@@ -173,19 +173,14 @@ struct MapView: View {
                     ChatView(chatId: chatId, pingId: ping.id ?? "", pingCreatorId: ping.creatorId)
                 }
             }
-            .overlay {
-                if let ping = sheetPing {
-                    MapPingSheet(
-                        ping: ping,
-                        creator: sheetCreator,
-                        onJoinChat: { handleSheetJoinChat(ping: ping) },
-                        onViewDetails: { handleSheetViewDetails(ping: ping) },
-                        onDismiss: { dismissPingSheet() }
-                    )
-                    .transition(.identity)
-                }
+            .sheet(item: $sheetPing) { ping in
+                MapPingSheet(
+                    ping: ping,
+                    creator: sheetCreator,
+                    onJoinChat: { handleSheetJoinChat(ping: ping) },
+                    onViewDetails: { handleSheetViewDetails(ping: ping) }
+                )
             }
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: sheetPing != nil)
             .sheet(isPresented: $showCreatePing, onDismiss: handleCreatePingDismiss) {
                 CreatePingView(createdPingLocation: $createdPingLocation)
                     .presentationDetents([.large])
@@ -352,30 +347,21 @@ struct MapView: View {
 
     private func showPingSheet(_ ping: Ping) {
         sheetCreator = nil
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            sheetPing = ping
-        }
+        sheetPing = ping
         Task {
             sheetCreator = try? await userService.fetchUser(id: ping.creatorId)
         }
     }
 
-    private func dismissPingSheet() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
-            sheetPing = nil
-        }
-        sheetCreator = nil
-    }
-
     private func handleSheetJoinChat(ping: Ping) {
-        dismissPingSheet()
+        sheetPing = nil
         if ping.chatId != nil {
             chatPing = ping
         }
     }
 
     private func handleSheetViewDetails(ping: Ping) {
-        dismissPingSheet()
+        sheetPing = nil
         detailPing = ping
     }
 }
