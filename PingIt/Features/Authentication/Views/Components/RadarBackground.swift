@@ -17,16 +17,20 @@ struct RadarBackground: View {
 
     // MARK: Rings
 
-    private static let ringStartRadius: CGFloat = 12
-    private static let ringPeriod: TimeInterval = 3.0
-    private static let ringDelays: [TimeInterval] = [0.0, 1.1, 2.2]
+    private static let ringPeriod: TimeInterval = 3.5
+    private static let ringDelays: [TimeInterval] = [0.0, 0.875, 1.75, 2.625]
+    private static let ringLineWidth: CGFloat = 1.2
 
     @ViewBuilder
     private func rings(in size: CGSize) -> some View {
-        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        // Pulse origin: top-left corner of the screen. Each ring expands until
+        // its radius covers the screen's diagonal — guaranteeing the wave sweeps
+        // past the bottom-right corner regardless of device aspect.
+        let origin = CGPoint.zero
+        let maxRadius = hypot(size.width, size.height)
         if reduceMotion {
             ForEach(Self.ringDelays.indices, id: \.self) { _ in
-                Self.ringShape(progress: 0.5, center: center)
+                Self.ringShape(progress: 0.5, origin: origin, maxRadius: maxRadius)
             }
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: false)) { context in
@@ -34,22 +38,22 @@ struct RadarBackground: View {
                 ForEach(Self.ringDelays.indices, id: \.self) { i in
                     let local = (now - Self.ringDelays[i]).truncatingRemainder(dividingBy: Self.ringPeriod)
                     let p = max(0, local) / Self.ringPeriod
-                    Self.ringShape(progress: p, center: center)
+                    Self.ringShape(progress: p, origin: origin, maxRadius: maxRadius)
                 }
             }
         }
     }
 
-    private static func ringShape(progress p: Double, center: CGPoint) -> some View {
+    private static func ringShape(progress p: Double, origin: CGPoint, maxRadius: CGFloat) -> some View {
         let eased = 1 - pow(1 - p, 3)  // ease-out cubic
-        let scale = lerp(0.05, 7.0, eased)
+        let radius = maxRadius * eased
+        let diameter = max(radius * 2, 1)
         let opacity = lerp(0.9, 0.0, eased)
         return Circle()
-            .stroke(Color.pingAccent, lineWidth: 1.2)
-            .frame(width: ringStartRadius * 2, height: ringStartRadius * 2)
-            .scaleEffect(scale)
+            .stroke(Color.pingAccent, lineWidth: ringLineWidth)
+            .frame(width: diameter, height: diameter)
             .opacity(opacity)
-            .position(center)
+            .position(origin)
     }
 
     // MARK: Dots
@@ -60,18 +64,29 @@ struct RadarBackground: View {
         let phase: TimeInterval
     }
 
+    /// 16 dots spread across a 390×844 reference viewport (iPhone-shape).
+    /// Positions hand-picked to avoid clustering and to keep the top-left
+    /// region — where rings spawn — sparser so the rings read clearly.
     private static let dotSpecs: [DotSpec] = [
-        .init(x:  72, y: 210, phase: 0.4),
-        .init(x: 295, y: 148, phase: 1.7),
-        .init(x: 328, y: 272, phase: 0.1),
-        .init(x:  55, y: 318, phase: 2.5),
-        .init(x: 248, y: 362, phase: 1.0),
-        .init(x: 140, y: 430, phase: 2.9),
-        .init(x: 340, y: 195, phase: 0.7),
-        .init(x: 180, y: 165, phase: 1.4),
+        .init(x: 320, y:  90, phase: 0.4),
+        .init(x: 245, y: 145, phase: 2.1),
+        .init(x: 350, y: 215, phase: 1.2),
+        .init(x: 175, y: 200, phase: 3.4),
+        .init(x:  90, y: 285, phase: 0.7),
+        .init(x: 280, y: 305, phase: 2.8),
+        .init(x: 360, y: 380, phase: 1.6),
+        .init(x: 200, y: 415, phase: 4.1),
+        .init(x:  60, y: 460, phase: 0.2),
+        .init(x: 305, y: 480, phase: 3.6),
+        .init(x: 140, y: 540, phase: 1.9),
+        .init(x: 250, y: 595, phase: 4.4),
+        .init(x:  85, y: 645, phase: 2.5),
+        .init(x: 345, y: 670, phase: 0.9),
+        .init(x: 200, y: 730, phase: 3.1),
+        .init(x: 290, y: 790, phase: 1.4),
     ]
     private static let referenceWidth: CGFloat = 390
-    private static let referenceHeight: CGFloat = 650
+    private static let referenceHeight: CGFloat = 844
     private static let dotPeriod: TimeInterval = 5.0
 
     @ViewBuilder
