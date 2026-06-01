@@ -6,6 +6,7 @@ final class DeleteAccountViewModel {
     enum Step {
         case confirmIntent
         case reauthenticate
+        case farewell
     }
 
     var step: Step = .confirmIntent
@@ -37,17 +38,21 @@ final class DeleteAccountViewModel {
         !password.isEmpty && !isDeleting
     }
 
-    func confirmDelete() async {
-        guard let authService, !password.isEmpty else { return }
+    func confirmDelete() async -> Bool {
+        guard let authService, !password.isEmpty else { return false }
         isDeleting = true
         errorMessage = nil
-        defer { isDeleting = false }
 
         do {
             try await authService.reauthenticate(password: password)
             try await authService.deleteAccount()
+            isDeleting = false
+            step = .farewell
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            isDeleting = false
+            return false
         }
     }
 }

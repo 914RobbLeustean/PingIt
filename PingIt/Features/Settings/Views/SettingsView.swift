@@ -175,15 +175,21 @@ struct SettingsView: View {
             PingItConfirmationDialog(isPresented: showDeleteFlow, onDismiss: dismissDeleteFlow) {
                 DialogTitleBlock(
                     title: "Delete account?",
-                    message: "This is permanent. All your pings disappear."
+                    message: "Press and hold the button below to continue. This is permanent — all your pings will disappear."
                 )
-                DialogButtonRow {
+                VStack(spacing: 10) {
+                    HoldToConfirmButton("Delete Account") {
+                        deleteViewModel.advanceToReauthenticate()
+                    }
                     Button("Keep it", action: dismissDeleteFlow)
                         .buttonStyle(DialogSecondaryButtonStyle())
-                } trailing: {
-                    Button("Delete", action: { deleteViewModel.advanceToReauthenticate() })
-                        .buttonStyle(DialogDestructiveButtonStyle())
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+        case .farewell:
+            PingItConfirmationDialog(isPresented: showDeleteFlow, onDismiss: {}) {
+                AccountFarewellCard()
             }
         case .reauthenticate:
             PingItConfirmationDialog(isPresented: showDeleteFlow, onDismiss: dismissDeleteFlow) {
@@ -260,8 +266,11 @@ struct SettingsView: View {
 
     private func handleConfirmDelete() {
         Task {
-            await deleteViewModel.confirmDelete()
-            if deleteViewModel.errorMessage == nil {
+            let succeeded = await deleteViewModel.confirmDelete()
+            if succeeded {
+                // Farewell card auto-dismisses when AuthService signs the user out
+                // and the root navigates back to Welcome. Keep it visible until then.
+                try? await Task.sleep(for: .seconds(3.5))
                 showDeleteFlow = false
             }
         }
