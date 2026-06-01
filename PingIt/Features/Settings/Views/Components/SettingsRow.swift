@@ -65,7 +65,7 @@ struct SettingsChevron: View {
     }
 }
 
-private struct SettingsRowButtonStyle: ButtonStyle {
+struct SettingsRowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background(

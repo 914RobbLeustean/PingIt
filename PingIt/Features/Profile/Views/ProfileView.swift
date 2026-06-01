@@ -5,84 +5,163 @@ struct ProfileView: View {
     @Environment(AuthService.self) private var authService
     @Environment(UserService.self) private var userService
     @Environment(ImageStorageService.self) private var imageStorageService
+    @Environment(PingService.self) private var pingService
     @State private var viewModel = ProfileViewModel()
     @FocusState private var isUsernameFocused: Bool
+
+    @State private var showPhotoSourcePicker = false
+    @State private var showLibrary = false
+    @State private var showCamera = false
+    @State private var showRemovePhotoDialog = false
 
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Profile image — outside Form to avoid tap area issues
-                    ProfileImageSection(
-                        profileImageUrl: viewModel.user?.profileImageUrl,
-                        isUploading: viewModel.isUploadingImage,
-                        selectedPhotoItem: $viewModel.selectedPhotoItem,
-                        onCameraImage: handleCameraImage,
-                        onRemove: handleRemovePhoto
-                    )
-                    .padding(.vertical)
+        ZStack {
+            Color.pingBackground.ignoresSafeArea()
 
-                    // Form for editable fields
-                    Form {
-                        Section("Username") {
-                            TextField("Username", text: $viewModel.editedUsername)
-                                .textContentType(.username)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                                .focused($isUsernameFocused)
+            VStack(spacing: 0) {
+                header
 
-                            if viewModel.hasUnsavedUsernameChanges, !viewModel.isUsernameValid {
-                                Text("3-20 characters, letters, numbers, and underscores only")
-                                    .font(.caption)
-                                    .foregroundStyle(.orange)
-                            }
-                        }
+                ScrollView {
+                    VStack(spacing: 24) {
+                        ProfileAvatarBlock(
+                            initial: viewModel.avatarInitial,
+                            username: viewModel.user?.username ?? "",
+                            email: viewModel.user?.email ?? "",
+                            profileImageUrl: viewModel.user?.profileImageUrl,
+                            isUploading: viewModel.isUploadingImage,
+                            onEditTapped: { showPhotoSourcePicker = true }
+                        )
 
-                        Section("Account") {
-                            LabeledContent("Email", value: viewModel.user?.email ?? "")
+                        ProfileStatsCard(
+                            pingCount: viewModel.pingCount,
+                            boostCount: viewModel.totalBoosts,
+                            memberAge: viewModel.memberAge
+                        )
 
-                            if let createdAt = viewModel.user?.createdAt {
-                                LabeledContent("Member since", value: createdAt.formatted(date: .abbreviated, time: .omitted))
-                            }
-                        }
-
-                        if let errorMessage = viewModel.errorMessage {
-                            Section {
-                                Label(errorMessage, systemImage: "exclamationmark.triangle")
-                                    .foregroundStyle(.red)
-                            }
-                        }
+                        ProfileInfoCard(
+                            username: viewModel.user?.username ?? "",
+                            email: viewModel.user?.email ?? "",
+                            memberSince: viewModel.memberSinceFormatted,
+                            isEditing: viewModel.isEditingUsername,
+                            editedUsername: $viewModel.editedUsername,
+                            isSaving: viewModel.isSaving,
+                            errorMessage: viewModel.isEditingUsername ? viewModel.errorMessage : nil
+                        )
 
                         if let successMessage = viewModel.successMessage {
-                            Section {
-                                Label(successMessage, systemImage: "checkmark.circle")
-                                    .foregroundStyle(.green)
-                            }
+                            Text(successMessage)
+                                .font(.dmSans(.medium, size: 13, relativeTo: .footnote))
+                                .foregroundStyle(Color.pingLive)
+                                .transition(.opacity)
                         }
                     }
-                    .scrollDisabled(true)
-                    .frame(minHeight: 400)
+                    .padding(.top, 4)
+                    .padding(.bottom, 90)
+                }
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.immediately)
+            }
+
+            photoSourceSheet
+
+            PingItConfirmationDialog(isPresented: showRemovePhotoDialog, onDismiss: { showRemovePhotoDialog = false }) {
+                DialogTitleBlock(
+                    title: "Remove profile photo?",
+                    message: "Your profile will show your initial instead."
+                )
+                DialogButtonRow {
+                    Button("Cancel", action: { showRemovePhotoDialog = false })
+                        .buttonStyle(DialogSecondaryButtonStyle())
+                } trailing: {
+                    Button("Remove", action: confirmRemovePhoto)
+                        .buttonStyle(DialogDestructiveButtonStyle())
                 }
             }
-            .scrollDismissesKeyboard(.immediately)
-            .navigationTitle("Profile")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+        }
+        .photosPicker(isPresented: $showLibrary, selection: Bindable(viewModel).selectedPhotoItem, matching: .images)
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPickerView(onImageCaptured: handleCameraImage)
+        }
+        .task {
+            viewModel.configure(
+                authService: authService,
+                userService: userService,
+                imageStorageService: imageStorageService,
+                pingService: pingService
+            )
+            await viewModel.loadProfile()
+        }
+        .onChange(of: viewModel.selectedPhotoItem) { _, newItem in
+            if newItem != nil {
+                Task { await viewModel.handleSelectedPhoto() }
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            Text("Profile")
+                .font(.syne(.extraBold, size: 30, relativeTo: .largeTitle))
+                .tracking(-0.5)
+                .foregroundStyle(Color.pingTextPrimary)
+
+            Spacer()
+
+            if viewModel.isEditingUsername {
+                HStack(spacing: 12) {
+                    Button("Cancel", action: cancelEditUsername)
+                        .font(.dmSans(.medium, size: 15, relativeTo: .body))
+                        .foregroundStyle(Color.pingTextSecondary)
+
                     Button("Save", action: handleSaveUsername)
-                        .disabled(viewModel.canSaveUsername == false)
+                        .font(.dmSans(.semiBold, size: 15, relativeTo: .body))
+                        .foregroundStyle(viewModel.canSaveUsername ? Color.pingAccent : Color.pingAccent.opacity(0.4))
+                        .disabled(!viewModel.canSaveUsername)
                 }
+            } else {
+                Button("Edit", systemImage: "pencil", action: { viewModel.beginEditingUsername() })
+                    .labelStyle(.iconOnly)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Color.pingTextSecondary)
             }
-            .task {
-                viewModel.configure(authService: authService, userService: userService, imageStorageService: imageStorageService)
-                await viewModel.loadProfile()
-            }
-            .onChange(of: viewModel.selectedPhotoItem) { _, newItem in
-                if newItem != nil {
-                    handlePhotoSelection()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 24)
+    }
+
+    @ViewBuilder
+    private var photoSourceSheet: some View {
+        if showPhotoSourcePicker {
+            ZStack(alignment: .bottom) {
+                Button(action: { showPhotoSourcePicker = false }) {
+                    Color.black.opacity(0.6)
+                        .ignoresSafeArea()
                 }
+                .buttonStyle(.plain)
+
+                PhotoSourcePicker(
+                    hasExistingPhoto: viewModel.user?.profileImageUrl != nil,
+                    onChooseLibrary: {
+                        showPhotoSourcePicker = false
+                        showLibrary = true
+                    },
+                    onTakePhoto: {
+                        showPhotoSourcePicker = false
+                        showCamera = true
+                    },
+                    onRemovePhoto: {
+                        showPhotoSourcePicker = false
+                        showRemovePhotoDialog = true
+                    },
+                    onCancel: { showPhotoSourcePicker = false }
+                )
+                .transition(.move(edge: .bottom))
             }
+            .transition(.opacity)
+            .animation(.easeOut(duration: 0.25), value: showPhotoSourcePicker)
         }
     }
 
@@ -90,26 +169,20 @@ struct ProfileView: View {
 
     private func handleSaveUsername() {
         isUsernameFocused = false
-        Task {
-            await viewModel.saveUsername()
-        }
+        Task { await viewModel.saveUsername() }
     }
 
-    private func handlePhotoSelection() {
-        Task {
-            await viewModel.handleSelectedPhoto()
-        }
+    private func cancelEditUsername() {
+        isUsernameFocused = false
+        viewModel.cancelEditingUsername()
     }
 
     private func handleCameraImage(_ image: UIImage) {
-        Task {
-            await viewModel.handleCameraImage(image)
-        }
+        Task { await viewModel.handleCameraImage(image) }
     }
 
-    private func handleRemovePhoto() {
-        Task {
-            await viewModel.removeProfilePicture()
-        }
+    private func confirmRemovePhoto() {
+        showRemovePhotoDialog = false
+        Task { await viewModel.removeProfilePicture() }
     }
 }

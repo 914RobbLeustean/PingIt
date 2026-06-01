@@ -22,4 +22,5 @@ protocol PingServicing {
     func uploadPingImage(pingId: String, imageData: Data) async throws -> String
     func boostPing(pingId: String) async throws -> BoostPingResult
     func hasUserBoostedPing(pingId: String, userId: String) async throws -> Bool
+    func fetchPings(byCreatorId creatorId: String) async throws -> [Ping]
 }

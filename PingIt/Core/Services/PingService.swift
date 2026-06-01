@@ -153,6 +153,17 @@ final class PingService: PingServicing {
         return ListenerHandle(registration)
     }
 
+    func fetchPings(byCreatorId creatorId: String) async throws -> [Ping] {
+        do {
+            let snapshot = try await db.collection(Constants.Firestore.pingsCollection)
+                .whereField("creatorId", isEqualTo: creatorId)
+                .getDocuments()
+            return snapshot.documents.compactMap { try? $0.data(as: Ping.self) }
+        } catch {
+            throw PingItError.firestoreReadFailed(underlying: error)
+        }
+    }
+
     private static func intValue(_ value: Any?) -> Int? {
         if let value = value as? Int {
             return value

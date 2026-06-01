@@ -7,6 +7,7 @@ final class ProfileViewModel {
     private var authService: (any AuthServicing)?
     private var userService: (any UserServicing)?
     private var imageStorageService: (any ImageStorageServicing)?
+    private var pingService: (any PingServicing)?
     private var isConfigured = false
 
     private(set) var user: User?
@@ -15,7 +16,10 @@ final class ProfileViewModel {
     private(set) var isUploadingImage = false
     private(set) var errorMessage: String?
     private(set) var successMessage: String?
+    private(set) var pingCount = 0
+    private(set) var totalBoosts = 0
 
+    var isEditingUsername = false
     var editedUsername = ""
     var selectedPhotoItem: PhotosPickerItem?
 
@@ -36,6 +40,28 @@ final class ProfileViewModel {
         hasUnsavedUsernameChanges && isUsernameValid && !isSaving
     }
 
+    var memberAge: String {
+        guard let createdAt = user?.createdAt else { return "—" }
+        let interval = Date.now.timeIntervalSince(createdAt)
+        let days = Int(interval / 86400)
+        if days < 1 { return "today" }
+        if days < 30 { return "\(days)d" }
+        let months = days / 30
+        if months < 12 { return "\(months)mo" }
+        let years = months / 12
+        return "\(years)y"
+    }
+
+    var memberSinceFormatted: String {
+        guard let createdAt = user?.createdAt else { return "—" }
+        return createdAt.formatted(date: .long, time: .omitted)
+    }
+
+    var avatarInitial: String {
+        guard let username = user?.username, let first = username.first else { return "?" }
+        return String(first).uppercased()
+    }
+
     private var currentUserId: String? {
         authService?.currentUser?.uid
     }
@@ -43,26 +69,44 @@ final class ProfileViewModel {
     func configure(
         authService: any AuthServicing,
         userService: any UserServicing,
-        imageStorageService: any ImageStorageServicing
+        imageStorageService: any ImageStorageServicing,
+        pingService: any PingServicing
     ) {
         guard !isConfigured else { return }
         self.authService = authService
         self.userService = userService
         self.imageStorageService = imageStorageService
+        self.pingService = pingService
         isConfigured = true
     }
 
     func loadProfile() async {
-        guard let currentUserId, let userService else { return }
+        guard let currentUserId, let userService, let pingService else { return }
         isLoading = true
         defer { isLoading = false }
 
         do {
             user = try await userService.fetchUser(id: currentUserId)
             editedUsername = user?.username ?? ""
+
+            let pings = try await pingService.fetchPings(byCreatorId: currentUserId)
+            pingCount = pings.count
+            totalBoosts = pings.reduce(0) { $0 + $1.boostCount }
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func beginEditingUsername() {
+        editedUsername = user?.username ?? ""
+        isEditingUsername = true
+    }
+
+    func cancelEditingUsername() {
+        editedUsername = user?.username ?? ""
+        isEditingUsername = false
+        errorMessage = nil
+        successMessage = nil
     }
 
     func saveUsername() async {
@@ -94,6 +138,7 @@ final class ProfileViewModel {
             )
             user?.username = trimmed
             user?.usernameLowercase = trimmed.lowercased()
+            isEditingUsername = false
             successMessage = "Username updated"
         } catch PingItError.usernameAlreadyTaken {
             errorMessage = PingItError.usernameAlreadyTaken.localizedDescription
