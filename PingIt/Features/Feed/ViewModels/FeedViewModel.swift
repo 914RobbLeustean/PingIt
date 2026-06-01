@@ -1,20 +1,39 @@
-import Foundation
+import SwiftUI
 import CoreLocation
 import FirebaseFirestore
 
 enum FeedSortOption: String, CaseIterable, Sendable {
-    case newest
     case hottest
-    case nearest
+    case newest
     case expiringSoon
 
-    var displayName: String {
+    var chipLabel: String {
         switch self {
-        case .newest: "Newest"
-        case .hottest: "Hottest"
-        case .nearest: "Nearest"
-        case .expiringSoon: "Expiring Soon"
+        case .hottest: "Hot"
+        case .newest: "New"
+        case .expiringSoon: "Expiring"
         }
+    }
+}
+
+enum PingUrgency: Sendable {
+    case critical
+    case urgent
+    case normal
+
+    var color: Color {
+        switch self {
+        case .critical: .pingHot
+        case .urgent: .pingAccent
+        case .normal: .pingTextSecondary
+        }
+    }
+
+    static func from(expiresAt: Date) -> PingUrgency {
+        let remaining = expiresAt.timeIntervalSince(ServerTime.now)
+        if remaining < 5400 { return .critical }
+        if remaining < 21600 { return .urgent }
+        return .normal
     }
 }
 
@@ -32,24 +51,26 @@ final class FeedViewModel {
     private(set) var pings: [Ping] = []
     private(set) var isLoading = false
     private(set) var creatorCache: [String: User] = [:]
-    var sortOption: FeedSortOption = .newest
+    var sortOption: FeedSortOption = .hottest
+
+    var visiblePings: [Ping] {
+        pings.filter { $0.expiresAt > ServerTime.now }
+    }
 
     var sortedPings: [Ping] {
+        let active = visiblePings
         switch sortOption {
         case .newest:
-            return pings.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+            return active.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         case .hottest:
-            return pings.sorted { $0.hotScore > $1.hotScore }
-        case .nearest:
-            guard let userLocation = locationService?.currentLocation else {
-                return pings
-            }
-            return pings.sorted {
-                distance(from: userLocation, to: $0) < distance(from: userLocation, to: $1)
-            }
+            return active.sorted { $0.hotScore > $1.hotScore }
         case .expiringSoon:
-            return pings.sorted { $0.expiresAt < $1.expiresAt }
+            return active.sorted { $0.expiresAt < $1.expiresAt }
         }
+    }
+
+    func urgency(for ping: Ping) -> PingUrgency {
+        PingUrgency.from(expiresAt: ping.expiresAt)
     }
 
     func configure(
@@ -108,6 +129,10 @@ final class FeedViewModel {
             && !(blockService?.isBlocked(ping.creatorId) ?? false)
         }
         Task { await fetchMissingCreators() }
+    }
+
+    func removeExpiredPings() {
+        pings.removeAll { $0.expiresAt <= ServerTime.now }
     }
 
     private func fetchMissingCreators() async {
