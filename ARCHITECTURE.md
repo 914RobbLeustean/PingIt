@@ -228,17 +228,32 @@ PingIt/
 │   │       ├── PingClusterAnnotationView.swift  Cluster annotation with count and hot-ping indicator
 │   │       └── EmailVerificationBannerView.swift  Dismissable banner for unverified users
 │   ├── Ping/
+│   │   ├── Models/
+│   │   │   └── PingCategory.swift         Enum with 9 categories (sports, study, social, music, food, skate, chill, gaming, art) + label + emoji
 │   │   ├── ViewModels/
-│   │   │   ├── CreatePingViewModel.swift   Validation, moderation, rate limit, location, Firestore write
+│   │   │   ├── CreatePingViewModel.swift   Validation, moderation, rate limit, location, category, Firestore write
 │   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete, ping document listener, boost
 │   │   └── Views/
-│   │       ├── CreatePingView.swift        Form: text, photo, location picker, expiration
-│   │       ├── PingPhotoSectionView.swift  Extracted photo section: image preview, remove overlay, Library/Camera menu
+│   │       ├── CreatePingView.swift        Modal bottom sheet: header + ScrollView sections + fixed CTA button
+│   │       ├── PingPhotoSectionView.swift  (Legacy — unused after overhaul)
 │   │       ├── PingDetailView.swift        Detail with creator, countdown, actions, report/block buttons
-│   │       ├── LocationPickerView.swift    GPS / search / map pin selection
-│   │       ├── MapPinPickerView.swift      Drag-pin-on-map picker
+│   │       ├── LocationPickerView.swift    Sheet: 3-option card (GPS / map pin / search) with dark styling
+│   │       ├── MapPinPickerView.swift      Full-screen map with centered amber pin + dark bottom bar
 │   │       ├── PingDetailCreatorSection.swift  Creator info + profile picture
-│   │       └── PingDetailActionSection.swift   Join chat + delete buttons
+│   │       ├── PingDetailActionSection.swift   Join chat + delete buttons
+│   │       └── Components/
+│   │           ├── FlowLayout.swift              Custom Layout protocol wrapping chip grid
+│   │           ├── CategoryChip.swift             Capsule chip with emoji + label (selected = amber 15% fill + amber border)
+│   │           ├── ExpiryPill.swift               Equal-width capsule duration pill (6h / 24h / 48h / Custom)
+│   │           ├── CreatePingHeader.swift          Drag handle + "New Ping" title + ✕ dismiss button
+│   │           ├── CreatePingSectionLabel.swift    ALL CAPS DM Sans SemiBold 11pt section header
+│   │           ├── CreatePingButton.swift          Fixed-bottom CTA with dynamic label ("Fill in the details" → "⚡ PING IT")
+│   │           ├── CreatePingCategorySection.swift FlowLayout of 9 CategoryChips with toggle selection
+│   │           ├── CreatePingTextSection.swift     TextEditor with custom placeholder + char count
+│   │           ├── CreatePingPhotoSection.swift    Dashed add button / image preview with red ✕ remove
+│   │           ├── CreatePingExpirySection.swift   4 ExpiryPills + collapsible DatePicker for custom
+│   │           ├── CreatePingLocationSection.swift Styled row with pin icon + chevron
+│   │           └── CreatePingErrorBanner.swift     Warning icon + error text in pingHot
 │   ├── Chat/
 │   │   ├── ViewModels/
 │   │   │   └── ChatViewModel.swift         Message listener, send (with moderation + rate limit), join; filters blocked; ping doc listener; user profile cache; toggleReaction; sendLocationMessage

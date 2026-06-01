@@ -6,6 +6,33 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Create Ping flow UI overhaul
+
+### Added
+- `Features/Ping/Models/PingCategory.swift`: enum with 9 categories (sports, study, social, music, food, skate, chill, gaming, art) plus label and emoji computed properties.
+- `Features/Ping/Views/Components/FlowLayout.swift`: custom `Layout` protocol implementation for wrapping chip grids.
+- `Features/Ping/Views/Components/CategoryChip.swift`: capsule chip with emoji + label; selected state uses amber 15% fill + amber border.
+- `Features/Ping/Views/Components/ExpiryPill.swift`: equal-width capsule duration pill (6h / 24h / 48h / Custom).
+- `Features/Ping/Views/Components/CreatePingHeader.swift`: drag handle (36×4pt, white 12% opacity) + "New Ping" Syne ExtraBold 22pt + ✕ dismiss button.
+- `Features/Ping/Views/Components/CreatePingSectionLabel.swift`: reusable ALL CAPS DM Sans SemiBold 11pt section header with 0.8pt tracking.
+- `Features/Ping/Views/Components/CreatePingButton.swift`: fixed-bottom CTA with dynamic label ("Fill in the details" disabled → "⚡ PING IT" enabled), amber glow shadow, scale-on-press.
+- `Features/Ping/Views/Components/CreatePingCategorySection.swift`: FlowLayout of 9 CategoryChips with toggle selection.
+- `Features/Ping/Views/Components/CreatePingTextSection.swift`: TextEditor with custom placeholder overlay + character count (280 max).
+- `Features/Ping/Views/Components/CreatePingPhotoSection.swift`: dashed-border add button, image preview (180pt, rounded 16), red ✕ remove button.
+- `Features/Ping/Views/Components/CreatePingExpirySection.swift`: 4 ExpiryPills in HStack + collapsible graphical DatePicker for Custom.
+- `Features/Ping/Views/Components/CreatePingLocationSection.swift`: tappable row with pin icon, location text, and chevron.
+- `Features/Ping/Views/Components/CreatePingErrorBanner.swift`: warning icon + error text in pingHot.
+- `Ping` model: added optional `category: String?` field.
+
+### Changed
+- `Features/Ping/Views/CreatePingView.swift`: full rewrite. Replaced NavigationStack + Form + toolbar with modal bottom sheet (VStack: custom header → ScrollView with sections → fixed bottom CTA). No system Form/List styling.
+- `Features/Ping/ViewModels/CreatePingViewModel.swift`: added `selectedCategory: PingCategory?`; `canCreate` now requires category instead of location; Ping creation includes category field.
+- `Features/Ping/Views/LocationPickerView.swift`: full rewrite. Now a sheet with drag handle, custom header, 3-option card (Use Current Location / Set Location on Map / Search Address) using SettingsRowButtonStyle, and inline search with autocomplete results.
+- `Features/Ping/Views/MapPinPickerView.swift`: restyled with amber pin icon, dark bottom panel with coordinates + Cancel/Confirm capsule buttons, presentation detents.
+- `Features/Map/Views/MapView.swift`: replaced toolbar "Create Ping" button with a floating 60pt amber circle FAB (bottom-trailing, dual shadow). Added presentation modifiers to CreatePingView sheet.
+
+---
+
 ## [2026-06-01] — Feed screen UI overhaul
 
 ### Added
