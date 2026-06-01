@@ -8,54 +8,69 @@ struct OnboardingView: View {
     let userId: String
     var onComplete: () -> Void
 
+    private static let pages: [OnboardingPageContent] = [
+        .init(
+            emoji: "🗺️",
+            accentSymbol: "sparkles",
+            title: "Discover what's happening",
+            subtitle: "Real-time pings from students across Cluj-Napoca. See who's hanging out where."
+        ),
+        .init(
+            emoji: "📍",
+            accentSymbol: "plus",
+            title: "Create a Ping",
+            subtitle: "Share study sessions, events, food spots. Pick a category and set how long it lasts."
+        ),
+        .init(
+            emoji: "💬",
+            accentSymbol: "bolt.fill",
+            title: "Join the conversation",
+            subtitle: "Tap any ping to drop into its live chat. Meet people who are actually nearby."
+        )
+    ]
+
     var body: some View {
-        VStack {
-            HStack {
-                Spacer()
-                if viewModel.currentPage < OnboardingViewModel.pageCount - 1 {
-                    Button("Skip") {
-                        Task { await viewModel.skip() }
+        ZStack {
+            Color.pingBackground.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                OnboardingTopBar(
+                    isLastPage: viewModel.currentPage == OnboardingViewModel.pageCount - 1,
+                    onSkip: handleSkip
+                )
+                .padding(.top, 12)
+
+                TabView(selection: $viewModel.currentPage) {
+                    ForEach(Self.pages.indices, id: \.self) { index in
+                        OnboardingPageView(
+                            emoji: Self.pages[index].emoji,
+                            accentSymbol: Self.pages[index].accentSymbol,
+                            title: Self.pages[index].title,
+                            subtitle: Self.pages[index].subtitle
+                        )
+                        .tag(index)
                     }
-                    .font(.subheadline)
-                    .padding()
                 }
-            }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut, value: viewModel.currentPage)
 
-            TabView(selection: $viewModel.currentPage) {
-                OnboardingPageView(
-                    systemImage: "map.fill",
-                    title: "Discover What's Happening",
-                    subtitle: "See real-time pings from students across Cluj-Napoca"
+                OnboardingPageIndicator(
+                    count: OnboardingViewModel.pageCount,
+                    selected: viewModel.currentPage
                 )
-                .tag(0)
+                .padding(.bottom, 24)
 
-                OnboardingPageView(
-                    systemImage: "mappin.and.ellipse",
-                    title: "Create a Ping",
-                    subtitle: "Share study sessions, events, food spots. Set how long it lasts."
+                OnboardingPrimaryButton(
+                    isLastPage: viewModel.currentPage == OnboardingViewModel.pageCount - 1,
+                    action: handleAdvance
                 )
-                .tag(1)
-
-                OnboardingPageView(
-                    systemImage: "bubble.left.and.bubble.right.fill",
-                    title: "Join the Conversation",
-                    subtitle: "Tap any ping to join its live chat"
-                )
-                .tag(2)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .animation(.easeInOut, value: viewModel.currentPage)
-
-            Button(viewModel.currentPage == OnboardingViewModel.pageCount - 1 ? "Get Started" : "Next") {
-                Task { await viewModel.advance() }
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.horizontal, 32)
-            .padding(.bottom, 32)
         }
+        .preferredColorScheme(.dark)
         .onChange(of: viewModel.isComplete) {
-            onComplete()
+            if viewModel.isComplete { onComplete() }
         }
         .task {
             viewModel.configure(
@@ -64,5 +79,101 @@ struct OnboardingView: View {
                 userId: userId
             )
         }
+    }
+
+    private func handleAdvance() {
+        Task { await viewModel.advance() }
+    }
+
+    private func handleSkip() {
+        Task { await viewModel.skip() }
+    }
+}
+
+// MARK: - Page Content
+
+private struct OnboardingPageContent {
+    let emoji: String
+    let accentSymbol: String
+    let title: String
+    let subtitle: String
+}
+
+// MARK: - Top Bar (Skip)
+
+private struct OnboardingTopBar: View {
+    let isLastPage: Bool
+    let onSkip: () -> Void
+
+    var body: some View {
+        HStack {
+            Spacer()
+
+            if !isLastPage {
+                Button(action: onSkip) {
+                    Text("Skip")
+                        .font(.dmSans(.semiBold, size: 14, relativeTo: .body))
+                        .foregroundStyle(Color.pingTextSecondary)
+                        .padding(.horizontal, 16)
+                        .frame(height: 36)
+                        .background(Color.pingSurface, in: .capsule)
+                        .overlay(
+                            Capsule().strokeBorder(Color.pingBorder, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Skip onboarding")
+            }
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 44)
+    }
+}
+
+// MARK: - Page Indicator
+
+private struct OnboardingPageIndicator: View {
+    let count: Int
+    let selected: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<count, id: \.self) { index in
+                Capsule()
+                    .fill(index == selected ? Color.pingAccent : Color.pingTextSecondary.opacity(0.35))
+                    .frame(width: index == selected ? 28 : 8, height: 8)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selected)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Page \(selected + 1) of \(count)")
+    }
+}
+
+// MARK: - Primary Button
+
+private struct OnboardingPrimaryButton: View {
+    let isLastPage: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(isLastPage ? "Get Started" : "Next")
+                    .font(.syne(.extraBold, size: 15))
+                    .tracking(-0.3)
+                if !isLastPage {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 14, weight: .bold))
+                }
+            }
+            .foregroundStyle(.black)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(Color.pingAccent, in: .capsule)
+            .shadow(color: Color.pingAccent.opacity(0.4), radius: 16, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isLastPage ? "Get started" : "Next page")
     }
 }
