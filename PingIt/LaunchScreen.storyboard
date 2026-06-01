@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="24506" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
-    <device id="retina6_9" orientation="portrait" appearance="light"/>
+    <device id="retina6_9" orientation="portrait" appearance="dark"/>
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="24504"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
-        <!--View Controller-->
+        <!--Launch Screen-->
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
@@ -15,17 +15,19 @@
                         <rect key="frame" x="0.0" y="0.0" width="440" height="956"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" image="LaunchLogo" translatesAutoresizingMaskIntoConstraints="NO" id="Img-1a-0bC">
-                                <rect key="frame" x="0.0" y="0.0" width="440" height="956"/>
-                            </imageView>
+                            <!-- "PINGIT" wordmark -->
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="PINGIT" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="lbl-Dd-004">
+                                <rect key="frame" x="159" y="461" width="122" height="29"/>
+                                <fontDescription key="fontDescription" name="Syne-ExtraBold" family="Syne" pointSize="24"/>
+                                <color key="textColor" red="0.94117647058823528" green="0.94117647058823528" blue="0.97254901960784312" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
-                        <color key="backgroundColor" red="0.10980392156862745" green="0.10980392156862745" blue="0.14117647058823529" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" red="0.035294117647058823" green="0.035294117647058823" blue="0.070588235294117646" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <constraint firstItem="Img-1a-0bC" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="tp1-Im-0aA"/>
-                            <constraint firstItem="Img-1a-0bC" firstAttribute="bottom" secondItem="Ze5-6b-2t3" secondAttribute="bottom" id="bt2-Im-0aB"/>
-                            <constraint firstItem="Img-1a-0bC" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="ld3-Im-0aC"/>
-                            <constraint firstItem="Img-1a-0bC" firstAttribute="trailing" secondItem="Ze5-6b-2t3" secondAttribute="trailing" id="tr4-Im-0aD"/>
+                            <constraint firstItem="lbl-Dd-004" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="lbl-cx-001"/>
+                            <constraint firstItem="lbl-Dd-004" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="lbl-cy-001"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -34,7 +36,4 @@
             <point key="canvasLocation" x="53" y="375"/>
         </scene>
     </scenes>
-    <resources>
-        <image name="LaunchLogo" width="440" height="956"/>
-    </resources>
 </document>
