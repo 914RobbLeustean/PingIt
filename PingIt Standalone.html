@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PingIt — Prototype</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:             #090912;
+      --surface:        #12121c;
+      --surface2:       #1a1a28;
+      --surface3:       #22223a;
+      --border:         rgba(255,255,255,0.07);
+      --border2:        rgba(255,255,255,0.12);
+      --text:           #f0f0f8;
+      --text-secondary: #6b6b84;
+      --text-muted:     #35354a;
+      --accent:         oklch(0.82 0.22 58);
+      --hot:            oklch(0.68 0.26 20);
+      --live:           oklch(0.78 0.20 145);
+    }
+
+    body {
+      background: #08080f;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    #root { min-height: 100vh; }
+
+    input::placeholder, textarea::placeholder { color: var(--text-secondary); }
+    input, textarea { color-scheme: dark; }
+    ::-webkit-scrollbar { width: 0; }
+
+    .leaflet-container { background: #090912; font-family: 'DM Sans', sans-serif; }
+    .leaflet-attribution-flag { display: none !important; }
+    .leaflet-control-attribution {
+      background: rgba(9,9,18,0.7) !important;
+      color: #3a3a50 !important;
+      font-size: 9px !important;
+      padding: 2px 6px !important;
+      border-radius: 4px !important;
+      backdrop-filter: blur(8px);
+    }
+    .leaflet-control-attribution a { color: #4a4a65 !important; }
+
+    .pm-wrap { position: relative; width: 52px; height: 52px; }
+    .pm-pulse {
+      position: absolute; inset: -4px; border-radius: 50%;
+      background: oklch(0.82 0.22 58); opacity: 0;
+      animation: ping-pulse 2.8s ease-out infinite; pointer-events: none;
+    }
+    .pm-p2 { animation-delay: 1.4s; }
+    .pm-dot {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: #12121c; border: 2.5px solid oklch(0.82 0.22 58);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 20px rgba(245,166,35,0.35), 0 4px 16px rgba(0,0,0,0.6);
+      cursor: pointer;
+    }
+    .pm-wrap.hot .pm-dot {
+      border-color: oklch(0.68 0.26 20);
+      box-shadow: 0 0 20px rgba(220,60,40,0.45), 0 4px 16px rgba(0,0,0,0.6);
+    }
+    .pm-wrap.hot .pm-pulse { background: oklch(0.68 0.26 20); animation-duration: 1.8s; }
+    .pm-wrap.critical .pm-dot { animation: pm-shake 0.6s ease-in-out infinite; }
+    .pm-badge {
+      position: absolute; top: -3px; right: -3px;
+      background: oklch(0.82 0.22 58); color: #000;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 11px;
+      min-width: 20px; height: 20px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px; border: 2px solid #090912;
+    }
+
+    @keyframes ping-pulse {
+      0%   { transform: scale(0.7); opacity: 0.7; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+    @keyframes pm-shake {
+      0%,100% { transform: translateX(0); }
+      25%     { transform: translateX(-2px) rotate(-2deg); }
+      75%     { transform: translateX(2px) rotate(2deg); }
+    }
+    @keyframes radar-ring {
+      0%   { transform: scale(0.05); opacity: 0.9; }
+      100% { transform: scale(7);    opacity: 0; }
+    }
+    @keyframes dot-blink {
+      0%,100% { opacity: 0; }
+      15%,70% { opacity: 1; }
+      90%     { opacity: 0; }
+    }
+    @keyframes logo-pulse {
+      0%,100% { transform: scale(1);   opacity: 0.6; }
+      50%     { transform: scale(1.4); opacity: 0.3; }
+    }
+    @keyframes fab-glow {
+      0%,100% { box-shadow: 0 0 28px rgba(245,166,35,0.55), 0 8px 24px rgba(0,0,0,0.5); }
+      50%     { box-shadow: 0 0 44px rgba(245,166,35,0.80), 0 8px 28px rgba(0,0,0,0.5); }
+    }
+    @keyframes live-pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%     { opacity: 0.4; transform: scale(0.75); }
+    }
+    @keyframes typing-dot {
+      0%,100% { transform: translateY(0); opacity: 0.5; }
+      50%     { transform: translateY(-4px); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+(function () {
+  var _now = Date.now();
+
+  window.PINGIT_DATA = {
+    currentUser: {
+      id: 'u1',
+      username: 'Radiana',
+      email: 'trvpapes@gmail.com',
+      memberSince: 'May 2, 2026',
+      color: '#F5A623',
+    },
+
+    pings: [
+      {
+        id: 'p1', authorId: 'u2', author: 'alex_m', authorColor: '#5DB8FE',
+        title: 'Pickup basketball @ Iulius', category: 'sports', emoji: '🏀',
+        lat: 46.7690, lng: 23.5930,
+        createdAt: _now - 30 * 60000, expiresAt: _now + 5.5 * 3600000,
+        boosts: 12, members: 8, isHot: true,
+        description: 'Need 2 more players. I have the ball.',
+      },
+      {
+        id: 'p2', authorId: 'u3', author: 'mia.eth', authorColor: '#8B7FE8',
+        title: 'Study session @ Central Library', category: 'study', emoji: '📚',
+        lat: 46.7715, lng: 23.5892,
+        createdAt: _now - 2 * 3600000, expiresAt: _now + 21.5 * 3600000,
+        boosts: 3, members: 5, isHot: false,
+        description: 'Quiet table, 3rd floor. Laptop ok.',
+      },
+      {
+        id: 'p3', authorId: 'u4', author: 'cluj.nights', authorColor: '#E8392A',
+        title: 'Rooftop drinks @ Memo', category: 'social', emoji: '🍻',
+        lat: 46.7728, lng: 23.5912,
+        createdAt: _now - 3600000, expiresAt: _now + 23 * 3600000,
+        boosts: 24, members: 14, isHot: true,
+        description: 'Bring whoever. BYOB. Rooftop access tonight.',
+      },
+      {
+        id: 'p4', authorId: 'u5', author: 'skate.cluj', authorColor: '#78E8A0',
+        title: 'Skate session, NOW', category: 'sports', emoji: '🛹',
+        lat: 46.7703, lng: 23.5955,
+        createdAt: _now - 45 * 60000, expiresAt: _now + 44 * 60000,
+        boosts: 7, members: 4, isHot: true,
+        description: 'Central Park skate zone. Almost gone — come now.',
+      },
+      {
+        id: 'p5', authorId: 'u1', author: 'Radiana', authorColor: '#F5A623',
+        title: 'Coffee & remote work @ Joe', category: 'chill', emoji: '☕',
+        lat: 46.7695, lng: 23.5905,
+        createdAt: _now - 20 * 60000, expiresAt: _now + 47 * 3600000,
+        boosts: 2, members: 1, isHot: false,
+        description: 'Working on a project here. Drop in.',
+      },
+      {
+        id: 'p6', authorId: 'u6', author: 'vibe.check', authorColor: '#FF9F7A',
+        title: 'Jam session @ Casa', category: 'music', emoji: '🎸',
+        lat: 46.7720, lng: 23.5945,
+        createdAt: _now - 15 * 60000, expiresAt: _now + 11 * 3600000,
+        boosts: 9, members: 6, isHot: false,
+        description: 'Guitar and keys here. Bring your thing.',
+      },
+    ],
+
+    chatMessages: {
+      'p3': [
+        { id: 'cm1', author: 'cluj.nights', text: "who's coming tonight??", time: '21:04', isOwn: false },
+        { id: 'cm2', author: 'alex_m', text: 'omw, 10 mins', time: '21:06', isOwn: false },
+        { id: 'cm3', author: 'mia.eth', text: 'is there actually a rooftop lol', time: '21:07', isOwn: false },
+        { id: 'cm4', author: 'cluj.nights', text: 'yes + vibes 😭', time: '21:07', isOwn: false },
+        { id: 'cm5', author: 'Radiana', text: 'just arrived, elevator?', time: '21:09', isOwn: true },
+        { id: 'cm6', author: 'cluj.nights', text: 'right side, go up', time: '21:09', isOwn: false },
+        { id: 'cm7', author: 'vibe.check', text: 'never done this before. WILD.', time: '21:11', isOwn: false },
+        { id: 'cm8', author: 'alex_m', text: 'pingit diff fr 🔥', time: '21:11', isOwn: false },
+      ],
+      'p1': [
+        { id: 'cm1', author: 'alex_m', text: 'need guards rn', time: '15:30', isOwn: false },
+        { id: 'cm2', author: 'hoop.life', text: 'pg here, 5 mins', time: '15:31', isOwn: false },
+        { id: 'cm3', author: 'alex_m', text: '🔥🔥 let\'s run it', time: '15:32', isOwn: false },
+        { id: 'cm4', author: 'Radiana', text: 'sg, walking over', time: '15:33', isOwn: true },
+      ],
+      'p4': [
+        { id: 'cm1', author: 'skate.cluj', text: 'yall where are you', time: '16:18', isOwn: false },
+        { id: 'cm2', author: 'kick.flip', text: 'omw 🛹', time: '16:19', isOwn: false },
+      ],
+      'p6': [
+        { id: 'cm1', author: 'vibe.check', text: 'who plays keys?', time: '18:04', isOwn: false },
+        { id: 'cm2', author: 'sol.keys', text: 'me! omw', time: '18:05', isOwn: false },
+        { id: 'cm3', author: 'vibe.check', text: "let's GO", time: '18:05', isOwn: false },
+      ],
+    },
+
+    liveMessages: [
+      "this is different 👀",
+      "just joined!",
+      "omw 🏃",
+      "3 mins away",
+      "who else is here?",
+      "this spot is 🔥",
+      "pingit W fr",
+      "saw this on someone's phone, had to come",
+      "never done this before",
+      "lmao who are you people",
+      "great vibes tho ngl",
+      "adding this to my daily",
+    ],
+  };
+
+  window.PINGIT_HELPERS = {
+    formatTimeRemaining: function (expiresAt) {
+      var ms = expiresAt - Date.now();
+      if (ms <= 0) return 'expired';
+      var h = Math.floor(ms / 3600000);
+      var m = Math.floor((ms % 3600000) / 60000);
+      if (h === 0) return m + 'm left';
+      if (h >= 24) return Math.floor(h / 24) + 'd ' + (h % 24) + 'h';
+      if (m === 0) return h + 'h left';
+      return h + 'h ' + m + 'm';
+    },
+
+    getUrgency: function (expiresAt) {
+      var ms = expiresAt - Date.now();
+      if (ms <= 0) return 'expired';
+      if (ms < 1.5 * 3600000) return 'critical';
+      if (ms < 6 * 3600000) return 'urgent';
+      return 'normal';
+    },
+
+    getUserColor: function (username) {
+      var colors = ['#F5A623', '#5DB8FE', '#8B7FE8', '#E8392A', '#78E8A0', '#FF9F7A', '#F472B6'];
+      var h = 0;
+      var s = username || '?';
+      for (var i = 0; i < s.length; i++) h = ((h * 31) + s.charCodeAt(i)) & 0xFFFF;
+      return colors[h % colors.length];
+    },
+  };
+})();
+
+  </script>
+
+  <script type="text/babel">
+// ─── Icons ────────────────────────────────────────────────────────────────────
+var Icons = {
+  Map: function() {
+    return React.createElement('svg', { width:22, height:22, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z' })
+    );
+  },
+  Feed: function() {
+    return React.createElement('svg', { width:22, height:22, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:2, strokeLinecap:'round' },
+      React.createElement('line', { x1:8, y1:6, x2:21, y2:6 }),
+      React.createElement('line', { x1:8, y1:12, x2:21, y2:12 }),
+      React.createElement('line', { x1:8, y1:18, x2:21, y2:18 }),
+      React.createElement('circle', { cx:3.5, cy:6, r:1.5, fill:'currentColor', stroke:'none' }),
+      React.createElement('circle', { cx:3.5, cy:12, r:1.5, fill:'currentColor', stroke:'none' }),
+      React.createElement('circle', { cx:3.5, cy:18, r:1.5, fill:'currentColor', stroke:'none' })
+    );
+  },
+  Profile: function() {
+    return React.createElement('svg', { width:22, height:22, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z' })
+    );
+  },
+  Settings: function() {
+    return React.createElement('svg', { width:22, height:22, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.44.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.32-.07.64-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.21.08-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' })
+    );
+  },
+  Plus: function() {
+    return React.createElement('svg', { width:26, height:26, viewBox:'0 0 24 24', fill:'#000' },
+      React.createElement('path', { d:'M19 13H13v6h-2v-6H5v-2h6V5h2v6h6v2z' })
+    );
+  },
+  Back: function() {
+    return React.createElement('svg', { width:20, height:20, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z' })
+    );
+  },
+  Send: function() {
+    return React.createElement('svg', { width:20, height:20, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M2 21l21-9L2 3v7l15 2-15 2z' })
+    );
+  },
+  Chat: function() {
+    return React.createElement('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z' })
+    );
+  },
+  Clock: function() {
+    return React.createElement('svg', { width:13, height:13, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z' })
+    );
+  },
+  Fire: function() {
+    return React.createElement('svg', { width:13, height:13, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 2.8 13.5.67z' })
+    );
+  },
+  Members: function() {
+    return React.createElement('svg', { width:13, height:13, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z' })
+    );
+  },
+  ChevronRight: function() {
+    return React.createElement('svg', { width:16, height:16, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z' })
+    );
+  },
+  Eye: function() {
+    return React.createElement('svg', { width:20, height:20, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' })
+    );
+  },
+  Delete: function() {
+    return React.createElement('svg', { width:16, height:16, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z' })
+    );
+  },
+  Sort: function() {
+    return React.createElement('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z' })
+    );
+  },
+  Location: function() {
+    return React.createElement('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z' })
+    );
+  },
+  Check: function() {
+    return React.createElement('svg', { width:16, height:16, viewBox:'0 0 24 24', fill:'currentColor' },
+      React.createElement('path', { d:'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' })
+    );
+  },
+};
+
+// ─── Status Bar ────────────────────────────────────────────────────────────────
+function StatusBar({ light }) {
+  var [time, setTime] = React.useState('');
+  React.useEffect(function() {
+    function tick() {
+      var n = new Date();
+      var h = n.getHours().toString().padStart(2,'0');
+      var m = n.getMinutes().toString().padStart(2,'0');
+      setTime(h + ':' + m);
+    }
+    tick();
+    var t = setInterval(tick, 15000);
+    return function() { clearInterval(t); };
+  }, []);
+
+  var col = light ? '#fff' : 'var(--text)';
+  return React.createElement('div', {
+    style: { height:54, display:'flex', alignItems:'flex-end', justifyContent:'space-between',
+      padding:'0 26px 10px', flexShrink:0 }
+  },
+    React.createElement('span', { style:{ fontFamily:'Syne', fontWeight:700, fontSize:15, color:col, letterSpacing:'-0.3px' }}, time),
+    React.createElement('div', { style:{ display:'flex', gap:6, alignItems:'center' }},
+      React.createElement('svg', { width:16, height:11, viewBox:'0 0 16 11', fill:col },
+        React.createElement('rect', { x:0, y:5, width:3, height:6, rx:1 }),
+        React.createElement('rect', { x:4.5, y:3, width:3, height:8, rx:1 }),
+        React.createElement('rect', { x:9, y:1, width:3, height:10, rx:1 }),
+        React.createElement('rect', { x:13.5, y:0, width:2.5, height:11, rx:1, opacity:.3 })
+      ),
+      React.createElement('svg', { width:15, height:11, viewBox:'0 0 24 17', fill:'none', stroke:col, strokeWidth:2.2, strokeLinecap:'round' },
+        React.createElement('path', { d:'M1 5.5C6 1.8 18 1.8 23 5.5' }),
+        React.createElement('path', { d:'M4.5 9.5C8 6.8 16 6.8 19.5 9.5' }),
+        React.createElement('path', { d:'M8.5 13C10.5 11.2 13.5 11.2 15.5 13' }),
+        React.createElement('circle', { cx:12, cy:16.5, r:1.5, fill:col, stroke:'none' })
+      ),
+      React.createElement('div', { style:{ position:'relative', width:24, height:12 }},
+        React.createElement('div', { style:{ width:21, height:12, border:'1.5px solid '+col, borderRadius:3 }},
+          React.createElement('div', { style:{ position:'absolute', top:2.5, left:2, right:5, bottom:2.5, background:col, borderRadius:1 }})
+        ),
+        React.createElement('div', { style:{ position:'absolute', right:0, top:3.5, width:3, height:5, background:col, borderRadius:'0 2px 2px 0' }})
+      )
+    )
+  );
+}
+
+// ─── Dynamic Island ────────────────────────────────────────────────────────────
+function DynamicIsland() {
+  return React.createElement('div', {
+    style: { position:'absolute', top:14, left:'50%', transform:'translateX(-50%)',
+      width:120, height:34, background:'#000', borderRadius:20, zIndex:200, pointerEvents:'none' }
+  });
+}
+
+// ─── Tab Bar ──────────────────────────────────────────────────────────────────
+function TabBar({ activeTab, onTabChange }) {
+  var tabs = [
+    { id:'map', label:'Map', Icon: Icons.Map },
+    { id:'feed', label:'Feed', Icon: Icons.Feed },
+    { id:'profile', label:'Profile', Icon: Icons.Profile },
+    { id:'settings', label:'Settings', Icon: Icons.Settings },
+  ];
+  return React.createElement('div', {
+    style: { position:'absolute', bottom:0, left:0, right:0, height:82, zIndex:500,
+      background:'rgba(9,9,18,0.92)', backdropFilter:'blur(24px)',
+      WebkitBackdropFilter:'blur(24px)',
+      borderTop:'1px solid rgba(255,255,255,0.06)',
+      display:'flex', alignItems:'flex-start', paddingTop:8 }
+  },
+    tabs.map(function(t) {
+      var active = activeTab === t.id;
+      return React.createElement('button', {
+        key: t.id,
+        onClick: function() { onTabChange(t.id); },
+        style: { flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3,
+          border:'none', background:'none', cursor:'pointer',
+          color: active ? 'var(--accent)' : 'var(--text-secondary)',
+          padding:'4px 0', transition:'color 0.2s' }
+      },
+        React.createElement('div', {
+          style: { width:44, height:28, display:'flex', alignItems:'center', justifyContent:'center',
+            borderRadius:14, background: active ? 'rgba(245,166,35,0.13)' : 'transparent',
+            transition:'background 0.2s' }
+        }, React.createElement(t.Icon)),
+        React.createElement('span', {
+          style: { fontFamily:'DM Sans', fontSize:10, fontWeight: active ? 600 : 400, letterSpacing:'0.3px' }
+        }, t.label)
+      );
+    })
+  );
+}
+
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+function Avatar({ username, color, size }) {
+  size = size || 36;
+  var bg = color || window.PINGIT_HELPERS.getUserColor(username || '?');
+  var init = (username || '?')[0].toUpperCase();
+  return React.createElement('div', {
+    style: { width:size, height:size, borderRadius:'50%', background:bg,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontFamily:'Syne', fontWeight:800, fontSize:size*0.4, color:'#fff', flexShrink:0 }
+  }, init);
+}
+
+// ─── Hot Badge ────────────────────────────────────────────────────────────────
+function HotBadge() {
+  return React.createElement('span', {
+    style: { display:'inline-flex', alignItems:'center', gap:3,
+      background:'var(--hot)', color:'#fff', fontFamily:'DM Sans', fontWeight:700,
+      fontSize:10, letterSpacing:'0.8px', padding:'2px 8px', borderRadius:20,
+      textTransform:'uppercase' }
+  }, '🔥 HOT');
+}
+
+// ─── Urgency Label ────────────────────────────────────────────────────────────
+function UrgencyLabel({ expiresAt }) {
+  var urgency = window.PINGIT_HELPERS.getUrgency(expiresAt);
+  var color = urgency === 'critical' ? 'var(--hot)' : urgency === 'urgent' ? 'var(--accent)' : 'var(--text-secondary)';
+  return React.createElement('span', {
+    style: { display:'inline-flex', alignItems:'center', gap:4, color:color,
+      fontFamily:'DM Sans', fontSize:12, fontWeight: urgency !== 'normal' ? 600 : 400 }
+  },
+    React.createElement(Icons.Clock),
+    window.PINGIT_HELPERS.formatTimeRemaining(expiresAt)
+  );
+}
+
+// ─── Ping Card ────────────────────────────────────────────────────────────────
+function PingCard({ ping, onClick }) {
+  var urgency = window.PINGIT_HELPERS.getUrgency(ping.expiresAt);
+  var accentLeft = urgency === 'critical' ? 'var(--hot)' : urgency === 'urgent' ? 'var(--accent)' : null;
+  return React.createElement('div', {
+    onClick: function() { onClick(ping); },
+    style: { background:'var(--surface)', borderRadius:16, padding:'14px 16px', cursor:'pointer',
+      border: '1px solid ' + (ping.isHot ? 'rgba(232,57,42,0.2)' : 'var(--border)'),
+      position:'relative', overflow:'hidden', transition:'transform 0.15s, box-shadow 0.15s',
+      boxShadow: ping.isHot ? '0 0 20px rgba(232,57,42,0.08)' : 'none' }
+  },
+    accentLeft && React.createElement('div', {
+      style: { position:'absolute', left:0, top:0, bottom:0, width:3, background:accentLeft,
+        borderRadius:'16px 0 0 16px' }
+    }),
+    React.createElement('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }},
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:8 }},
+        React.createElement(Avatar, { username: ping.author, color: ping.authorColor, size: 26 }),
+        React.createElement('span', { style:{ fontFamily:'DM Sans', fontSize:12, color:'var(--text-secondary)', fontWeight:500 }},
+          '@' + ping.author)
+      ),
+      ping.isHot && React.createElement(HotBadge)
+    ),
+    React.createElement('div', { style:{ fontFamily:'Syne', fontWeight:700, fontSize:17, color:'var(--text)',
+      marginBottom:8, paddingLeft:34, lineHeight:1.2, textWrap:'pretty' }},
+      ping.emoji + ' ' + ping.title),
+    React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:14, paddingLeft:34 }},
+      React.createElement(UrgencyLabel, { expiresAt: ping.expiresAt }),
+      React.createElement('span', { style:{ color:'var(--text-secondary)', fontSize:12,
+        display:'flex', alignItems:'center', gap:3 }},
+        React.createElement(Icons.Fire),
+        React.createElement('span', { style:{ color: ping.boosts > 0 ? 'var(--accent)' : 'var(--text-secondary)' }},
+          ping.boosts)
+      ),
+      React.createElement('span', { style:{ color:'var(--text-secondary)', fontSize:12,
+        display:'flex', alignItems:'center', gap:3 }},
+        React.createElement(Icons.Members), ping.members)
+    )
+  );
+}
+
+// ─── Back Button ──────────────────────────────────────────────────────────────
+function BackBtn({ onClick, light }) {
+  return React.createElement('button', {
+    onClick: onClick,
+    style: { width:38, height:38, borderRadius:'50%', border:'1px solid ' + (light ? 'rgba(255,255,255,0.2)' : 'var(--border)'),
+      background: light ? 'rgba(255,255,255,0.12)' : 'var(--surface)',
+      color: light ? '#fff' : 'var(--text)', cursor:'pointer',
+      display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+      backdropFilter: light ? 'blur(12px)' : 'none' }
+  }, React.createElement(Icons.Back));
+}
+
+Object.assign(window, { Icons, StatusBar, DynamicIsland, TabBar, Avatar, HotBadge, UrgencyLabel, PingCard, BackBtn });
+
+  </script>
+
+  <script type="text/babel">
+// ─── Welcome Screen ───────────────────────────────────────────────────────────
+function WelcomeScreen({ onCreateAccount, onSignIn }) {
+  var rings = [0, 1.1, 2.2];
+  var dots = [
+    { cx:72,  cy:210, delay:0.4 },
+    { cx:295, cy:148, delay:1.7 },
+    { cx:328, cy:272, delay:0.1 },
+    { cx:55,  cy:318, delay:2.5 },
+    { cx:248, cy:362, delay:1.0 },
+    { cx:140, cy:430, delay:2.9 },
+    { cx:340, cy:195, delay:0.7 },
+    { cx:180, cy:165, delay:1.4 },
+  ];
+
+  return React.createElement('div', {
+    style: { position:'absolute', inset:0, background:'var(--bg)',
+      display:'flex', flexDirection:'column', overflow:'hidden' }
+  },
+    /* Radar SVG */
+    React.createElement('svg', {
+      viewBox:'0 0 390 650', preserveAspectRatio:'xMidYMid slice',
+      style: { position:'absolute', inset:0, width:'100%', height:'100%', opacity:0.55 }
+    },
+      rings.map(function(delay, i) {
+        return React.createElement('g', { key:i, transform:'translate(195,300)',
+          style: { animation:'radar-ring 3s ease-out '+delay+'s infinite', transformOrigin:'0 0' }},
+          React.createElement('circle', { r:120, fill:'none', stroke:'#F5A623', strokeWidth:1.2 })
+        );
+      }),
+      dots.map(function(d, i) {
+        return React.createElement('g', { key:i, transform:'translate('+d.cx+','+d.cy+')',
+          style: { animation:'dot-blink 5s ease-in-out '+d.delay+'s infinite' }},
+          React.createElement('circle', { r:6, fill:'rgba(245,166,35,0.25)' }),
+          React.createElement('circle', { r:3.5, fill:'#F5A623' })
+        );
+      })
+    ),
+    /* Top safe area */
+    React.createElement('div', { style:{ height:54 }}),
+    /* Spacer */
+    React.createElement('div', { style:{ flex:1 }}),
+    /* Logo block */
+    React.createElement('div', { style:{ padding:'0 32px', zIndex:10 }},
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }},
+        React.createElement('div', { style:{ position:'relative', width:18, height:18 }},
+          React.createElement('div', { style:{ position:'absolute', inset:-5, borderRadius:'50%',
+            background:'rgba(245,166,35,0.2)', animation:'logo-pulse 2s ease-in-out infinite' }}),
+          React.createElement('div', { style:{ position:'absolute', inset:-2, borderRadius:'50%',
+            background:'rgba(245,166,35,0.35)' }}),
+          React.createElement('div', { style:{ width:18, height:18, borderRadius:'50%',
+            background:'#F5A623', position:'absolute', inset:0 }})
+        ),
+        React.createElement('span', {
+          style: { fontFamily:'Syne', fontWeight:800, fontSize:34, color:'var(--text)',
+            letterSpacing:'-1px', lineHeight:1 }
+        }, 'PINGIT')
+      ),
+      React.createElement('p', {
+        style: { fontFamily:'DM Sans', fontSize:16, color:'var(--text-secondary)',
+          margin:0, lineHeight:1.5, maxWidth:280, textWrap:'pretty' }
+      }, 'The city is live. Feel it.')
+    ),
+    /* Spacer */
+    React.createElement('div', { style:{ flex:1 }}),
+    /* Buttons */
+    React.createElement('div', { style:{ padding:'0 24px 48px', display:'flex', flexDirection:'column', gap:12, zIndex:10 }},
+      React.createElement('button', {
+        onClick: onCreateAccount,
+        style: { width:'100%', height:56, borderRadius:28, border:'none', cursor:'pointer',
+          background:'var(--accent)', color:'#000',
+          fontFamily:'Syne', fontWeight:800, fontSize:16, letterSpacing:'-0.3px',
+          boxShadow:'0 0 32px rgba(245,166,35,0.35), 0 8px 24px rgba(0,0,0,0.4)',
+          transition:'transform 0.15s, box-shadow 0.15s' }
+      }, 'Create Account'),
+      React.createElement('button', {
+        onClick: onSignIn,
+        style: { width:'100%', height:56, borderRadius:28, border:'1px solid var(--border)',
+          cursor:'pointer', background:'var(--surface)',
+          color:'var(--text)', fontFamily:'DM Sans', fontWeight:500, fontSize:16 }
+      }, 'Sign In')
+    )
+  );
+}
+
+// ─── Input Field ──────────────────────────────────────────────────────────────
+function AuthInput({ placeholder, type, value, onChange, icon }) {
+  var [showPw, setShowPw] = React.useState(false);
+  var inputType = type === 'password' ? (showPw ? 'text' : 'password') : (type || 'text');
+  return React.createElement('div', {
+    style: { position:'relative', background:'var(--surface2)', borderRadius:14,
+      border:'1px solid var(--border)', overflow:'hidden' }
+  },
+    React.createElement('input', {
+      type: inputType,
+      placeholder: placeholder,
+      value: value,
+      onChange: function(e) { onChange(e.target.value); },
+      style: { width:'100%', height:52, background:'transparent', border:'none', outline:'none',
+        padding: icon ? '0 48px 0 44px' : '0 16px',
+        fontFamily:'DM Sans', fontSize:15, color:'var(--text)',
+        boxSizing:'border-box' }
+    }),
+    icon && React.createElement('div', {
+      style: { position:'absolute', left:14, top:'50%', transform:'translateY(-50%)',
+        color:'var(--text-secondary)', pointerEvents:'none', display:'flex' }
+    }, icon),
+    type === 'password' && React.createElement('button', {
+      onClick: function() { setShowPw(function(p){ return !p; }); },
+      style: { position:'absolute', right:14, top:'50%', transform:'translateY(-50%)',
+        background:'none', border:'none', cursor:'pointer', color:'var(--text-secondary)',
+        display:'flex', alignItems:'center' }
+    }, React.createElement(Icons.Eye))
+  );
+}
+
+// ─── Sign In Screen ───────────────────────────────────────────────────────────
+function SignInScreen({ onBack, onSignIn }) {
+  var [email, setEmail] = React.useState('');
+  var [password, setPassword] = React.useState('');
+  var [error, setError] = React.useState('');
+  var [loading, setLoading] = React.useState(false);
+
+  function handleSignIn() {
+    if (!email || !password) { setError('Fill in all fields.'); return; }
+    setLoading(true);
+    setError('');
+    setTimeout(function() { setLoading(false); onSignIn(); }, 900);
+  }
+
+  return React.createElement('div', {
+    style: { position:'absolute', inset:0, background:'var(--bg)', display:'flex', flexDirection:'column' }
+  },
+    React.createElement(StatusBar),
+    /* Header */
+    React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:14, padding:'8px 20px 24px' }},
+      React.createElement(BackBtn, { onClick: onBack }),
+      React.createElement('span', { style:{ fontFamily:'Syne', fontWeight:800, fontSize:22, color:'var(--text)' }},
+        'Sign In')
+    ),
+    /* Form */
+    React.createElement('div', { style:{ padding:'0 24px', display:'flex', flexDirection:'column', gap:12 }},
+      React.createElement(AuthInput, { placeholder:'Email', type:'email', value:email, onChange:setEmail,
+        icon: React.createElement('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'currentColor' },
+          React.createElement('path', { d:'M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z' })) }),
+      React.createElement(AuthInput, { placeholder:'Password', type:'password', value:password, onChange:setPassword,
+        icon: React.createElement('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'currentColor' },
+          React.createElement('path', { d:'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z' })) }),
+      error && React.createElement('p', { style:{ margin:0, fontFamily:'DM Sans', fontSize:13, color:'var(--hot)' }}, error),
+      React.createElement('button', {
+        onClick: handleSignIn,
+        style: { width:'100%', height:54, borderRadius:27, border:'none', cursor:'pointer',
+          background: (!email || !password) ? 'var(--surface2)' : 'var(--accent)',
+          color: (!email || !password) ? 'var(--text-secondary)' : '#000',
+          fontFamily:'Syne', fontWeight:800, fontSize:16, marginTop:8,
+          transition:'all 0.2s', opacity: loading ? 0.7 : 1 }
+      }, loading ? 'Signing in…' : 'Sign In'),
+      React.createElement('button', {
+        style: { background:'none', border:'none', cursor:'pointer', color:'var(--text-secondary)',
+          fontFamily:'DM Sans', fontSize:13, marginTop:4 }
+      }, 'Forgot Password?')
+    )
+  );
+}
+
+// ─── Create Account Screen ────────────────────────────────────────────────────
+function CreateAccountScreen({ onBack, onSignIn }) {
+  var [email, setEmail] = React.useState('');
+  var [username, setUsername] = React.useState('');
+  var [password, setPassword] = React.useState('');
+  var [confirm, setConfirm] = React.useState('');
+  var [agreed, setAgreed] = React.useState(false);
+  var [error, setError] = React.useState('');
+  var [loading, setLoading] = React.useState(false);
+
+  var canSubmit = email && username && password && confirm && agreed;
+
+  function handleCreate() {
+    if (!canSubmit) return;
+    if (password !== confirm) { setError('Passwords do not match.'); return; }
+    if (password.length < 6) { setError('Password must be 6+ characters.'); return; }
+    setLoading(true); setError('');
+    setTimeout(function() { setLoading(false); onSignIn(); }, 1100);
+  }
+
+  var lockIcon = React.createElement('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'currentColor' },
+    React.createElement('path', { d:'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z' }));
+
+  return React.createElement('div', {
+    style: { position:'absolute', inset:0, background:'var(--bg)', display:'flex', flexDirection:'column' }
+  },
+    React.createElement(StatusBar),
+    React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:14, padding:'8px 20px 24px' }},
+      React.createElement(BackBtn, { onClick: onBack }),
+      React.createElement('span', { style:{ fontFamily:'Syne', fontWeight:800, fontSize:22, color:'var(--text)' }},
+        'Create Account')
+    ),
+    React.createElement('div', { style:{ padding:'0 24px', display:'flex', flexDirection:'column', gap:12 }},
+      React.createElement(AuthInput, { placeholder:'Email', type:'email', value:email, onChange:setEmail,
+        icon: React.createElement('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'currentColor' },
+          React.createElement('path', { d:'M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z' })) }),
+      React.createElement(AuthInput, { placeholder:'Username', type:'text', value:username, onChange:setUsername,
+        icon: React.createElement('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'currentColor' },
+          React.createElement('path', { d:'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z' })) }),
+      React.createElement(AuthInput, { placeholder:'Password', type:'password', value:password, onChange:setPassword, icon: lockIcon }),
+      React.createElement(AuthInput, { placeholder:'Confirm Password', type:'password', value:confirm, onChange:setConfirm, icon: lockIcon }),
+      React.createElement('label', {
+        style: { display:'flex', alignItems:'center', gap:10, cursor:'pointer',
+          fontFamily:'DM Sans', fontSize:13, color:'var(--text-secondary)', paddingLeft:2 }
+      },
+        React.createElement('div', {
+          onClick: function() { setAgreed(function(a){ return !a; }); },
+          style: { width:20, height:20, borderRadius:6, border:'1.5px solid ' + (agreed ? 'var(--accent)' : 'var(--border)'),
+            background: agreed ? 'var(--accent)' : 'var(--surface2)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            flexShrink:0, transition:'all 0.2s', cursor:'pointer' }
+        }, agreed && React.createElement('svg', { width:12, height:12, viewBox:'0 0 24 24', fill:'#000' },
+          React.createElement('path', { d:'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' }))),
+        React.createElement('span', null, 'I agree to the ',
+          React.createElement('span', { style:{ color:'var(--accent)' }}, 'Terms'),
+          ' and ',
+          React.createElement('span', { style:{ color:'var(--accent)' }}, 'Privacy Policy'))
+      ),
+      error && React.createElement('p', { style:{ margin:0, fontFamily:'DM Sans', fontSize:13, color:'var(--hot)' }}, error),
+      React.createElement('button', {
+        onClick: handleCreate,
+        style: { width:'100%', height:54, borderRadius:27, border:'none', cursor:'pointer',
+          background: canSubmit ? 'var(--accent)' : 'var(--surface2)',
+          color: canSubmit ? '#000' : 'var(--text-secondary)',
+          fontFamily:'Syne', fontWeight:800, fontSize:16, marginTop:8,
+          transition:'all 0.2s', opacity: loading ? 0.7 : 1 }
+      }, loading ? 'Creating…' : 'Create Account')
+    )
+  );
+}
+
+Object.assign(window, { WelcomeScreen, SignInScreen, CreateAccountScreen });
+
+  </script>
+
+  <script type="text/babel">
+// ─── Map Screen ───────────────────────────────────────────────────────────────
+function MapScreen({ pings, onPingSelect, onCreatePing }) {
+  var containerRef = React.useRef(null);
+  var mapRef = React.useRef(null);
+  var markersRef = React.useRef({});
+
+  // Init Leaflet map
+  React.useEffect(function() {
+    if (!containerRef.current || mapRef.current) return;
+
+    var map = L.map(containerRef.current, {
+      center: [46.7710, 23.5928],
+      zoom: 15,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Subtle attribution
+    L.control.attribution({ position: 'bottomleft', prefix: '' })
+      .addAttribution('© <a href="https://carto.com" style="color:#555">CARTO</a>')
+      .addTo(map);
+
+    mapRef.current = map;
+
+    return function() {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Add / refresh markers when pings change
+  React.useEffect(function() {
+    if (!mapRef.current) return;
+
+    // Remove stale markers
+    Object.values(markersRef.current).forEach(function(m) { m.remove(); });
+    markersRef.current = {};
+
+    pings.forEach(function(ping) {
+      var urgency = window.PINGIT_HELPERS.getUrgency(ping.expiresAt);
+      var isHot = ping.isHot || urgency === 'critical';
+      var cls = 'pm-wrap' + (isHot ? ' hot' : '') + (urgency === 'critical' ? ' critical' : '');
+
+      var badge = ping.members > 1
+        ? '<div class="pm-badge">' + ping.members + '</div>'
+        : '';
+
+      var html = '<div class="' + cls + '">'
+        + '<div class="pm-pulse"></div>'
+        + '<div class="pm-pulse pm-p2"></div>'
+        + '<div class="pm-dot">' + ping.emoji + '</div>'
+        + badge
+        + '</div>';
+
+      var icon = L.divIcon({ html: html, className: '', iconSize: [52, 52], iconAnchor: [26, 26] });
+      var marker = L.marker([ping.lat, ping.lng], { icon: icon });
+
+      marker.on('click', function() { onPingSelect(ping); });
+      marker.addTo(mapRef.current);
+      markersRef.current[ping.id] = marker;
+    });
+  }, [pings]);
+
+  return React.createElement('div', { style: { position: 'absolute', inset: 0 } },
+
+    // Leaflet container
+    React.createElement('div', {
+      ref: containerRef,
+      style: { position: 'absolute', inset: 0 }
+    }),
+
+    // Top gradient for legibility
+    React.createElement('div', {
+      style: {
+        position: 'absolute', top: 0, left: 0, right: 0, height: 130, zIndex: 1000,
+        background: 'linear-gradient(to bottom, rgba(9,9,18,0.92) 0%, transparent 100%)',
+        pointerEvents: 'none',
+      }
+    }),
+
+    // Status bar
+    React.createElement('div', { style: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1001 } },
+      React.createElement(StatusBar, { light: true })
+    ),
+
+    // "Map" label top-left
+    React.createElement('div', {
+      style: {
+        position: 'absolute', top: 58, left: 20, zIndex: 1001,
+        fontFamily: 'Syne', fontWeight: 800, fontSize: 28, color: '#fff',
+        letterSpacing: '-0.5px', pointerEvents: 'none',
+      }
+    }, 'Map'),
+
+    // Location re-center button
+    React.createElement('button', {
+      onClick: function() {
+        if (mapRef.current) mapRef.current.flyTo([46.7710, 23.5928], 15, { duration: 0.8 });
+      },
+      style: {
+        position: 'absolute', top: 62, right: 20, zIndex: 1002,
+        width: 42, height: 42, borderRadius: 21,
+        background: 'rgba(9,9,18,0.85)', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        color: 'var(--accent)', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }
+    }, React.createElement(Icons.Location)),
+
+    // Create Ping FAB
+    React.createElement('button', {
+      onClick: onCreatePing,
+      style: {
+        position: 'absolute', bottom: 98, right: 20, zIndex: 1002,
+        width: 60, height: 60, borderRadius: 30,
+        background: 'var(--accent)',
+        border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 0 28px rgba(245,166,35,0.55), 0 8px 24px rgba(0,0,0,0.5)',
+        animation: 'fab-glow 2.5s ease-in-out infinite',
+      }
+    }, React.createElement(Icons.Plus))
+  );
+}
+
+// ─── Map Ping Sheet (bottom preview card) ─────────────────────────────────────
+function MapPingSheet({ ping, onClose, onViewDetails, onJoinChat }) {
+  var [visible, setVisible] = React.useState(false);
+
+  React.useEffect(function() {
+    var t = requestAnimationFrame(function() { setVisible(true); });
+    return function() { cancelAnimationFrame(t); };
+  }, []);
+
+  function handleClose() {
+    setVisible(false);
+    setTimeout(onClose, 280);
+  }
+
+  var urgency = window.PINGIT_HELPERS.getUrgency(ping.expiresAt);
+
+  return React.createElement('div', {
+    style: {
+      position: 'absolute', inset: 0, zIndex: 600, pointerEvents: 'none',
+    }
+  },
+    // Backdrop (tap to close)
+    React.createElement('div', {
+      onClick: handleClose,
+      style: { position: 'absolute', inset: 0, pointerEvents: 'all' }
+    }),
+
+    // Sheet
+    React.createElement('div', {
+      style: {
+        position: 'absolute', bottom: 82, left: 12, right: 12,
+        background: 'var(--surface)',
+        borderRadius: 24,
+        border: '1px solid var(--border2)',
+        padding: '20px 20px 20px',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
+        pointerEvents: 'all',
+        transform: visible ? 'translateY(0)' : 'translateY(110%)',
+        transition: 'transform 0.3s cubic-bezier(0.32,0.72,0,1)',
+        backdropFilter: 'blur(20px)',
+      }
+    },
+
+      // Drag handle
+      React.createElement('div', {
+        style: { width: 36, height: 4, borderRadius: 2, background: 'var(--border2)',
+          margin: '0 auto 16px' }
+      }),
+
+      // Author row
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 } },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 9 } },
+          React.createElement(Avatar, { username: ping.author, color: ping.authorColor, size: 32 }),
+          React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 } },
+            '@' + ping.author)
+        ),
+        React.createElement(UrgencyLabel, { expiresAt: ping.expiresAt })
+      ),
+
+      // Title
+      React.createElement('div', {
+        style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 20, color: 'var(--text)',
+          marginBottom: 6, lineHeight: 1.2 }
+      }, ping.emoji + ' ' + ping.title),
+
+      // Description
+      ping.description && React.createElement('p', {
+        style: { margin: '0 0 14px', fontFamily: 'DM Sans', fontSize: 13,
+          color: 'var(--text-secondary)', lineHeight: 1.5 }
+      }, ping.description),
+
+      // Stats row
+      React.createElement('div', {
+        style: { display: 'flex', gap: 16, marginBottom: 18,
+          fontFamily: 'DM Sans', fontSize: 13, color: 'var(--text-secondary)' }
+      },
+        React.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: 4 } },
+          React.createElement(Icons.Fire),
+          React.createElement('span', { style: { color: ping.boosts > 0 ? 'var(--accent)' : 'inherit' } }, ping.boosts + ' boosts')
+        ),
+        React.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: 4 } },
+          React.createElement(Icons.Members), ping.members + ' in chat'
+        )
+      ),
+
+      // Buttons
+      React.createElement('div', { style: { display: 'flex', gap: 10 } },
+        React.createElement('button', {
+          onClick: onJoinChat,
+          style: { flex: 1, height: 48, borderRadius: 24, border: 'none', cursor: 'pointer',
+            background: 'var(--accent)', color: '#000',
+            fontFamily: 'Syne', fontWeight: 800, fontSize: 14,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            boxShadow: '0 0 20px rgba(245,166,35,0.3)' }
+        },
+          React.createElement(Icons.Chat), 'JOIN CHAT'
+        ),
+        React.createElement('button', {
+          onClick: onViewDetails,
+          style: { height: 48, padding: '0 18px', borderRadius: 24,
+            border: '1px solid var(--border2)', cursor: 'pointer',
+            background: 'var(--surface2)', color: 'var(--text)',
+            fontFamily: 'DM Sans', fontWeight: 500, fontSize: 14 }
+        }, 'Details')
+      )
+    )
+  );
+}
+
+Object.assign(window, { MapScreen, MapPingSheet });
+
+  </script>
+
+  <script type="text/babel">
+// ─── Feed Screen ──────────────────────────────────────────────────────────────
+function FeedScreen({ pings, onPingSelect }) {
+  var [sort, setSort] = React.useState('hot');
+
+  var sorted = pings.slice().sort(function(a, b) {
+    if (sort === 'hot') {
+      var scoreA = (a.isHot ? 100 : 0) + a.boosts * 2 + a.members;
+      var scoreB = (b.isHot ? 100 : 0) + b.boosts * 2 + b.members;
+      return scoreB - scoreA;
+    }
+    if (sort === 'new') return b.createdAt - a.createdAt;
+    if (sort === 'near') return a.expiresAt - b.expiresAt;
+    return 0;
+  });
+
+  return React.createElement('div', {
+    style: { position: 'absolute', inset: 0, background: 'var(--bg)',
+      display: 'flex', flexDirection: 'column' }
+  },
+    React.createElement(StatusBar),
+
+    // Header
+    React.createElement('div', { style: { padding: '4px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+      React.createElement('div', null,
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+          React.createElement('span', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 30, color: 'var(--text)', letterSpacing: '-0.5px' } }, 'Feed'),
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5 } },
+            React.createElement('div', { style: { width: 7, height: 7, borderRadius: '50%', background: 'var(--live)', animation: 'live-pulse 1.5s ease-in-out infinite' } }),
+            React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 11, color: 'var(--live)', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' } }, 'Live')
+          )
+        )
+      ),
+      // Sort button
+      React.createElement('div', { style: { display: 'flex', gap: 6 } },
+        ['hot', 'new', 'near'].map(function(s) {
+          return React.createElement('button', {
+            key: s,
+            onClick: function() { setSort(s); },
+            style: { height: 30, padding: '0 12px', borderRadius: 15,
+              border: '1px solid ' + (sort === s ? 'var(--accent)' : 'var(--border)'),
+              background: sort === s ? 'rgba(245,166,35,0.13)' : 'var(--surface)',
+              color: sort === s ? 'var(--accent)' : 'var(--text-secondary)',
+              fontFamily: 'DM Sans', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              textTransform: 'capitalize' }
+          }, s === 'near' ? 'expiring' : s);
+        })
+      )
+    ),
+
+    // Ping list
+    React.createElement('div', {
+      style: { flex: 1, overflowY: 'auto', padding: '14px 16px 90px',
+        display: 'flex', flexDirection: 'column', gap: 10 }
+    },
+      sorted.length === 0
+        ? React.createElement('div', { style: { textAlign: 'center', paddingTop: 80, color: 'var(--text-secondary)', fontFamily: 'DM Sans' } },
+            'No pings nearby. Drop one.')
+        : sorted.map(function(p) {
+            return React.createElement(PingCard, { key: p.id, ping: p, onClick: onPingSelect });
+          })
+    )
+  );
+}
+
+// ─── Ping Detail Screen ───────────────────────────────────────────────────────
+function PingDetailScreen({ ping, onBack, onJoinChat }) {
+  var [boosted, setBoosted] = React.useState(false);
+  var [boostCount, setBoostCount] = React.useState(ping.boosts);
+  var isOwn = ping.authorId === 'u1';
+
+  function handleBoost() {
+    if (boosted) return;
+    setBoosted(true);
+    setBoostCount(function(n) { return n + 1; });
+  }
+
+  var urgency = window.PINGIT_HELPERS.getUrgency(ping.expiresAt);
+  var urgencyColor = urgency === 'critical' ? 'var(--hot)' : urgency === 'urgent' ? 'var(--accent)' : 'var(--text-secondary)';
+
+  return React.createElement('div', {
+    style: { position: 'absolute', inset: 0, background: 'var(--bg)', display: 'flex', flexDirection: 'column', zIndex: 400 }
+  },
+    React.createElement(StatusBar),
+
+    // Header
+    React.createElement('div', {
+      style: { display: 'flex', alignItems: 'center', gap: 14, padding: '8px 20px 16px' }
+    },
+      React.createElement(BackBtn, { onClick: onBack }),
+      React.createElement('span', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 20, color: 'var(--text)' } },
+        'Ping Details')
+    ),
+
+    // Content (scrollable)
+    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 20px 32px' } },
+
+      // Author + timer row
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 } },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+          React.createElement(Avatar, { username: ping.author, color: ping.authorColor, size: 40 }),
+          React.createElement('div', null,
+            React.createElement('div', { style: { fontFamily: 'Syne', fontWeight: 700, fontSize: 16, color: 'var(--text)' } },
+              '@' + ping.author),
+            React.createElement('div', { style: { fontFamily: 'DM Sans', fontSize: 12, color: 'var(--text-secondary)' } },
+              'just now')
+          )
+        ),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5,
+          background: 'rgba(245,166,35,0.1)', borderRadius: 20, padding: '6px 12px',
+          border: '1px solid rgba(245,166,35,0.2)' } },
+          React.createElement(Icons.Clock),
+          React.createElement('span', { style: { fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: urgencyColor } },
+            window.PINGIT_HELPERS.formatTimeRemaining(ping.expiresAt))
+        )
+      ),
+
+      // Title
+      React.createElement('div', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 26,
+        color: 'var(--text)', marginBottom: 10, lineHeight: 1.15, letterSpacing: '-0.5px' } },
+        ping.emoji + '  ' + ping.title),
+
+      // Description
+      ping.description && React.createElement('p', {
+        style: { margin: '0 0 18px', fontFamily: 'DM Sans', fontSize: 15,
+          color: 'var(--text-secondary)', lineHeight: 1.6 }
+      }, ping.description),
+
+      // Stats card
+      React.createElement('div', {
+        style: { background: 'var(--surface)', borderRadius: 16, padding: '14px 18px',
+          border: '1px solid var(--border)', display: 'flex', gap: 24, marginBottom: 20 }
+      },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 7 } },
+          React.createElement('button', {
+            onClick: handleBoost,
+            style: { background: boosted ? 'rgba(245,166,35,0.15)' : 'var(--surface2)',
+              border: '1px solid ' + (boosted ? 'var(--accent)' : 'var(--border)'),
+              borderRadius: 20, padding: '6px 14px', cursor: boosted ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13,
+              color: boosted ? 'var(--accent)' : 'var(--text-secondary)',
+              transition: 'all 0.2s' }
+          },
+            React.createElement(Icons.Fire),
+            boostCount + (boosted ? ' boosted' : ' boost')
+          )
+        ),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6,
+          fontFamily: 'DM Sans', fontSize: 13, color: 'var(--text-secondary)' } },
+          React.createElement(Icons.Members),
+          React.createElement('span', null, ping.members + ' in chat')
+        )
+      ),
+
+      // Hot badge
+      ping.isHot && React.createElement('div', { style: { marginBottom: 20 } },
+        React.createElement(HotBadge)
+      ),
+
+      // JOIN CHAT button
+      React.createElement('button', {
+        onClick: onJoinChat,
+        style: { width: '100%', height: 56, borderRadius: 28, border: 'none', cursor: 'pointer',
+          background: 'var(--accent)', color: '#000',
+          fontFamily: 'Syne', fontWeight: 800, fontSize: 17, letterSpacing: '-0.3px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          marginBottom: 14,
+          boxShadow: '0 0 28px rgba(245,166,35,0.4), 0 8px 24px rgba(0,0,0,0.4)' }
+      },
+        React.createElement(Icons.Chat), 'JOIN CHAT'
+      ),
+
+      // Delete (own pings only)
+      isOwn && React.createElement('button', {
+        style: { width: '100%', height: 48, borderRadius: 24,
+          border: '1px solid rgba(232,57,42,0.25)', cursor: 'pointer',
+          background: 'rgba(232,57,42,0.07)', color: 'var(--hot)',
+          fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+      },
+        React.createElement(Icons.Delete), 'Delete Ping'
+      )
+    )
+  );
+}
+
+// ─── Chat Screen ──────────────────────────────────────────────────────────────
+function ChatScreen({ ping, onBack }) {
+  var baseMessages = window.PINGIT_DATA.chatMessages[ping.id] || [];
+  var [messages, setMessages] = React.useState(baseMessages);
+  var [input, setInput] = React.useState('');
+  var [typing, setTyping] = React.useState(false);
+  var [memberCount, setMemberCount] = React.useState(ping.members);
+  var listRef = React.useRef(null);
+  var livePool = window.PINGIT_DATA.liveMessages;
+  var liveIndex = React.useRef(0);
+
+  // Auto-scroll
+  React.useEffect(function() {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [messages, typing]);
+
+  // Simulate live incoming messages
+  React.useEffect(function() {
+    function scheduleNext() {
+      var delay = 3000 + Math.random() * 5000;
+      return setTimeout(function() {
+        setTyping(true);
+        var typingDelay = 800 + Math.random() * 800;
+        setTimeout(function() {
+          setTyping(false);
+          var authors = ['stranger_0x', 'nightcrawler', 'idk.who', 'just.passing', 'uni.kid'];
+          var author = authors[Math.floor(Math.random() * authors.length)];
+          var text = livePool[liveIndex.current % livePool.length];
+          liveIndex.current++;
+          setMessages(function(prev) {
+            return prev.concat([{ id: 'live_' + Date.now(), author: author, text: text,
+              time: (function() { var n = new Date(); return n.getHours().toString().padStart(2,'0') + ':' + n.getMinutes().toString().padStart(2,'0'); })(),
+              isOwn: false }]);
+          });
+          setMemberCount(function(n) { return n + (Math.random() > 0.6 ? 1 : 0); });
+          timerRef.current = scheduleNext();
+        }, typingDelay);
+      }, delay);
+    }
+    var timerRef = { current: scheduleNext() };
+    return function() { clearTimeout(timerRef.current); };
+  }, []);
+
+  function handleSend() {
+    var text = input.trim();
+    if (!text) return;
+    var now = new Date();
+    var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    setMessages(function(prev) {
+      return prev.concat([{ id: 'own_' + Date.now(), author: 'Radiana', text: text, time: time, isOwn: true }]);
+    });
+    setInput('');
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') handleSend();
+  }
+
+  return React.createElement('div', {
+    style: { position: 'absolute', inset: 0, background: 'var(--bg)',
+      display: 'flex', flexDirection: 'column', zIndex: 410 }
+  },
+    React.createElement(StatusBar),
+
+    // Header
+    React.createElement('div', { style: { padding: '4px 16px 12px', borderBottom: '1px solid var(--border)' } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+        React.createElement(BackBtn, { onClick: onBack }),
+        React.createElement('div', { style: { flex: 1 } },
+          React.createElement('div', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: 'var(--text)', lineHeight: 1.2 } },
+            ping.emoji + ' ' + ping.title),
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 } },
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5 } },
+              React.createElement('div', { style: { width: 6, height: 6, borderRadius: '50%', background: 'var(--live)', animation: 'live-pulse 1.5s ease-in-out infinite' } }),
+              React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 11, color: 'var(--live)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' } }, 'Live')
+            ),
+            React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 12, color: 'var(--text-secondary)' } },
+              memberCount + ' in here')
+          )
+        ),
+        React.createElement(UrgencyLabel, { expiresAt: ping.expiresAt })
+      )
+    ),
+
+    // Messages
+    React.createElement('div', {
+      ref: listRef,
+      style: { flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }
+    },
+      messages.map(function(msg) {
+        if (msg.isOwn) {
+          return React.createElement('div', { key: msg.id, style: { display: 'flex', justifyContent: 'flex-end' } },
+            React.createElement('div', {
+              style: { maxWidth: '72%', background: 'var(--accent)', borderRadius: '18px 18px 4px 18px',
+                padding: '10px 14px' }
+            },
+              React.createElement('p', { style: { margin: 0, fontFamily: 'DM Sans', fontSize: 14, color: '#000', lineHeight: 1.4 } }, msg.text),
+              React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 10, color: 'rgba(0,0,0,0.5)', marginTop: 3, display: 'block', textAlign: 'right' } }, msg.time)
+            )
+          );
+        }
+        return React.createElement('div', { key: msg.id, style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '76%' } },
+          React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 3, paddingLeft: 4 } },
+            '@' + msg.author),
+          React.createElement('div', {
+            style: { background: 'var(--surface)', borderRadius: '4px 18px 18px 18px',
+              padding: '10px 14px', border: '1px solid var(--border)' }
+          },
+            React.createElement('p', { style: { margin: 0, fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text)', lineHeight: 1.4 } }, msg.text),
+            React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 10, color: 'var(--text-secondary)', marginTop: 3, display: 'block' } }, msg.time)
+          )
+        );
+      }),
+
+      // Typing indicator
+      typing && React.createElement('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 8 } },
+        React.createElement('div', {
+          style: { background: 'var(--surface)', borderRadius: '4px 18px 18px 18px',
+            padding: '12px 16px', display: 'flex', gap: 4, border: '1px solid var(--border)' }
+        },
+          [0, 0.18, 0.36].map(function(delay, i) {
+            return React.createElement('div', {
+              key: i,
+              style: { width: 7, height: 7, borderRadius: '50%', background: 'var(--text-secondary)',
+                animation: 'typing-dot 0.8s ease-in-out ' + delay + 's infinite' }
+            });
+          })
+        )
+      )
+    ),
+
+    // Input bar
+    React.createElement('div', {
+      style: { padding: '10px 12px 20px', borderTop: '1px solid var(--border)',
+        display: 'flex', gap: 10, alignItems: 'center',
+        background: 'rgba(9,9,18,0.95)', backdropFilter: 'blur(20px)' }
+    },
+      React.createElement('input', {
+        value: input,
+        onChange: function(e) { setInput(e.target.value); },
+        onKeyDown: handleKeyDown,
+        placeholder: 'say something…',
+        style: { flex: 1, height: 44, borderRadius: 22, border: '1px solid var(--border2)',
+          background: 'var(--surface)', padding: '0 16px', outline: 'none',
+          fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text)' }
+      }),
+      React.createElement('button', {
+        onClick: handleSend,
+        style: { width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer',
+          background: input.trim() ? 'var(--accent)' : 'var(--surface)',
+          color: input.trim() ? '#000' : 'var(--text-secondary)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.2s', flexShrink: 0 }
+      }, React.createElement(Icons.Send))
+    )
+  );
+}
+
+Object.assign(window, { FeedScreen, PingDetailScreen, ChatScreen });
+
+  </script>
+
+  <script type="text/babel">
+// ─── Profile Screen ───────────────────────────────────────────────────────────
+function ProfileScreen() {
+  var user = window.PINGIT_DATA.currentUser;
+  var pings = window.PINGIT_DATA.pings;
+  var myPings = pings.filter(function(p) { return p.authorId === 'u1'; });
+  var totalBoosts = myPings.reduce(function(s, p) { return s + p.boosts; }, 0);
+
+  return React.createElement('div', {
+    style: { position: 'absolute', inset: 0, background: 'var(--bg)', display: 'flex', flexDirection: 'column' }
+  },
+    React.createElement(StatusBar),
+
+    React.createElement('div', { style: { flex: 1, overflowY: 'auto', paddingBottom: 90 } },
+
+      // Header section
+      React.createElement('div', { style: { padding: '8px 20px 24px' } },
+        React.createElement('span', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 30,
+          color: 'var(--text)', letterSpacing: '-0.5px' } }, 'Profile')
+      ),
+
+      // Avatar + identity
+      React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28 } },
+        React.createElement('div', { style: { position: 'relative', marginBottom: 12 } },
+          React.createElement('div', { style: { width: 86, height: 86, borderRadius: '50%',
+            background: user.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'Syne', fontWeight: 800, fontSize: 36, color: '#fff',
+            border: '3px solid rgba(245,166,35,0.4)',
+            boxShadow: '0 0 24px rgba(245,166,35,0.2)' } },
+            user.username[0].toUpperCase()
+          ),
+          React.createElement('button', {
+            style: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28,
+              borderRadius: '50%', background: 'var(--accent)', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }
+          },
+            React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: '#000' },
+              React.createElement('path', { d: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z' }))
+          )
+        ),
+        React.createElement('div', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: 'var(--text)', letterSpacing: '-0.3px' } },
+          '@' + user.username),
+        React.createElement('div', { style: { fontFamily: 'DM Sans', fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 } },
+          user.email)
+      ),
+
+      // Stats row
+      React.createElement('div', {
+        style: { display: 'flex', margin: '0 20px 24px', background: 'var(--surface)',
+          borderRadius: 20, border: '1px solid var(--border)', overflow: 'hidden' }
+      },
+        [
+          { label: 'Pings', value: myPings.length },
+          { label: 'Boosts', value: totalBoosts },
+          { label: 'Member', value: '1mo' },
+        ].map(function(stat, i, arr) {
+          return React.createElement('div', { key: stat.label,
+            style: { flex: 1, padding: '16px 0', textAlign: 'center',
+              borderRight: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }
+          },
+            React.createElement('div', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 22,
+              color: 'var(--accent)', letterSpacing: '-0.5px' } }, stat.value),
+            React.createElement('div', { style: { fontFamily: 'DM Sans', fontSize: 11, color: 'var(--text-secondary)',
+              marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.5px' } }, stat.label)
+          );
+        })
+      ),
+
+      // Info rows
+      React.createElement('div', {
+        style: { margin: '0 20px', background: 'var(--surface)', borderRadius: 20,
+          border: '1px solid var(--border)', overflow: 'hidden' }
+      },
+        [
+          { label: 'Username', value: '@' + user.username },
+          { label: 'Email', value: user.email },
+          { label: 'Member since', value: user.memberSince },
+        ].map(function(row, i, arr) {
+          return React.createElement('div', { key: row.label,
+            style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '14px 18px',
+              borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }
+          },
+            React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text-secondary)' } },
+              row.label),
+            React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text)', fontWeight: 500 } },
+              row.value)
+          );
+        })
+      )
+    )
+  );
+}
+
+// ─── Settings Screen ──────────────────────────────────────────────────────────
+function SettingsScreen({ onSignOut }) {
+  var [notifyNearby, setNotifyNearby] = React.useState(true);
+  var [notifyHot, setNotifyHot] = React.useState(true);
+  var [privateProfile, setPrivateProfile] = React.useState(false);
+
+  function Toggle({ on, onChange }) {
+    return React.createElement('div', {
+      onClick: function() { onChange(!on); },
+      style: { width: 48, height: 28, borderRadius: 14, cursor: 'pointer',
+        background: on ? 'var(--live)' : 'var(--surface2)',
+        border: '1px solid ' + (on ? 'var(--live)' : 'var(--border)'),
+        position: 'relative', transition: 'all 0.2s', flexShrink: 0 }
+    },
+      React.createElement('div', { style: { position: 'absolute', top: 2,
+        left: on ? 22 : 2, width: 22, height: 22, borderRadius: 11,
+        background: '#fff', transition: 'left 0.2s',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.3)' } })
+    );
+  }
+
+  function SettingsRow({ label, rightEl, color, onClick, dimmed }) {
+    return React.createElement('div', {
+      onClick: onClick,
+      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '15px 18px', cursor: onClick ? 'pointer' : 'default' }
+    },
+      React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 15,
+        color: color || 'var(--text)', fontWeight: 500, opacity: dimmed ? 0.5 : 1 } },
+        label),
+      rightEl || React.createElement(Icons.ChevronRight)
+    );
+  }
+
+  function SettingsSection({ title, children }) {
+    return React.createElement('div', { style: { margin: '0 20px 20px' } },
+      React.createElement('div', { style: { fontFamily: 'DM Sans', fontSize: 11, color: 'var(--text-secondary)',
+        fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px',
+        marginBottom: 8, paddingLeft: 4 } }, title),
+      React.createElement('div', { style: { background: 'var(--surface)', borderRadius: 20,
+        border: '1px solid var(--border)', overflow: 'hidden' } },
+        children)
+    );
+  }
+
+  function Divider() {
+    return React.createElement('div', { style: { height: 1, background: 'var(--border)', margin: '0 18px' } });
+  }
+
+  return React.createElement('div', {
+    style: { position: 'absolute', inset: 0, background: 'var(--bg)', display: 'flex', flexDirection: 'column' }
+  },
+    React.createElement(StatusBar),
+    React.createElement('div', { style: { padding: '8px 20px 20px' } },
+      React.createElement('span', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 30, color: 'var(--text)', letterSpacing: '-0.5px' } }, 'Settings')
+    ),
+
+    React.createElement('div', { style: { flex: 1, overflowY: 'auto', paddingBottom: 90 } },
+      React.createElement(SettingsSection, { title: 'Account' },
+        React.createElement(SettingsRow, { label: 'Sign Out', color: 'var(--hot)', onClick: onSignOut,
+          rightEl: React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'var(--hot)' },
+            React.createElement('path', { d: 'M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z' })) })
+      ),
+
+      React.createElement(SettingsSection, { title: 'Notifications' },
+        React.createElement(SettingsRow, { label: 'Nearby Pings', rightEl: React.createElement(Toggle, { on: notifyNearby, onChange: setNotifyNearby }) }),
+        React.createElement(Divider),
+        React.createElement(SettingsRow, { label: 'Hot Pings', rightEl: React.createElement(Toggle, { on: notifyHot, onChange: setNotifyHot }) })
+      ),
+
+      React.createElement(SettingsSection, { title: 'Privacy & Safety' },
+        React.createElement(SettingsRow, { label: 'Private Profile', rightEl: React.createElement(Toggle, { on: privateProfile, onChange: setPrivateProfile }) }),
+        React.createElement(Divider),
+        React.createElement(SettingsRow, { label: 'Blocked Users' }),
+        React.createElement(Divider),
+        React.createElement(SettingsRow, { label: 'Export My Data', color: 'var(--accent)',
+          rightEl: React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'var(--accent)' },
+            React.createElement('path', { d: 'M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z' })) })
+      ),
+
+      React.createElement(SettingsSection, { title: 'Legal' },
+        React.createElement(SettingsRow, { label: 'Terms of Service' }),
+        React.createElement(Divider),
+        React.createElement(SettingsRow, { label: 'Privacy Policy' })
+      ),
+
+      React.createElement('div', { style: { margin: '0 20px 20px' } },
+        React.createElement('div', { style: { background: 'var(--surface)', borderRadius: 20,
+          border: '1px solid rgba(232,57,42,0.2)', overflow: 'hidden' } },
+          React.createElement(SettingsRow, { label: 'Delete Account', color: 'var(--hot)' })
+        )
+      )
+    )
+  );
+}
+
+// ─── Create Ping Modal ────────────────────────────────────────────────────────
+var CATEGORIES = [
+  { id:'sports', emoji:'🏀', label:'Sports' }, { id:'study', emoji:'📚', label:'Study' },
+  { id:'social', emoji:'🍻', label:'Social' }, { id:'music', emoji:'🎸', label:'Music' },
+  { id:'food', emoji:'🍕', label:'Food' },   { id:'skate', emoji:'🛹', label:'Skate' },
+  { id:'chill', emoji:'☕', label:'Chill' }, { id:'gaming', emoji:'🎮', label:'Gaming' },
+  { id:'art', emoji:'🎨', label:'Art' },
+];
+var EXPIRY_OPTS = [
+  { label:'1h', ms: 3600000 }, { label:'6h', ms: 21600000 },
+  { label:'12h', ms: 43200000 }, { label:'24h', ms: 86400000 }, { label:'48h', ms: 172800000 },
+];
+
+function CreatePingModal({ onClose, onCreate }) {
+  var [visible, setVisible] = React.useState(false);
+  var [category, setCategory] = React.useState(null);
+  var [text, setText] = React.useState('');
+  var [expiry, setExpiry] = React.useState(EXPIRY_OPTS[1]);
+
+  React.useEffect(function() {
+    var t = requestAnimationFrame(function() { setVisible(true); });
+    return function() { cancelAnimationFrame(t); };
+  }, []);
+
+  function handleClose() {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  }
+
+  function handleCreate() {
+    if (!text.trim() || !category) return;
+    var cat = CATEGORIES.find(function(c) { return c.id === category; });
+    onCreate({
+      title: text.trim(),
+      category: category,
+      emoji: cat ? cat.emoji : '📍',
+      lat: 46.7710 + (Math.random() - 0.5) * 0.01,
+      lng: 23.5930 + (Math.random() - 0.5) * 0.01,
+      expiresAt: Date.now() + expiry.ms,
+      description: '',
+    });
+    handleClose();
+  }
+
+  var canCreate = text.trim().length > 0 && category;
+
+  return React.createElement('div', {
+    style: { position: 'absolute', inset: 0, zIndex: 800 }
+  },
+    // Backdrop
+    React.createElement('div', {
+      onClick: handleClose,
+      style: { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)',
+        backdropFilter: 'blur(6px)', opacity: visible ? 1 : 0, transition: 'opacity 0.3s' }
+    }),
+
+    // Sheet
+    React.createElement('div', {
+      style: { position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'var(--surface)',
+        borderRadius: '28px 28px 0 0',
+        border: '1px solid var(--border2)',
+        padding: '0 0 40px',
+        transform: visible ? 'translateY(0)' : 'translateY(105%)',
+        transition: 'transform 0.35s cubic-bezier(0.32,0.72,0,1)',
+        maxHeight: '88%', overflowY: 'auto' }
+    },
+      // Handle + header
+      React.createElement('div', { style: { padding: '14px 20px 16px', borderBottom: '1px solid var(--border)' } },
+        React.createElement('div', { style: { width: 36, height: 4, borderRadius: 2, background: 'var(--border2)', margin: '0 auto 16px' } }),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+          React.createElement('span', { style: { fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: 'var(--text)' } },
+            'New Ping'),
+          React.createElement('button', {
+            onClick: handleClose,
+            style: { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '50%',
+              width: 32, height: 32, cursor: 'pointer', color: 'var(--text-secondary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'DM Sans', fontSize: 18, lineHeight: 1 }
+          }, '×')
+        )
+      ),
+
+      // Category chips
+      React.createElement('div', { style: { padding: '16px 20px 0' } },
+        React.createElement('div', { style: { fontFamily: 'DM Sans', fontSize: 11, color: 'var(--text-secondary)',
+          textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 600, marginBottom: 10 } },
+          'What kind of moment?'),
+        React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
+          CATEGORIES.map(function(cat) {
+            var sel = category === cat.id;
+            return React.createElement('button', {
+              key: cat.id,
+              onClick: function() { setCategory(cat.id); },
+              style: { display: 'flex', alignItems: 'center', gap: 6, height: 36, padding: '0 14px',
+                borderRadius: 18, cursor: 'pointer', transition: 'all 0.2s',
+                border: '1px solid ' + (sel ? 'var(--accent)' : 'var(--border)'),
+                background: sel ? 'rgba(245,166,35,0.15)' : 'var(--surface2)',
+                color: sel ? 'var(--accent)' : 'var(--text-secondary)',
+                fontFamily: 'DM Sans', fontSize: 13, fontWeight: sel ? 600 : 400 }
+            }, cat.emoji + ' ' + cat.label);
+          })
+        )
+      ),
+
+      // Text input
+      React.createElement('div', { style: { padding: '20px 20px 0' } },
+        React.createElement('div', { style: { fontFamily: 'DM Sans', fontSize: 11, color: 'var(--text-secondary)',
+          textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 600, marginBottom: 10 } },
+          "What's happening right now?"),
+        React.createElement('textarea', {
+          value: text,
+          onChange: function(e) { setText(e.target.value.slice(0, 280)); },
+          placeholder: 'Be specific. Be real.',
+          rows: 3,
+          style: { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)',
+            borderRadius: 16, padding: '14px 16px', outline: 'none', resize: 'none',
+            fontFamily: 'DM Sans', fontSize: 15, color: 'var(--text)', lineHeight: 1.5,
+            boxSizing: 'border-box' }
+        }),
+        React.createElement('div', { style: { textAlign: 'right', fontFamily: 'DM Sans', fontSize: 12,
+          color: 'var(--text-secondary)', marginTop: 4 } },
+          text.length + '/280')
+      ),
+
+      // Expiry
+      React.createElement('div', { style: { padding: '20px 20px 0' } },
+        React.createElement('div', { style: { fontFamily: 'DM Sans', fontSize: 11, color: 'var(--text-secondary)',
+          textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 600, marginBottom: 10 } },
+          'Expires in'),
+        React.createElement('div', { style: { display: 'flex', gap: 8 } },
+          EXPIRY_OPTS.map(function(opt) {
+            var sel = expiry.label === opt.label;
+            return React.createElement('button', {
+              key: opt.label,
+              onClick: function() { setExpiry(opt); },
+              style: { flex: 1, height: 40, borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s',
+                border: '1px solid ' + (sel ? 'var(--accent)' : 'var(--border)'),
+                background: sel ? 'rgba(245,166,35,0.15)' : 'var(--surface2)',
+                color: sel ? 'var(--accent)' : 'var(--text-secondary)',
+                fontFamily: 'DM Sans', fontSize: 13, fontWeight: sel ? 700 : 400 }
+            }, opt.label);
+          })
+        )
+      ),
+
+      // Location row
+      React.createElement('div', { style: { margin: '20px 20px 0', background: 'var(--surface2)',
+        borderRadius: 16, border: '1px solid var(--border)', padding: '14px 16px',
+        display: 'flex', alignItems: 'center', gap: 10 } },
+        React.createElement(Icons.Location),
+        React.createElement('span', { style: { fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text-secondary)' } },
+          'Current location (auto-detected)')
+      ),
+
+      // Create button
+      React.createElement('div', { style: { padding: '24px 20px 0' } },
+        React.createElement('button', {
+          onClick: handleCreate,
+          style: { width: '100%', height: 56, borderRadius: 28, border: 'none', cursor: canCreate ? 'pointer' : 'default',
+            background: canCreate ? 'var(--accent)' : 'var(--surface2)',
+            color: canCreate ? '#000' : 'var(--text-secondary)',
+            fontFamily: 'Syne', fontWeight: 800, fontSize: 18, letterSpacing: '-0.3px',
+            transition: 'all 0.2s',
+            boxShadow: canCreate ? '0 0 28px rgba(245,166,35,0.35)' : 'none' }
+        }, canCreate ? '⚡ PING IT' : 'Fill in the details')
+      )
+    )
+  );
+}
+
+Object.assign(window, { ProfileScreen, SettingsScreen, CreatePingModal });
+
+  </script>
+
+  <script type="text/babel">
+function App() {
+  var [screen, setScreen] = React.useState('welcome');
+  var [appTab, setAppTab] = React.useState('map');
+  var [selectedPing, setSelectedPing] = React.useState(null);
+  var [chatPing, setChatPing] = React.useState(null);
+  var [mapSheetPing, setMapSheetPing] = React.useState(null);
+  var [showCreatePing, setShowCreatePing] = React.useState(false);
+  var [pings, setPings] = React.useState(window.PINGIT_DATA.pings.slice());
+
+  function goToApp() { setScreen('app'); setAppTab('map'); }
+  function goToWelcome() { setScreen('welcome'); setAppTab('map'); }
+
+  function openPingDetail(ping) {
+    setSelectedPing(ping);
+    setScreen('pingDetail');
+  }
+
+  function openChat(ping) {
+    setChatPing(ping);
+    setScreen('chat');
+  }
+
+  function handleTabChange(tab) {
+    setAppTab(tab);
+    setMapSheetPing(null);
+  }
+
+  function handleCreatePing(data) {
+    var newPing = Object.assign({
+      id: 'p' + Date.now(),
+      authorId: 'u1',
+      author: window.PINGIT_DATA.currentUser.username,
+      authorColor: window.PINGIT_DATA.currentUser.color,
+      boosts: 0,
+      members: 1,
+      isHot: false,
+      createdAt: Date.now(),
+    }, data);
+    setPings(function(prev) { return [newPing].concat(prev); });
+    setShowCreatePing(false);
+    setAppTab('map');
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  return React.createElement('div', { style: { position: 'absolute', inset: 0, background: 'var(--bg)' } },
+
+    // Auth screens
+    screen === 'welcome' && React.createElement(WelcomeScreen, {
+      onCreateAccount: function() { setScreen('signup'); },
+      onSignIn: function() { setScreen('signin'); },
+    }),
+
+    screen === 'signin' && React.createElement(SignInScreen, {
+      onBack: function() { setScreen('welcome'); },
+      onSignIn: goToApp,
+    }),
+
+    screen === 'signup' && React.createElement(CreateAccountScreen, {
+      onBack: function() { setScreen('welcome'); },
+      onSignIn: goToApp,
+    }),
+
+    // Main app
+    screen === 'app' && React.createElement(React.Fragment, null,
+      appTab === 'map' && React.createElement(MapScreen, {
+        pings: pings,
+        onPingSelect: function(p) { setMapSheetPing(p); },
+        onCreatePing: function() { setShowCreatePing(true); },
+      }),
+      appTab === 'feed' && React.createElement(FeedScreen, {
+        pings: pings,
+        onPingSelect: openPingDetail,
+      }),
+      appTab === 'profile' && React.createElement(ProfileScreen, null),
+      appTab === 'settings' && React.createElement(SettingsScreen, { onSignOut: goToWelcome }),
+
+      React.createElement(TabBar, { activeTab: appTab, onTabChange: handleTabChange }),
+
+      // Map ping bottom sheet
+      mapSheetPing && React.createElement(MapPingSheet, {
+        ping: mapSheetPing,
+        onClose: function() { setMapSheetPing(null); },
+        onViewDetails: function() { openPingDetail(mapSheetPing); setMapSheetPing(null); },
+        onJoinChat: function() { openChat(mapSheetPing); setMapSheetPing(null); },
+      }),
+
+      // Create ping modal
+      showCreatePing && React.createElement(CreatePingModal, {
+        onClose: function() { setShowCreatePing(false); },
+        onCreate: handleCreatePing,
+      })
+    ),
+
+    // Detail screens (full-screen overlays)
+    screen === 'pingDetail' && selectedPing && React.createElement(PingDetailScreen, {
+      ping: selectedPing,
+      onBack: function() { setScreen(appTab === 'map' ? 'app' : 'app'); },
+      onJoinChat: function() { openChat(selectedPing); },
+    }),
+
+    screen === 'chat' && chatPing && React.createElement(ChatScreen, {
+      ping: chatPing,
+      onBack: function() { setScreen('pingDetail'); },
+    })
+  );
+}
+
+// ── Phone Frame + Mount ────────────────────────────────────────────────────────
+function PhoneFrame() {
+  return React.createElement('div', {
+    style: {
+      width: 393, height: 852,
+      background: '#1c1c1e',
+      borderRadius: 54,
+      border: '10px solid #1c1c1e',
+      boxShadow: [
+        '0 0 0 1.5px #3a3a3c',
+        '0 0 0 3px #2a2a2c',
+        '0 50px 100px rgba(0,0,0,0.7)',
+        '0 20px 40px rgba(0,0,0,0.5)',
+        'inset 0 0 0 1px rgba(255,255,255,0.08)',
+      ].join(', '),
+      position: 'relative',
+      flexShrink: 0,
+    }
+  },
+    // Screen
+    React.createElement('div', {
+      style: { width: '100%', height: '100%', borderRadius: 44,
+        background: 'var(--bg)', overflow: 'hidden', position: 'relative' }
+    },
+      React.createElement(DynamicIsland),
+      React.createElement(App)
+    ),
+
+    // Side buttons (left)
+    React.createElement('div', {
+      style: { position: 'absolute', left: -13, top: 140, width: 4, height: 32,
+        background: '#3a3a3c', borderRadius: '2px 0 0 2px' }
+    }),
+    React.createElement('div', {
+      style: { position: 'absolute', left: -13, top: 184, width: 4, height: 64,
+        background: '#3a3a3c', borderRadius: '2px 0 0 2px' }
+    }),
+    React.createElement('div', {
+      style: { position: 'absolute', left: -13, top: 260, width: 4, height: 64,
+        background: '#3a3a3c', borderRadius: '2px 0 0 2px' }
+    }),
+    // Right button
+    React.createElement('div', {
+      style: { position: 'absolute', right: -13, top: 200, width: 4, height: 80,
+        background: '#3a3a3c', borderRadius: '0 2px 2px 0' }
+    })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  React.createElement('div', {
+    style: {
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'radial-gradient(ellipse at 40% 30%, #14141f 0%, #08080f 100%)',
+      padding: '24px',
+    }
+  },
+    React.createElement(PhoneFrame)
+  )
+);
+
+  </script>
+</body>
+</html>

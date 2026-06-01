@@ -34,7 +34,7 @@ struct ProfileAvatarBlock: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.black)
                 .frame(width: 28, height: 28)
-                .background(Color.pingAccent)
+                .background(Color.green)
                 .clipShape(.circle)
         }
         .accessibilityElement(children: .combine)
