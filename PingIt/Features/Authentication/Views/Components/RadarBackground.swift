@@ -17,9 +17,9 @@ struct RadarBackground: View {
 
     // MARK: Rings
 
-    private static let ringPeriod: TimeInterval = 3.5
-    private static let ringDelays: [TimeInterval] = [0.0, 0.875, 1.75, 2.625]
-    private static let ringLineWidth: CGFloat = 1.2
+    private static let ringPeriod: TimeInterval = 5.0
+    private static let ringDelays: [TimeInterval] = [0.0, 1.666, 3.333]
+    private static let ringLineWidth: CGFloat = 2.0
 
     @ViewBuilder
     private func rings(in size: CGSize) -> some View {
@@ -45,10 +45,13 @@ struct RadarBackground: View {
     }
 
     private static func ringShape(progress p: Double, origin: CGPoint, maxRadius: CGFloat) -> some View {
-        let eased = 1 - pow(1 - p, 3)  // ease-out cubic
-        let radius = maxRadius * eased
+        // Linear progression — the visible arc sweeps across the screen at a
+        // steady speed, the way a real radar pulse would. Cubic ease-out made
+        // the ring slam through the bottom-left region in the last 20% of the
+        // loop, which read as a second pulse origin.
+        let radius = maxRadius * p
         let diameter = max(radius * 2, 1)
-        let opacity = lerp(0.9, 0.0, eased)
+        let opacity = lerp(0.9, 0.0, p)
         return Circle()
             .stroke(Color.pingAccent, lineWidth: ringLineWidth)
             .frame(width: diameter, height: diameter)
