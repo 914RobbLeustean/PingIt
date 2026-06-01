@@ -1,12 +1,12 @@
 import SwiftUI
 
-enum SyneWeight: String {
+enum SyneWeight: String, CaseIterable {
     case regular   = "Syne-Regular"
     case bold      = "Syne-Bold"
     case extraBold = "Syne-ExtraBold"
 }
 
-enum DMSansWeight: String {
+enum DMSansWeight: String, CaseIterable {
     case regular  = "DMSans-Regular"
     case medium   = "DMSans-Medium"
     case semiBold = "DMSans-SemiBold"

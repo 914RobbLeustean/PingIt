@@ -14,6 +14,3 @@ enum FontRegistrationCheck {
         #endif
     }
 }
-
-extension SyneWeight: CaseIterable {}
-extension DMSansWeight: CaseIterable {}

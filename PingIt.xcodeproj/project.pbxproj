@@ -32,14 +32,12 @@
 		3A1A48892FCD208B0061F4B4 /* DMSans_24pt-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A482F2FCD208B0061F4B4 /* DMSans_24pt-BoldItalic.ttf */; };
 		3A1A488A2FCD208B0061F4B4 /* DMSans-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48522FCD208B0061F4B4 /* DMSans-Bold.ttf */; };
 		3A1A488B2FCD208B0061F4B4 /* Syne-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48692FCD208B0061F4B4 /* Syne-ExtraBold.ttf */; };
-		3A1A488C2FCD208B0061F4B4 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A486E2FCD208B0061F4B4 /* OFL.txt */; };
 		3A1A488D2FCD208B0061F4B4 /* DMSans_24pt-SemiBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A483B2FCD208B0061F4B4 /* DMSans_24pt-SemiBoldItalic.ttf */; };
 		3A1A488E2FCD208B0061F4B4 /* DMSans-SemiBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A485F2FCD208B0061F4B4 /* DMSans-SemiBoldItalic.ttf */; };
 		3A1A488F2FCD208B0061F4B4 /* DMSans_24pt-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48302FCD208B0061F4B4 /* DMSans_24pt-ExtraBold.ttf */; };
 		3A1A48902FCD208B0061F4B4 /* DMSans_36pt-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A484C2FCD208B0061F4B4 /* DMSans_36pt-SemiBold.ttf */; };
 		3A1A48912FCD208B0061F4B4 /* DMSans-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48562FCD208B0061F4B4 /* DMSans-ExtraLight.ttf */; };
 		3A1A48922FCD208B0061F4B4 /* Syne-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48682FCD208B0061F4B4 /* Syne-Bold.ttf */; };
-		3A1A48932FCD208B0061F4B4 /* README.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48662FCD208B0061F4B4 /* README.txt */; };
 		3A1A48942FCD208B0061F4B4 /* DMSans_24pt-BlackItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A482D2FCD208B0061F4B4 /* DMSans_24pt-BlackItalic.ttf */; };
 		3A1A48952FCD208B0061F4B4 /* DMSans-ExtraLightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48572FCD208B0061F4B4 /* DMSans-ExtraLightItalic.ttf */; };
 		3A1A48962FCD208B0061F4B4 /* DMSans_18pt-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48232FCD208B0061F4B4 /* DMSans_18pt-Light.ttf */; };
@@ -51,11 +49,9 @@
 		3A1A489C2FCD208B0061F4B4 /* DMSans-ThinItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48612FCD208B0061F4B4 /* DMSans-ThinItalic.ttf */; };
 		3A1A489D2FCD208B0061F4B4 /* DMSans_36pt-ExtraBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48432FCD208B0061F4B4 /* DMSans_36pt-ExtraBoldItalic.ttf */; };
 		3A1A489E2FCD208B0061F4B4 /* DMSans_24pt-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48392FCD208B0061F4B4 /* DMSans_24pt-Regular.ttf */; };
-		3A1A489F2FCD208B0061F4B4 /* README.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A486F2FCD208B0061F4B4 /* README.txt */; };
 		3A1A48A02FCD208B0061F4B4 /* DMSans_24pt-ExtraBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48312FCD208B0061F4B4 /* DMSans_24pt-ExtraBoldItalic.ttf */; };
 		3A1A48A12FCD208B0061F4B4 /* DMSans_36pt-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A484B2FCD208B0061F4B4 /* DMSans_36pt-Regular.ttf */; };
 		3A1A48A22FCD208B0061F4B4 /* DMSans_18pt-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48252FCD208B0061F4B4 /* DMSans_18pt-Medium.ttf */; };
-		3A1A48A32FCD208B0061F4B4 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48652FCD208B0061F4B4 /* OFL.txt */; };
 		3A1A48A42FCD208B0061F4B4 /* DMSans_18pt-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48222FCD208B0061F4B4 /* DMSans_18pt-Italic.ttf */; };
 		3A1A48A52FCD208B0061F4B4 /* DMSans_36pt-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A48402FCD208B0061F4B4 /* DMSans_36pt-Bold.ttf */; };
 		3A1A48A62FCD208B0061F4B4 /* DMSans_36pt-ThinItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A1A484F2FCD208B0061F4B4 /* DMSans_36pt-ThinItalic.ttf */; };
@@ -194,15 +190,11 @@
 		3A1A48612FCD208B0061F4B4 /* DMSans-ThinItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-ThinItalic.ttf"; sourceTree = "<group>"; };
 		3A1A48632FCD208B0061F4B4 /* DMSans-Italic-VariableFont_opsz,wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Italic-VariableFont_opsz,wght.ttf"; sourceTree = "<group>"; };
 		3A1A48642FCD208B0061F4B4 /* DMSans-VariableFont_opsz,wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-VariableFont_opsz,wght.ttf"; sourceTree = "<group>"; };
-		3A1A48652FCD208B0061F4B4 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
-		3A1A48662FCD208B0061F4B4 /* README.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
 		3A1A48682FCD208B0061F4B4 /* Syne-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Syne-Bold.ttf"; sourceTree = "<group>"; };
 		3A1A48692FCD208B0061F4B4 /* Syne-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Syne-ExtraBold.ttf"; sourceTree = "<group>"; };
 		3A1A486A2FCD208B0061F4B4 /* Syne-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Syne-Medium.ttf"; sourceTree = "<group>"; };
 		3A1A486B2FCD208B0061F4B4 /* Syne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Syne-Regular.ttf"; sourceTree = "<group>"; };
 		3A1A486C2FCD208B0061F4B4 /* Syne-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Syne-SemiBold.ttf"; sourceTree = "<group>"; };
-		3A1A486E2FCD208B0061F4B4 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
-		3A1A486F2FCD208B0061F4B4 /* README.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
 		3A1A48702FCD208B0061F4B4 /* Syne-VariableFont_wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Syne-VariableFont_wght.ttf"; sourceTree = "<group>"; };
 		3A1E75BF2F787EB400A2237A /* PingIt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PingIt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A1E75CC2F787EB500A2237A /* PingItTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PingItTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -359,8 +351,6 @@
 				3A1A48622FCD208B0061F4B4 /* static */,
 				3A1A48632FCD208B0061F4B4 /* DMSans-Italic-VariableFont_opsz,wght.ttf */,
 				3A1A48642FCD208B0061F4B4 /* DMSans-VariableFont_opsz,wght.ttf */,
-				3A1A48652FCD208B0061F4B4 /* OFL.txt */,
-				3A1A48662FCD208B0061F4B4 /* README.txt */,
 			);
 			path = DM_Sans;
 			sourceTree = "<group>";
@@ -381,8 +371,6 @@
 			isa = PBXGroup;
 			children = (
 				3A1A486D2FCD208B0061F4B4 /* static */,
-				3A1A486E2FCD208B0061F4B4 /* OFL.txt */,
-				3A1A486F2FCD208B0061F4B4 /* README.txt */,
 				3A1A48702FCD208B0061F4B4 /* Syne-VariableFont_wght.ttf */,
 			);
 			path = Syne;
@@ -583,14 +571,12 @@
 				3A1A48892FCD208B0061F4B4 /* DMSans_24pt-BoldItalic.ttf in Resources */,
 				3A1A488A2FCD208B0061F4B4 /* DMSans-Bold.ttf in Resources */,
 				3A1A488B2FCD208B0061F4B4 /* Syne-ExtraBold.ttf in Resources */,
-				3A1A488C2FCD208B0061F4B4 /* OFL.txt in Resources */,
 				3A1A488D2FCD208B0061F4B4 /* DMSans_24pt-SemiBoldItalic.ttf in Resources */,
 				3A1A488E2FCD208B0061F4B4 /* DMSans-SemiBoldItalic.ttf in Resources */,
 				3A1A488F2FCD208B0061F4B4 /* DMSans_24pt-ExtraBold.ttf in Resources */,
 				3A1A48902FCD208B0061F4B4 /* DMSans_36pt-SemiBold.ttf in Resources */,
 				3A1A48912FCD208B0061F4B4 /* DMSans-ExtraLight.ttf in Resources */,
 				3A1A48922FCD208B0061F4B4 /* Syne-Bold.ttf in Resources */,
-				3A1A48932FCD208B0061F4B4 /* README.txt in Resources */,
 				3A1A48942FCD208B0061F4B4 /* DMSans_24pt-BlackItalic.ttf in Resources */,
 				3A1A48952FCD208B0061F4B4 /* DMSans-ExtraLightItalic.ttf in Resources */,
 				3A1A48962FCD208B0061F4B4 /* DMSans_18pt-Light.ttf in Resources */,
@@ -602,11 +588,9 @@
 				3A1A489C2FCD208B0061F4B4 /* DMSans-ThinItalic.ttf in Resources */,
 				3A1A489D2FCD208B0061F4B4 /* DMSans_36pt-ExtraBoldItalic.ttf in Resources */,
 				3A1A489E2FCD208B0061F4B4 /* DMSans_24pt-Regular.ttf in Resources */,
-				3A1A489F2FCD208B0061F4B4 /* README.txt in Resources */,
 				3A1A48A02FCD208B0061F4B4 /* DMSans_24pt-ExtraBoldItalic.ttf in Resources */,
 				3A1A48A12FCD208B0061F4B4 /* DMSans_36pt-Regular.ttf in Resources */,
 				3A1A48A22FCD208B0061F4B4 /* DMSans_18pt-Medium.ttf in Resources */,
-				3A1A48A32FCD208B0061F4B4 /* OFL.txt in Resources */,
 				3A1A48A42FCD208B0061F4B4 /* DMSans_18pt-Italic.ttf in Resources */,
 				3A1A48A52FCD208B0061F4B4 /* DMSans_36pt-Bold.ttf in Resources */,
 				3A1A48A62FCD208B0061F4B4 /* DMSans_36pt-ThinItalic.ttf in Resources */,
