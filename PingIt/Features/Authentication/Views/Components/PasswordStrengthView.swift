@@ -11,17 +11,14 @@ struct PasswordStrengthView: View {
     }
 
     private var strengthBar: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 4) {
-                ForEach(0..<4) { index in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(segmentColor(at: index))
-                        .animation(.easeInOut(duration: 0.2), value: result.strength)
-                }
+        HStack(spacing: 4) {
+            ForEach(0..<4) { index in
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(segmentColor(at: index))
+                    .frame(height: 6)
+                    .animation(.easeInOut(duration: 0.2), value: result.strength)
             }
-            .frame(width: proxy.size.width, height: 6)
         }
-        .frame(height: 6)
     }
 
     private var rulesList: some View {
@@ -29,11 +26,11 @@ struct PasswordStrengthView: View {
             ForEach(result.rules) { rule in
                 HStack(spacing: 6) {
                     Image(systemName: rule.isMet ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(rule.isMet ? .green : .secondary)
-                        .imageScale(.small)
+                        .font(.system(size: 12))
+                        .foregroundStyle(rule.isMet ? Color.pingLive : Color.pingTextSecondary)
                     Text(rule.label)
-                        .font(.caption)
-                        .foregroundStyle(rule.isMet ? .primary : .secondary)
+                        .font(.dmSans(.regular, size: 12, relativeTo: .caption))
+                        .foregroundStyle(rule.isMet ? Color.pingTextPrimary : Color.pingTextSecondary)
                 }
             }
         }
@@ -42,13 +39,13 @@ struct PasswordStrengthView: View {
     private func segmentColor(at index: Int) -> Color {
         switch result.strength {
         case .empty:
-            return Color(.systemGray5)
+            return Color.pingBorder
         case .weak:
-            return index < 1 ? .red : Color(.systemGray5)
+            return index < 1 ? Color.pingHot : Color.pingBorder
         case .moderate:
-            return index < 3 ? .orange : Color(.systemGray5)
+            return index < 3 ? Color.pingAccent : Color.pingBorder
         case .strong:
-            return .green
+            return Color.pingLive
         }
     }
 }
