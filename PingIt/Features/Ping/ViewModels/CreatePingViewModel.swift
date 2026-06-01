@@ -19,7 +19,7 @@ final class CreatePingViewModel {
     var selectedCategory: PingCategory?
     var selectedExpirationIndex = 1 // Default: 24hr
     var isCustomDuration = false
-    var customExpiryDate = Calendar.current.date(byAdding: .hour, value: 6, to: Date.now) ?? Date.now
+    var customDurationHours: Double = 2.0
     var selectedLocation: CLLocationCoordinate2D?
     var selectedLocationName: String?
     private(set) var selectedImageData: Data?
@@ -50,17 +50,24 @@ final class CreatePingViewModel {
 
     var selectedExpiration: TimeInterval {
         if isCustomDuration {
-            let duration = customExpiryDate.timeIntervalSince(Date.now)
-            return min(max(duration, Constants.Ping.customDurationMin), Constants.Ping.customDurationMax)
+            return customDurationHours * 3600
         }
         return Constants.Ping.expirationPresets[selectedExpirationIndex]
     }
 
-    var customExpiryRange: ClosedRange<Date> {
-        let minDate = Date.now.addingTimeInterval(Constants.Ping.customDurationMin)
-        let endOfDay = Calendar.current.startOfDay(for: Date.now).addingTimeInterval(24 * 3600 - 60)
-        let maxDate = max(minDate, endOfDay)
-        return minDate...maxDate
+    var customExpiryDisplayLabel: String {
+        let totalMinutes = Int(customDurationHours * 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if minutes == 0 {
+            return "\(hours)h"
+        }
+        return "\(hours)h \(minutes)m"
+    }
+
+    var customExpiryAbsoluteLabel: String {
+        let expiryDate = Date.now.addingTimeInterval(customDurationHours * 3600)
+        return expiryDate.formatted(date: .omitted, time: .shortened)
     }
 
     func expirationLabel(for index: Int) -> String {

@@ -3,8 +3,9 @@ import SwiftUI
 struct CreatePingExpirySection: View {
     @Binding var selectedIndex: Int
     @Binding var isCustomDuration: Bool
-    @Binding var customExpiryDate: Date
-    let customExpiryRange: ClosedRange<Date>
+    @Binding var customDurationHours: Double
+    let durationDisplayLabel: String
+    let absoluteTimeLabel: String
 
     private let presetLabels = ["6h", "24h", "48h", "Custom"]
 
@@ -24,15 +25,11 @@ struct CreatePingExpirySection: View {
             .padding(.horizontal, 20)
 
             if isCustomDuration {
-                DatePicker(
-                    "Expires at",
-                    selection: $customExpiryDate,
-                    in: customExpiryRange,
-                    displayedComponents: [.hourAndMinute, .date]
+                CustomDurationSlider(
+                    durationHours: $customDurationHours,
+                    displayLabel: durationDisplayLabel,
+                    absoluteTimeLabel: absoluteTimeLabel
                 )
-                .datePickerStyle(.graphical)
-                .tint(Color.pingAccent)
-                .labelsHidden()
                 .padding(.horizontal, 20)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
