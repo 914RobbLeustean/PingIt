@@ -162,6 +162,15 @@
   - **`PingService.fetchPings(byCreatorId:)`** — New Firestore query for profile stats computation.
   - `SettingsRowButtonStyle` promoted from private to internal for cross-feature reuse. Old `ProfileImageSection` removed (replaced by `ProfileAvatarBlock`).
 
+## Completed (UI Overhaul — Ping Detail + Map Ping Sheet)
+- **Ping Detail + Map Ping Sheet redesign (2026-06-01):** Full UI overhaul of ping detail screens to match the prototype's dark design system.
+  - **Ping model expanded:** Added optional `description: String?` field (500 char limit) for longer ping details, separate from the title (`text`).
+  - **CreatePingView:** Added `CreatePingDescriptionSection` — optional "Add more details" TextEditor below the title field, with 500 char limit, content moderation, and placeholder text.
+  - **MapPingSheet (NEW):** Custom bottom overlay card that appears when tapping a map marker. Replaces the previous direct `NavigationDestination` push. Shows author avatar, urgency label, category emoji + title, optional description, boost/member stats, and two capsule buttons: JOIN CHAT (amber, direct to ChatView) and Details (surface, pushes PingDetailView). Spring-animated slide-up, backdrop-tap dismiss, `ultraThinMaterial` glass effect.
+  - **PingDetailView (REWRITE):** Fully redesigned with custom nav bar (38pt dark circle back button + Syne ExtraBold title), author+timer row (40pt avatar, `@username`, relative created date, urgency pill with amber background tint), category emoji + Syne ExtraBold 26pt title, optional description, stats card (boost button with spring animation + member count, split by 1pt divider), FeedHotBadge for hot pings, full-width amber JOIN CHAT capsule with glow shadow, red delete pill (creator only), report/block text links (non-creator). Delete and Block use `PingItConfirmationDialog` instead of system `.alert()`.
+  - **Feed cards:** Description shown as a single-line preview below the title when present.
+  - **Dead code removed:** `PingDetailCreatorSection`, `PingDetailActionSection`, `PingPhotoSectionView`.
+
 ## Up Next
 - **Beta Testing implementation:** Blocked on Apple Developer Program enrollment ($99/yr, 2-5 day approval). See `docs/BETA_TESTING.md` for full checklist.
 

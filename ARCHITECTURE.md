@@ -114,6 +114,9 @@ The Profile feature owns (added 2026-06-01):
 - `PhotoSourcePicker` — Bottom sheet with drag handle, "Profile Photo" title, and action rows (Choose from Library, Take Photo, Remove Photo) in a `pingSurface` card. Uses `SettingsRowButtonStyle` and `SettingsRowDivider` for consistent row styling.
 - `SettingsRowButtonStyle` — Shared `ButtonStyle` for tappable rows; white 3% highlight on press with 0.12s ease-out animation. Promoted from Settings (was private) for cross-feature reuse.
 
+The Map feature owns (added 2026-06-01):
+- `MapPingSheet` — Custom bottom overlay card that appears when tapping a map marker. Shows author avatar, urgency label, title (with category emoji), optional description, boost/member stats, and JOIN CHAT + Details capsule buttons. Slides up with spring animation; tapping outside dismisses. Not a system `.sheet` — implemented as a ZStack overlay with backdrop tap.
+
 The Feed feature owns (added 2026-06-01):
 - `FeedSortChip` — Capsule toggle chip; selected state uses `pingAccent` 13% background fill + amber border; unselected uses `pingSurface` + `pingBorder`. DM Sans Medium 12pt label.
 - `FeedHotBadge` — Red capsule badge ("HOT") with DM Sans Bold 10pt white text on `pingHot` background, 0.8pt letter tracking.
@@ -136,7 +139,7 @@ PingIt/
 ├── Core/
 │   ├── Models/
 │   │   ├── User.swift               Firestore: users collection
-│   │   ├── Ping.swift               Firestore: pings collection (+ PingStatus enum, imageUrl)
+│   │   ├── Ping.swift               Firestore: pings collection (+ PingStatus enum, imageUrl, description)
 │   │   ├── Chat.swift               Firestore: chats collection
 │   │   ├── ChatMessage.swift        Firestore: chatMessages collection (+ reactions, messageType, latitude, longitude, locationName)
 │   │   ├── ChatParticipant.swift    Firestore: chatParticipants collection
@@ -223,7 +226,8 @@ PingIt/
 │   │   ├── ViewModels/
 │   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state; filters expired + blocked; hotPingIds; manual clustering; overlapping pin offset
 │   │   └── Views/
-│   │       ├── MapView.swift              MapKit map with annotations, email verification banner
+│   │       ├── MapView.swift              MapKit map with annotations, email verification banner, MapPingSheet overlay
+│   │       ├── MapPingSheet.swift         Custom bottom overlay: compact ping preview card with spring-animated slide-up
 │   │       ├── PingAnnotationView.swift   Custom ping marker with hot ping visual treatment
 │   │       ├── PingClusterAnnotationView.swift  Cluster annotation with count and hot-ping indicator
 │   │       └── EmailVerificationBannerView.swift  Dismissable banner for unverified users
@@ -231,16 +235,13 @@ PingIt/
 │   │   ├── Models/
 │   │   │   └── PingCategory.swift         Enum with 9 categories (sports, study, social, music, food, skate, chill, gaming, art) + label + emoji
 │   │   ├── ViewModels/
-│   │   │   ├── CreatePingViewModel.swift   Validation, moderation, rate limit, location, category, Firestore write
-│   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete, ping document listener, boost
+│   │   │   ├── CreatePingViewModel.swift   Validation, moderation, rate limit, location, category, description, Firestore write
+│   │   │   └── PingDetailViewModel.swift   Creator loading, countdown, delete, ping document listener, boost, urgency, category display
 │   │   └── Views/
 │   │       ├── CreatePingView.swift        Modal bottom sheet: header + ScrollView sections + fixed CTA button
-│   │       ├── PingPhotoSectionView.swift  (Legacy — unused after overhaul)
-│   │       ├── PingDetailView.swift        Detail with creator, countdown, actions, report/block buttons
+│   │       ├── PingDetailView.swift        Full-screen detail: custom nav bar, author+timer row, urgency pill, title, description, stats card with boost, join chat, delete, report/block
 │   │       ├── LocationPickerView.swift    Sheet: 3-option card (GPS / map pin / search) with dark styling
 │   │       ├── MapPinPickerView.swift      Full-screen map with centered amber pin + dark bottom bar
-│   │       ├── PingDetailCreatorSection.swift  Creator info + profile picture
-│   │       ├── PingDetailActionSection.swift   Join chat + delete buttons
 │   │       └── Components/
 │   │           ├── FlowLayout.swift              Custom Layout protocol wrapping chip grid
 │   │           ├── CategoryChip.swift             Capsule chip with emoji + label (selected = amber 15% fill + amber border)
@@ -249,7 +250,8 @@ PingIt/
 │   │           ├── CreatePingSectionLabel.swift    ALL CAPS DM Sans SemiBold 11pt section header
 │   │           ├── CreatePingButton.swift          Fixed-bottom CTA with dynamic label ("Fill in the details" → "⚡ PING IT")
 │   │           ├── CreatePingCategorySection.swift FlowLayout of 9 CategoryChips with toggle selection
-│   │           ├── CreatePingTextSection.swift     TextEditor with custom placeholder + char count
+│   │           ├── CreatePingTextSection.swift     TextEditor with custom placeholder + char count (title, 280 max)
+│   │           ├── CreatePingDescriptionSection.swift  Optional description TextEditor + char count (500 max)
 │   │           ├── CreatePingPhotoSection.swift    Dashed add button / image preview with red ✕ remove
 │   │           ├── CreatePingExpirySection.swift   4 ExpiryPills + collapsible DatePicker for custom
 │   │           ├── CreatePingLocationSection.swift Styled row with pin icon + chevron
@@ -466,11 +468,15 @@ MapView ──observes──▶ MapViewModel ──calls──▶ PingService �
                                               BlockService (filters blocked creators + expired pings)
                      └─ renders unclusteredPings + clusters (manual client-side clustering)
                      └─ uses displayCoordinates (offset for overlapping pins)
+                     └─ marker tap ──▶ MapPingSheet (overlay) ──▶ JOIN CHAT → ChatView / Details → PingDetailView
 
 PingDetailView ──observes──▶ PingDetailViewModel ──calls──▶ PingService (callable delete/boost, boost check)
                                                             ChatService
                                                             AnalyticsService (logs boost_used)
-             └─ report/block buttons ──▶ ReportView / BlockService
+             └─ custom nav bar, urgency pill, stats card (boost + member count)
+             └─ join chat button ──▶ ChatView
+             └─ delete button ──▶ PingItConfirmationDialog
+             └─ report/block buttons ──▶ ReportView / PingItConfirmationDialog + BlockService
 
 SettingsView ──calls──▶ UserService (fetch + update preferences)
              └─ loads isPrivateProfile, notifyNearbyPings, notifyHotPings from Firestore

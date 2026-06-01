@@ -6,6 +6,29 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Ping Detail + Map Ping Sheet UI overhaul + description field
+
+### Added
+- `Core/Models/Ping.swift`: added optional `description: String?` field for longer ping details (500 char limit), separate from the title.
+- `Core/Utilities/Constants.swift`: added `Ping.maxDescriptionLength = 500`.
+- `Features/Map/Views/MapPingSheet.swift`: new custom bottom overlay card for map marker taps. Shows author avatar, urgency label, category emoji + title, optional description, boost/member stats, JOIN CHAT + Details capsule buttons. Spring-animated slide-up with `ultraThinMaterial` backdrop.
+- `Features/Ping/Views/Components/CreatePingDescriptionSection.swift`: optional "Add more details" TextEditor with 500 char limit, matching the title section's styling.
+- `Features/Ping/ViewModels/PingDetailViewModel.swift`: added `pingCategory` and `urgency` computed properties for display layer use.
+
+### Changed
+- `Features/Ping/Views/PingDetailView.swift`: full rewrite. Custom nav bar (38pt dark circle back button + "Ping Details" Syne ExtraBold title), author+timer row (40pt avatar, @username, relative date, urgency pill), category emoji title (Syne ExtraBold 26pt), optional description, stats card with boost button (spring animation, amber boosted state) + member count, FeedHotBadge, full-width amber JOIN CHAT capsule with glow, red delete pill (creator), report/block links (non-creator). Delete and Block use PingItConfirmationDialog instead of system .alert().
+- `Features/Map/Views/MapView.swift`: marker taps now show MapPingSheet overlay instead of pushing PingDetailView directly. Added `UserService` dependency for creator loading. Added `chatPing` navigation destination for direct JOIN CHAT from sheet. Added helper methods: `showPingSheet`, `dismissPingSheet`, `handleSheetJoinChat`, `handleSheetViewDetails`.
+- `Features/Feed/Views/PingFeedCardView.swift`: TitleRow now shows optional description as a single-line preview below the title when present.
+- `Features/Ping/Views/CreatePingView.swift`: added CreatePingDescriptionSection between title and photo sections.
+- `Features/Ping/ViewModels/CreatePingViewModel.swift`: added `descriptionText`, `descriptionCharacterCount`, `isDescriptionOverLimit`. Description is content-moderated and passed to Ping model on creation.
+
+### Removed
+- `Features/Ping/Views/PingDetailCreatorSection.swift`: replaced by inline DetailAuthorTimerRow in PingDetailView.
+- `Features/Ping/Views/PingDetailActionSection.swift`: replaced by inline DetailJoinChatButton + DetailDeleteButton in PingDetailView.
+- `Features/Ping/Views/PingPhotoSectionView.swift`: legacy file, unused since Create Ping overhaul.
+
+---
+
 ## [2026-06-01] — Create Ping flow UI overhaul
 
 ### Added
