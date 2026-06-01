@@ -28,6 +28,7 @@ final class ChatViewModel {
     private var joinedChatId: String?
     var messageText = ""
     var pingUnavailable = false
+    private(set) var currentPing: Ping?
     private(set) var userCache: [String: User] = [:]
     private let pageSize = 50
 
@@ -214,6 +215,7 @@ final class ChatViewModel {
         pingListener = pingService.observePing(id: pingId) { [weak self] updatedPing in
             guard let self else { return }
             Task { @MainActor [self] in
+                self.currentPing = updatedPing
                 if updatedPing == nil || updatedPing?.status != .active {
                     self.pingUnavailable = true
                 }
