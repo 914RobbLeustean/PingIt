@@ -44,6 +44,19 @@ final class UserService: UserServicing {
         }
     }
 
+    /// Like `updateUser` but uses `setData(merge: true)` so the write
+    /// succeeds even if the user document doesn't exist yet. Use for
+    /// idempotent state writes (e.g. flipping onboarding flags).
+    func mergeUser(id: String, data: [String: Any]) async throws {
+        do {
+            try await db.collection(Constants.Firestore.usersCollection)
+                .document(id)
+                .setData(data, merge: true)
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
     func updateUsername(id: String, currentUsername: String?, newUsername: String) async throws {
         let normalized = newUsername.lowercased()
         let usernameRef = db.collection(Constants.Firestore.usernamesCollection).document(normalized)

@@ -52,7 +52,7 @@ final class OnboardingViewModel {
         errorMessage = nil
         defer { isSubmitting = false }
         do {
-            try await userService.updateUser(id: userId, data: ["hasCompletedOnboarding": true])
+            try await userService.mergeUser(id: userId, data: ["hasCompletedOnboarding": true])
             analyticsService?.logEvent("onboarding_completed", parameters: nil)
             isComplete = true
         } catch {

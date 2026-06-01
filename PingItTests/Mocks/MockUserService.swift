@@ -34,6 +34,12 @@ final class MockUserService: UserServicing {
         if let error = errorToThrow { throw error }
     }
 
+    func mergeUser(id: String, data: [String: Any]) async throws {
+        updateUserCalled = true
+        lastUpdateData = data
+        if let error = errorToThrow { throw error }
+    }
+
     func updateUsername(id: String, currentUsername: String?, newUsername: String) async throws {
         updateUsernameCalled = true
         lastUpdatedUsername = newUsername
