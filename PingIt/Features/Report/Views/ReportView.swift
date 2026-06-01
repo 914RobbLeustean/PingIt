@@ -67,6 +67,7 @@ struct ReportView: View {
                 .padding(.bottom, 32)
             }
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
         }
         .background(Color.pingBackground)
         .presentationDetents([.large])
