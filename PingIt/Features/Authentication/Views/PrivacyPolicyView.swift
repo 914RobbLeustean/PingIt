@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct PrivacyPolicyView: View {
+    private let document = LegalDocumentLoader.load("privacy")
+
     var body: some View {
-        WebContentView(htmlFileName: "privacy")
-            .navigationTitle("Privacy Policy")
-            .navigationBarTitleDisplayMode(.inline)
+        LegalDocumentView(title: "Privacy Policy", document: document)
     }
 }

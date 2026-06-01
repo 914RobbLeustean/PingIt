@@ -4,6 +4,7 @@
 **Phase 2 — Polish & Launch** — Code complete (10/11 features). All code features shipped across 3 sessions: Custom Ping Duration, Firebase Analytics, Crashlytics, Privacy Policy & Terms, Onboarding Flow, App Icon, Performance Monitoring. Only **Beta Testing** remains, blocked on Apple Developer Program enrollment ($99/yr). See `docs/BETA_TESTING.md` for the full setup checklist.
 
 ## Completed
+- 2026-06-01 — UI overhaul (Authentication screens): redesigned Sign In, Create Account, Forgot Password, Terms of Service, and Privacy Policy to match the prototype's visual language. Adds shared auth components (`AuthInputField`, `AuthPasswordField`, `AuthCheckbox`, `AuthCTAButtonStyle`, `AuthBackButton`, `AuthScreenHeader`, `AuthFieldHint`). Terms / Privacy now render natively via `LegalDocumentView` + `LegalDocumentLoader` (HTML → typed blocks) instead of `WKWebView`; the old `AuthTextField` / `AuthSecureField` / `WebContentView` were removed.
 - 2026-06-01 — UI overhaul (Welcome screen): full rewrite of `WelcomeView` to match the HTML prototype, plus design-system foundation (dark-mode color tokens, Syne + DM Sans font helpers, primary/secondary pill button styles, animated RadarBackground, PingItLogoMark, PingItWordmark). Dark color scheme is now enforced app-wide.
 - Project specification and documentation setup
 - Foundation setup: folder structure, Firebase SDK (Auth, Firestore, Storage) via SPM

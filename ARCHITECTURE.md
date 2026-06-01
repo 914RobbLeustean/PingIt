@@ -87,9 +87,16 @@ All UI code in the app MUST use the tokens and components defined under `PingIt/
 **Dark mode enforcement:** `.preferredColorScheme(.dark)` is applied at the `WindowGroup` root in `PingItApp.swift`. Light mode is not supported.
 
 **Reusable components live under feature-scoped `Views/Components/` folders.** As of 2026-06-01, the authentication feature owns:
-- `PrimaryPillButtonStyle` / `SecondaryPillButtonStyle` — `ButtonStyle`s for the amber and surface pill CTAs.
+- `PrimaryPillButtonStyle` / `SecondaryPillButtonStyle` — `ButtonStyle`s for the Welcome screen's amber and surface pill CTAs.
+- `AuthCTAButtonStyle` — auth-form CTA with enabled/disabled state colour transition (amber fill → surface fill) and glow.
 - `RadarBackground` — animated decorative background; respects `accessibilityReduceMotion`.
 - `PingItLogoMark` / `PingItWordmark` — the brand-mark composition used on the Welcome screen.
+- `AuthBackButton` / `AuthScreenHeader` — shared 38pt dark-circle back button and title row used on every non-Welcome auth screen.
+- `AuthInputField` / `AuthPasswordField` — 52pt rounded surface inputs with leading SF Symbol icon, optional trailing slot, and (for passwords) an eye toggle.
+- `AuthCheckbox` — 20pt rounded square checkbox with amber fill + bold white SF Symbol checkmark when checked.
+- `AuthFieldHint` — 12pt DM Sans helper text with `error` / `soft` / `success` tone variants.
+
+**Legal screens render natively.** `Features/Authentication/Models/LegalDocument.swift` parses the bundled `terms.html` / `privacy.html` resources into a small `LegalDocument` block model (`heading`, `sectionHeading`, `updated`, `paragraph`, `bullets`), and `Features/Authentication/Views/LegalDocumentView.swift` renders those blocks with the design tokens. The previous `WKWebView`-based `WebContentView` was removed.
 
 ### Actual File Listing (as of 2026-05-07)
 

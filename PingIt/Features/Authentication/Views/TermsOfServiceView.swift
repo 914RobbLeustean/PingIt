@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct TermsOfServiceView: View {
+    private let document = LegalDocumentLoader.load("terms")
+
     var body: some View {
-        WebContentView(htmlFileName: "terms")
-            .navigationTitle("Terms of Service")
-            .navigationBarTitleDisplayMode(.inline)
+        LegalDocumentView(title: "Terms of Service", document: document)
     }
 }

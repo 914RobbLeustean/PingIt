@@ -6,6 +6,31 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Authentication screens UI overhaul (Sign In, Create Account, Forgot Password, Terms, Privacy)
+
+### Added
+- `Features/Authentication/Views/Components/AuthBackButton.swift`: 38pt dark circle back button with `chevron.left` glyph and hairline border.
+- `Features/Authentication/Views/Components/AuthScreenHeader.swift`: shared Syne ExtraBold 22pt title row with back button.
+- `Features/Authentication/Views/Components/AuthInputField.swift`: custom 52pt surface-elevated input field with leading SF Symbol icon and trailing accessory slot; matches the prototype's `AuthInput` component.
+- `Features/Authentication/Views/Components/AuthPasswordField.swift`: secure-field variant with eye/eye.slash visibility toggle.
+- `Features/Authentication/Views/Components/AuthCheckbox.swift`: 20×20pt rounded square checkbox with amber fill when checked and a bold white SF Symbol checkmark.
+- `Features/Authentication/Views/Components/AuthCTAButtonStyle.swift`: amber pill CTA with `easeInOut(0.2)` colour transition between enabled (amber fill / black text / glow) and disabled (surface fill / secondary text) states.
+- `Features/Authentication/Views/Components/AuthFieldHint.swift`: 12pt DM Sans helper text with `error` / `soft` / `success` tone variants.
+- `Features/Authentication/Models/LegalDocument.swift`: lightweight HTML parser that turns the bundled `terms.html` / `privacy.html` into native `heading / sectionHeading / updated / paragraph / bullets` blocks.
+- `Features/Authentication/Views/LegalDocumentView.swift`: shared scrollable renderer for `LegalDocument`, using Syne for headings and DM Sans for body.
+
+### Changed
+- `Features/Authentication/Views/LoginView.swift`: full rewrite using `AuthScreenHeader`, `AuthInputField`, `AuthPasswordField`, `AuthCTAButtonStyle`. Focus chain between email → password, custom dark back button (system chrome hidden), Forgot Password link uses `pingTextSecondary`.
+- `Features/Authentication/Views/RegisterView.swift`: full rewrite with the new components. Terms / Privacy inline links in amber, four-field focus chain, password strength view retained, inline username availability hints preserved with new typography.
+- `Features/Authentication/Views/ForgotPasswordView.swift`: full rewrite. Form state mirrors Sign In; success state shows a haloed amber `envelope.badge.fill` mark with a "Back to Sign In" CTA that pops the screen.
+- `Features/Authentication/Views/TermsOfServiceView.swift` / `PrivacyPolicyView.swift`: now load `LegalDocument` and render natively via `LegalDocumentView` instead of `WKWebView`.
+
+### Removed
+- `Features/Authentication/Views/Components/AuthTextField.swift` and `AuthSecureField.swift`: superseded by `AuthInputField` / `AuthPasswordField`.
+- `Features/Authentication/Views/WebContentView.swift`: legal screens render natively now, so the `WKWebView` wrapper is no longer used.
+
+---
+
 ## [2026-06-01] — Welcome screen UI overhaul
 
 ### Added
