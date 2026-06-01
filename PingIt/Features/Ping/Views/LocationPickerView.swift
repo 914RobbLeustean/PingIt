@@ -13,39 +13,27 @@ struct LocationPickerView: View {
     @State private var showMapPicker = false
     @State private var showSearch = false
     @State private var errorMessage: String?
+    @State private var mapCameraPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: Constants.Cluj.center,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+    )
+    @State private var mapPinCoordinate = Constants.Cluj.center
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.white.opacity(0.12))
-                    .frame(width: 36, height: 4)
-                    .padding(.top, 14)
-                    .padding(.bottom, 16)
+        if showMapPicker {
+            mapPickerContent
+        } else {
+            optionsContent
+        }
+    }
 
-                HStack {
-                    Text("Choose Location")
-                        .font(.syne(.extraBold, size: 22, relativeTo: .title2))
-                        .foregroundStyle(Color.pingTextPrimary)
-                    Spacer()
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.pingTextSecondary)
-                            .frame(width: 32, height: 32)
-                            .background(Color.pingSurfaceElevated)
-                            .clipShape(.circle)
-                            .overlay(
-                                Circle()
-                                    .strokeBorder(Color.pingBorder, lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Dismiss")
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
-            }
+    // MARK: - Options View
+
+    private var optionsContent: some View {
+        VStack(spacing: 0) {
+            locationPickerHeader(title: "Choose Location", onLeading: { dismiss() })
 
             ScrollView {
                 VStack(spacing: 16) {
@@ -96,13 +84,102 @@ struct LocationPickerView: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(28)
-        .sheet(isPresented: $showMapPicker) {
-            MapPinPickerView(
-                initialCoordinate: locationService.currentLocation?.coordinate ?? Constants.Cluj.center,
-                onConfirm: handleMapPinConfirm
-            )
+    }
+
+    // MARK: - Inline Map Picker
+
+    private var mapPickerContent: some View {
+        ZStack {
+            Map(position: $mapCameraPosition, interactionModes: .all)
+                .mapStyle(.standard(elevation: .flat))
+                .onMapCameraChange(frequency: .continuous) { context in
+                    mapPinCoordinate = context.camera.centerCoordinate
+                }
+                .ignoresSafeArea(edges: .bottom)
+
+            Image(systemName: "mappin.circle.fill")
+                .font(.system(size: 36))
+                .foregroundStyle(Color.pingAccent)
+                .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
+                .offset(y: -18)
+
+            VStack {
+                locationPickerHeader(title: "Set Location", onLeading: { showMapPicker = false })
+                    .background(
+                        LinearGradient(
+                            colors: [Color.pingSurface, Color.pingSurface.opacity(0.6), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                Spacer()
+
+                VStack(spacing: 12) {
+                    Text("\(mapPinCoordinate.latitude.formatted(.number.precision(.fractionLength(5)))), \(mapPinCoordinate.longitude.formatted(.number.precision(.fractionLength(5))))")
+                        .font(.dmSans(.regular, size: 12, relativeTo: .caption))
+                        .foregroundStyle(Color.pingTextSecondary)
+
+                    Button("Confirm Location", action: handleMapPinConfirm)
+                        .font(.syne(.bold, size: 15, relativeTo: .body))
+                        .foregroundStyle(Color.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.pingAccent)
+                        .clipShape(.capsule)
+                        .shadow(color: Color.pingAccent.opacity(0.35), radius: 12, y: 4)
+                }
+                .padding(20)
+                .background(Color.pingSurface)
+                .clipShape(.rect(cornerRadii: .init(topLeading: 24, topTrailing: 24)))
+            }
+        }
+        .background(Color.pingSurface)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(28)
+        .transition(.move(edge: .trailing))
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showMapPicker)
+    }
+
+    // MARK: - Shared Header
+
+    private func locationPickerHeader(title: String, onLeading: @escaping () -> Void) -> some View {
+        VStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.white.opacity(0.12))
+                .frame(width: 36, height: 4)
+                .padding(.top, 14)
+                .padding(.bottom, 16)
+
+            HStack {
+                Button(action: onLeading) {
+                    Image(systemName: showMapPicker ? "chevron.left" : "xmark")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.pingTextSecondary)
+                        .frame(width: 32, height: 32)
+                        .background(Color.pingSurfaceElevated)
+                        .clipShape(.circle)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.pingBorder, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(showMapPicker ? "Back" : "Dismiss")
+
+                Text(title)
+                    .font(.syne(.extraBold, size: 22, relativeTo: .title2))
+                    .foregroundStyle(Color.pingTextPrimary)
+
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
         }
     }
+
+    // MARK: - Search Section
 
     private var searchSection: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -176,6 +253,12 @@ struct LocationPickerView: View {
     }
 
     private func handleShowMapPicker() {
+        let center = locationService.currentLocation?.coordinate ?? Constants.Cluj.center
+        mapCameraPosition = .region(MKCoordinateRegion(
+            center: center,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        ))
+        mapPinCoordinate = center
         showMapPicker = true
     }
 
@@ -192,10 +275,9 @@ struct LocationPickerView: View {
         }
     }
 
-    private func handleMapPinConfirm(_ coordinate: CLLocationCoordinate2D) {
-        selectedLocation = coordinate
+    private func handleMapPinConfirm() {
+        selectedLocation = mapPinCoordinate
         selectedLocationName = "Pinned Location"
-        showMapPicker = false
         dismiss()
     }
 
