@@ -65,6 +65,32 @@ PingIt/
 
 **Naming:** Feature folders are self-contained. Each has `Views/` subfolders (and `ViewModels/` when needed). Shared UI components go under the feature that owns them.
 
+### Design system
+
+All UI code in the app MUST use the tokens and components defined under `PingIt/Core/Theme/` and the per-feature component folders.
+
+**Color tokens (`Core/Theme/Color+Tokens.swift`):** A dark-only palette exposed as `Color` extensions. Hard-coded hex colors and system colors are not allowed.
+
+| Token | Use |
+| --- | --- |
+| `Color.pingBackground` (`#090912`) | App background |
+| `Color.pingSurface` (`#12121C`) | Cards, secondary button fill |
+| `Color.pingSurfaceElevated` (`#1A1A28`) | Elevated surfaces |
+| `Color.pingBorder` (white α=0.07) | Hairline borders |
+| `Color.pingTextPrimary` (`#F0F0F8`) | Headlines and body text |
+| `Color.pingTextSecondary` (`#6B6B84`) | Captions, placeholders |
+| `Color.pingAccent` (`#F5A623`) | Primary CTAs, decorative accents |
+| `Color.pingHot` / `Color.pingLive` | Reserved for status indicators |
+
+**Font tokens (`Core/Theme/Font+Tokens.swift`):** Typed helpers `Font.syne(_:size:relativeTo:)` and `Font.dmSans(_:size:relativeTo:)`. The underlying fonts (Syne Regular/Bold/ExtraBold + DM Sans Regular/Medium/SemiBold/Bold) are bundled as `.ttf` resources and declared in `Info.plist` under `UIAppFonts`. A DEBUG assertion in `FontRegistrationCheck.run()` (invoked from `PingItApp`'s `.task`) catches font-registration regressions on first launch.
+
+**Dark mode enforcement:** `.preferredColorScheme(.dark)` is applied at the `WindowGroup` root in `PingItApp.swift`. Light mode is not supported.
+
+**Reusable components live under feature-scoped `Views/Components/` folders.** As of 2026-06-01, the authentication feature owns:
+- `PrimaryPillButtonStyle` / `SecondaryPillButtonStyle` — `ButtonStyle`s for the amber and surface pill CTAs.
+- `RadarBackground` — animated decorative background; respects `accessibilityReduceMotion`.
+- `PingItLogoMark` / `PingItWordmark` — the brand-mark composition used on the Welcome screen.
+
 ### Actual File Listing (as of 2026-05-07)
 
 ```
@@ -126,6 +152,10 @@ PingIt/
 │       ├── ActivityViewRepresentable.swift  UIActivityViewController wrapper for share sheet
 │       ├── ServerTime.swift             Firebase RTDB .info/serverTimeOffset for clock sync
 │       └── GeoJSONBoundaryValidator.swift  Ray casting point-in-polygon
+│   └── Theme/
+│       ├── Color+Tokens.swift           Dark-mode palette as Color extensions (pingBackground, pingSurface, pingSurfaceElevated, pingBorder, pingTextPrimary, pingTextSecondary, pingAccent, pingHot, pingLive)
+│       ├── Font+Tokens.swift            SyneWeight + DMSansWeight enums; Font.syne(_:size:relativeTo:) and Font.dmSans(_:size:relativeTo:) helpers
+│       └── FontRegistrationCheck.swift  DEBUG-only assertion verifying every custom font weight loads at launch
 ├── Features/
 │   ├── Authentication/
 │   │   ├── Models/
@@ -146,9 +176,14 @@ PingIt/
 │   │       ├── PrivacyPolicyView.swift    Privacy Policy (WKWebView loading privacy.html)
 │   │       ├── WebContentView.swift       UIViewRepresentable WKWebView wrapper for bundled HTML
 │   │       └── Components/
-│   │           ├── AuthTextField.swift         Styled field with icon + validation indicator
-│   │           ├── AuthSecureField.swift        Password field with show/hide toggle
-│   │           └── PasswordStrengthView.swift   Segmented strength bar + rule checklist
+│   │           ├── AuthTextField.swift             Styled field with icon + validation indicator
+│   │           ├── AuthSecureField.swift            Password field with show/hide toggle
+│   │           ├── PasswordStrengthView.swift       Segmented strength bar + rule checklist
+│   │           ├── PrimaryPillButtonStyle.swift     Amber pill ButtonStyle with glow shadow
+│   │           ├── SecondaryPillButtonStyle.swift   Surface pill ButtonStyle with hairline border
+│   │           ├── RadarBackground.swift            3 concentric pulsing rings + 8 blinking dots; respects accessibilityReduceMotion
+│   │           ├── PingItLogoMark.swift             18pt amber core with two halo layers and breathing pulse
+│   │           └── PingItWordmark.swift             Logo mark + "PINGIT" Syne ExtraBold wordmark; VoiceOver reads "PingIt" as a header
 │   ├── Map/
 │   │   ├── Models/
 │   │   │   └── PingCluster.swift    Cluster model: grouped pings, center, containsHotPing

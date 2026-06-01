@@ -6,6 +6,26 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Welcome screen UI overhaul
+
+### Added
+- `Core/Theme/Color+Tokens.swift`: dark-mode color palette (`Color.pingBackground`, `pingSurface`, `pingSurfaceElevated`, `pingBorder`, `pingTextPrimary`, `pingTextSecondary`, `pingAccent`, `pingHot`, `pingLive`).
+- `Core/Theme/Font+Tokens.swift`: typed `Font.syne(_:size:relativeTo:)` and `Font.dmSans(_:size:relativeTo:)` helpers backed by `SyneWeight` / `DMSansWeight` enums.
+- `Core/Theme/FontRegistrationCheck.swift`: DEBUG-only assertion that every custom font weight loads at app launch.
+- `Features/Authentication/Views/Components/PrimaryPillButtonStyle.swift`: amber pill `ButtonStyle` with glow shadow and press-scale animation.
+- `Features/Authentication/Views/Components/SecondaryPillButtonStyle.swift`: surface pill `ButtonStyle` with hairline border.
+- `Features/Authentication/Views/Components/RadarBackground.swift`: 3 concentric pulsing rings + 8 blinking dots; respects `accessibilityReduceMotion`.
+- `Features/Authentication/Views/Components/PingItLogoMark.swift`: 18pt amber core with two halo layers and a 2s breathing pulse.
+- `Features/Authentication/Views/Components/PingItWordmark.swift`: logo mark composed with the "PINGIT" Syne ExtraBold wordmark; VoiceOver reads "PingIt" as a header.
+
+### Changed
+- `Features/Authentication/Views/WelcomeView.swift`: full rewrite to compose the new components (radar background + custom typography + custom pill buttons), replacing the previous stock-SwiftUI implementation.
+- `App/PingItApp.swift`: enforces `.preferredColorScheme(.dark)` on the root `WindowGroup` and runs `FontRegistrationCheck.run()` inside `.task`.
+- `Info.plist`: declares 7 custom fonts (3 Syne + 4 DM Sans weights) under `UIAppFonts`.
+- `PingIt.xcodeproj/project.pbxproj`: 7 font `.ttf` files added as bundle resources; duplicate `OFL.txt` / `README.txt` entries removed to fix a "multiple commands produce" build collision.
+
+---
+
 ## [2026-05-31] — Tech Debt Remediation: Privacy Descriptions, Image Storage Protocol, Location Updates, GDPR Data Export
 
 ### Summary
