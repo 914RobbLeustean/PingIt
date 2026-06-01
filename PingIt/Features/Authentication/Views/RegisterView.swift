@@ -3,79 +3,106 @@ import SwiftUI
 struct RegisterView: View {
     @Environment(AuthService.self) private var authService
     @Environment(UserService.self) private var userService
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = RegisterViewModel()
+    @FocusState private var focusedField: Field?
+
+    enum Field: Hashable { case email, username, password, confirmPassword }
 
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        ScrollView {
-            VStack(spacing: 24) {
-                emailSection(viewModel: viewModel)
-                usernameSection(viewModel: viewModel)
-                passwordSection(viewModel: viewModel)
-                confirmPasswordSection(viewModel: viewModel)
-                tosSection(viewModel: viewModel)
+        ZStack {
+            Color.pingBackground.ignoresSafeArea()
 
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            VStack(spacing: 0) {
+                AuthScreenHeader(title: "Create Account") { dismiss() }
 
-                Button("Create Account") {
-                    Task { await viewModel.register() }
+                ScrollView {
+                    VStack(spacing: 12) {
+                        emailField(viewModel: viewModel)
+                        usernameField(viewModel: viewModel)
+                        passwordField(viewModel: viewModel)
+                        confirmPasswordField(viewModel: viewModel)
+                        termsRow(viewModel: viewModel)
+
+                        if let errorMessage = viewModel.errorMessage {
+                            Text(errorMessage)
+                                .font(.dmSans(.regular, size: 13, relativeTo: .footnote))
+                                .foregroundStyle(Color.pingHot)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        Button {
+                            submit(viewModel: viewModel)
+                        } label: {
+                            Text(viewModel.isLoading ? "Creating…" : "Create Account")
+                        }
+                        .buttonStyle(AuthCTAButtonStyle(
+                            isEnabled: viewModel.canSubmit,
+                            isLoading: viewModel.isLoading
+                        ))
+                        .disabled(!viewModel.canSubmit)
+                        .padding(.top, 8)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
-                .disabled(!viewModel.canSubmit)
+                .scrollDismissesKeyboard(.interactively)
             }
-            .padding()
         }
-        .scrollDismissesKeyboard(.immediately)
-        .navigationTitle("Create Account")
-        .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(.dark)
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             viewModel.configure(authService: authService, userService: userService)
         }
     }
 
-    // MARK: - Sections
+    private func submit(viewModel: RegisterViewModel) {
+        guard viewModel.canSubmit else { return }
+        focusedField = nil
+        Task { await viewModel.register() }
+    }
 
-    private func emailSection(viewModel: RegisterViewModel) -> some View {
+    // MARK: - Fields
+
+    private func emailField(viewModel: RegisterViewModel) -> some View {
         @Bindable var viewModel = viewModel
         return VStack(alignment: .leading, spacing: 6) {
-            AuthTextField(
-                title: "Email",
+            AuthInputField(
+                placeholder: "Email",
                 text: $viewModel.email,
                 icon: "envelope",
-                validationState: emailValidationState(viewModel: viewModel),
                 keyboardType: .emailAddress,
-                textContentType: .emailAddress
+                contentType: .emailAddress,
+                submitLabel: .next
             )
+            .focused($focusedField, equals: .email)
+            .onSubmit { focusedField = .username }
+
             if let message = viewModel.emailValidationMessage {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 4)
+                AuthFieldHint(message: message, tone: .error)
             }
         }
     }
 
-    private func usernameSection(viewModel: RegisterViewModel) -> some View {
+    private func usernameField(viewModel: RegisterViewModel) -> some View {
         @Bindable var viewModel = viewModel
         return VStack(alignment: .leading, spacing: 6) {
-            AuthTextField(
-                title: "Username",
+            AuthInputField(
+                placeholder: "Username",
                 text: $viewModel.username,
                 icon: "person",
-                validationState: usernameValidationState(viewModel: viewModel),
-                textContentType: .username
+                contentType: .username,
+                submitLabel: .next
             )
+            .focused($focusedField, equals: .username)
             .onChange(of: viewModel.username) {
                 viewModel.usernameDidChange()
             }
+            .onSubmit { focusedField = .password }
+
             usernameHint(viewModel: viewModel)
         }
     }
@@ -83,102 +110,89 @@ struct RegisterView: View {
     @ViewBuilder
     private func usernameHint(viewModel: RegisterViewModel) -> some View {
         if let message = viewModel.usernameFormatMessage {
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(.red)
-                .padding(.horizontal, 4)
-        } else if viewModel.usernameAvailability == .taken {
-            Text("This username is already taken.")
-                .font(.caption)
-                .foregroundStyle(.red)
-                .padding(.horizontal, 4)
-        } else if viewModel.usernameAvailability == .error {
-            Text("Could not check availability. Please try again.")
-                .font(.caption)
-                .foregroundStyle(.orange)
-                .padding(.horizontal, 4)
+            AuthFieldHint(message: message, tone: .error)
+        } else {
+            switch viewModel.usernameAvailability {
+            case .taken:
+                AuthFieldHint(message: "This username is already taken.", tone: .error)
+            case .error:
+                AuthFieldHint(message: "Could not check availability. Try again.", tone: .soft)
+            case .checking:
+                AuthFieldHint(message: "Checking availability…", tone: .soft)
+            case .available:
+                AuthFieldHint(message: "Username available.", tone: .success)
+            case .unchecked:
+                EmptyView()
+            }
         }
     }
 
-    private func passwordSection(viewModel: RegisterViewModel) -> some View {
+    private func passwordField(viewModel: RegisterViewModel) -> some View {
         @Bindable var viewModel = viewModel
         return VStack(alignment: .leading, spacing: 8) {
-            AuthSecureField(
-                title: "Password",
+            AuthPasswordField(
+                placeholder: "Password",
                 text: $viewModel.password,
                 isVisible: $viewModel.isPasswordVisible,
-                textContentType: .newPassword
+                contentType: .newPassword,
+                submitLabel: .next
             )
+            .focused($focusedField, equals: .password)
             .onChange(of: viewModel.password) {
                 viewModel.passwordDidChange()
             }
+            .onSubmit { focusedField = .confirmPassword }
+
             if !viewModel.password.isEmpty {
                 PasswordStrengthView(result: viewModel.passwordValidation)
             }
         }
     }
 
-    private func confirmPasswordSection(viewModel: RegisterViewModel) -> some View {
+    private func confirmPasswordField(viewModel: RegisterViewModel) -> some View {
         @Bindable var viewModel = viewModel
         return VStack(alignment: .leading, spacing: 6) {
-            AuthSecureField(
-                title: "Confirm Password",
+            AuthPasswordField(
+                placeholder: "Confirm Password",
                 text: $viewModel.confirmPassword,
                 isVisible: $viewModel.isConfirmPasswordVisible,
-                textContentType: .newPassword
+                contentType: .newPassword,
+                submitLabel: .go
             )
+            .focused($focusedField, equals: .confirmPassword)
+            .onSubmit { submit(viewModel: viewModel) }
+
             if let message = viewModel.passwordsMatchMessage {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 4)
+                AuthFieldHint(message: message, tone: .error)
             }
         }
     }
 
-    private func tosSection(viewModel: RegisterViewModel) -> some View {
+    private func termsRow(viewModel: RegisterViewModel) -> some View {
         @Bindable var viewModel = viewModel
-        return HStack(alignment: .top, spacing: 8) {
-            Button(viewModel.hasAcceptedTerms ? "Accepted" : "Accept terms", systemImage: viewModel.hasAcceptedTerms ? "checkmark.square.fill" : "square") {
-                viewModel.hasAcceptedTerms.toggle()
-            }
-            .labelStyle(.iconOnly)
-            .foregroundStyle(viewModel.hasAcceptedTerms ? Color.accentColor : .secondary)
+        return HStack(alignment: .top, spacing: 10) {
+            AuthCheckbox(isChecked: $viewModel.hasAcceptedTerms)
+                .padding(.top, 1)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
-                    Text("I agree to the")
-                        .font(.subheadline)
-                    NavigationLink("Terms of Service", value: AuthRoute.termsOfService)
-                        .font(.subheadline)
-                        .underline()
+            HStack(spacing: 0) {
+                Text("I agree to the ")
+                    .foregroundStyle(Color.pingTextSecondary)
+                NavigationLink(value: AuthRoute.termsOfService) {
+                    Text("Terms")
+                        .foregroundStyle(Color.pingAccent)
                 }
-                HStack(spacing: 4) {
-                    Text("and the")
-                        .font(.subheadline)
-                    NavigationLink("Privacy Policy", value: AuthRoute.privacyPolicy)
-                        .font(.subheadline)
-                        .underline()
+                Text(" and ")
+                    .foregroundStyle(Color.pingTextSecondary)
+                NavigationLink(value: AuthRoute.privacyPolicy) {
+                    Text("Privacy Policy")
+                        .foregroundStyle(Color.pingAccent)
                 }
             }
+            .font(.dmSans(.regular, size: 13, relativeTo: .footnote))
+
+            Spacer(minLength: 0)
         }
-    }
-
-    // MARK: - Validation states
-
-    private func emailValidationState(viewModel: RegisterViewModel) -> ValidationState? {
-        guard !viewModel.email.isEmpty else { return nil }
-        return viewModel.isEmailValid ? .valid : .invalid
-    }
-
-    private func usernameValidationState(viewModel: RegisterViewModel) -> ValidationState? {
-        guard !viewModel.username.isEmpty else { return nil }
-        if !viewModel.isUsernameFormatValid { return .invalid }
-        switch viewModel.usernameAvailability {
-        case .checking: return .checking
-        case .available: return .valid
-        case .taken, .error: return .invalid
-        case .unchecked: return nil
-        }
+        .padding(.leading, 2)
+        .padding(.top, 4)
     }
 }

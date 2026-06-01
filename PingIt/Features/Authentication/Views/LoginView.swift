@@ -2,80 +2,87 @@ import SwiftUI
 
 struct LoginView: View {
     @Environment(AuthService.self) private var authService
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = LoginViewModel()
+    @FocusState private var focusedField: Field?
+
+    enum Field: Hashable { case email, password }
 
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        ScrollView {
-            VStack(spacing: 24) {
-                emailSection(viewModel: viewModel)
-                passwordSection(viewModel: viewModel)
+        ZStack {
+            Color.pingBackground.ignoresSafeArea()
 
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: 0) {
+                AuthScreenHeader(title: "Sign In") { dismiss() }
+
+                ScrollView {
+                    VStack(spacing: 12) {
+                        AuthInputField(
+                            placeholder: "Email",
+                            text: $viewModel.email,
+                            icon: "envelope",
+                            keyboardType: .emailAddress,
+                            contentType: .emailAddress,
+                            submitLabel: .next
+                        )
+                        .focused($focusedField, equals: .email)
+                        .onSubmit { focusedField = .password }
+
+                        AuthPasswordField(
+                            placeholder: "Password",
+                            text: $viewModel.password,
+                            isVisible: $viewModel.isPasswordVisible,
+                            contentType: .password,
+                            submitLabel: .go
+                        )
+                        .focused($focusedField, equals: .password)
+                        .onSubmit { submit(viewModel: viewModel) }
+
+                        if let errorMessage = viewModel.errorMessage {
+                            Text(errorMessage)
+                                .font(.dmSans(.regular, size: 13, relativeTo: .footnote))
+                                .foregroundStyle(Color.pingHot)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        Button {
+                            submit(viewModel: viewModel)
+                        } label: {
+                            Text(viewModel.isLoading ? "Signing in…" : "Sign In")
+                        }
+                        .buttonStyle(AuthCTAButtonStyle(
+                            isEnabled: viewModel.canSubmit,
+                            isLoading: viewModel.isLoading
+                        ))
+                        .disabled(!viewModel.canSubmit)
+                        .padding(.top, 8)
+
+                        NavigationLink(value: AuthRoute.forgotPassword) {
+                            Text("Forgot Password?")
+                                .font(.dmSans(.regular, size: 13, relativeTo: .footnote))
+                                .foregroundStyle(Color.pingTextSecondary)
+                        }
+                        .padding(.top, 4)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
                 }
-
-                Button("Sign In") {
-                    Task { await viewModel.authenticate() }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
-                .disabled(!viewModel.canSubmit)
-
-                NavigationLink("Forgot Password?", value: AuthRoute.forgotPassword)
-                    .font(.footnote)
+                .scrollDismissesKeyboard(.interactively)
             }
-            .padding()
         }
-        .scrollDismissesKeyboard(.immediately)
-        .navigationTitle("Sign In")
-        .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(.dark)
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             viewModel.configure(authService: authService)
         }
     }
 
-    // MARK: - Sections
-
-    private func emailSection(viewModel: LoginViewModel) -> some View {
-        @Bindable var viewModel = viewModel
-        return VStack(alignment: .leading, spacing: 6) {
-            AuthTextField(
-                title: "Email",
-                text: $viewModel.email,
-                icon: "envelope",
-                validationState: emailValidationState(viewModel: viewModel),
-                keyboardType: .emailAddress,
-                textContentType: .emailAddress
-            )
-            if let message = viewModel.emailValidationMessage {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 4)
-            }
-        }
-    }
-
-    private func passwordSection(viewModel: LoginViewModel) -> some View {
-        @Bindable var viewModel = viewModel
-        return AuthSecureField(
-            title: "Password",
-            text: $viewModel.password,
-            isVisible: $viewModel.isPasswordVisible,
-            textContentType: .password
-        )
-    }
-
-    // MARK: - Validation states
-
-    private func emailValidationState(viewModel: LoginViewModel) -> ValidationState? {
-        guard !viewModel.email.isEmpty else { return nil }
-        return viewModel.isEmailValid ? .valid : .invalid
+    private func submit(viewModel: LoginViewModel) {
+        guard viewModel.canSubmit else { return }
+        focusedField = nil
+        Task { await viewModel.authenticate() }
     }
 }
