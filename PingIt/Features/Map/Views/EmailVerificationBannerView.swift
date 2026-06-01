@@ -5,28 +5,13 @@ struct EmailVerificationBannerView: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        HStack {
-            Image(systemName: "envelope.badge")
-                .foregroundStyle(.orange)
-
-            Text("Verify your email to create pings")
-                .font(.subheadline)
-
-            Spacer()
-
-            Button("Resend", action: onResend)
-                .font(.subheadline)
-                .bold()
-
-            Button("Dismiss", systemImage: "xmark", action: onDismiss)
-                .labelStyle(.iconOnly)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-        .clipShape(.rect(cornerRadius: 12))
-        .padding(.horizontal)
-        .accessibilityElement(children: .combine)
+        MapAlertChip(
+            severity: .warning,
+            icon: "envelope.badge",
+            title: "Verify your email",
+            message: "Confirm to create pings and unlock chat.",
+            primaryAction: .init(label: "Resend", handler: onResend),
+            onDismiss: onDismiss
+        )
     }
 }
