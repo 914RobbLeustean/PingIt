@@ -175,6 +175,23 @@ private struct CreatorAvatar: View {
     let size: CGFloat
 
     var body: some View {
+        if let urlString = creator?.profileImageUrl, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                default:
+                    initialFallback
+                }
+            }
+            .frame(width: size, height: size)
+            .clipShape(.circle)
+        } else {
+            initialFallback
+        }
+    }
+
+    private var initialFallback: some View {
         Circle()
             .fill(avatarColor)
             .frame(width: size, height: size)
