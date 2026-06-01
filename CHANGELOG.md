@@ -6,6 +6,28 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Settings tab UI overhaul (Settings, Blocked Users, Sign Out, Delete Account)
+
+### Added
+- `Features/Settings/Models/SettingsRoute.swift`: navigation route enum for the Settings tab (`blockedUsers`, `termsOfService`, `privacyPolicy`).
+- `Features/Settings/ViewModels/DeleteAccountViewModel.swift`: `@Observable @MainActor` view model orchestrating the two-step delete-account flow (`confirmIntent` → `reauthenticate` → `farewell`). Splits the reauth + Cloud Function call from the final sign-out so the UI can show a farewell state before the auth listener tears down `SettingsView`.
+- `Features/Settings/Views/Components/SettingsSection.swift`: rounded `pingSurface` card with optional uppercase section label; `isDestructive` variant tints the hairline border `pingHot @ 0.2` (used by the Delete Account container).
+- `Features/Settings/Views/Components/SettingsRow.swift`: generic 52pt-min row with `DM Sans Medium 15pt` label, optional `labelColor` override, optional tap action, and a `ViewBuilder` trailing slot. A convenience initializer renders a `SettingsChevron` when no trailing view is supplied.
+- `Features/Settings/Views/Components/SettingsRowDivider.swift`: 1pt `pingBorder` hairline inset 18pt from the leading edge.
+- `Features/Settings/Views/Components/PingItToggle.swift`: custom 48×28 capsule toggle. Off-state uses `pingSurfaceElevated`, on-state uses `pingLive`. Sliding white thumb animated with `spring(response: 0.25, dampingFraction: 0.7)`. Exposes an accessibility label/value to VoiceOver.
+- `Features/Settings/Views/Components/PingItConfirmationDialog.swift`: generic modal overlay with a dimmed backdrop, a centered `pingSurfaceElevated` card, spring scale + opacity transition, and tap-to-dismiss on the backdrop. Also adds `DialogTitleBlock`, `DialogButtonRow`, `DialogSecondaryButtonStyle`, `DialogDestructiveButtonStyle`. The app must use this instead of system `.alert()` / `.confirmationDialog()`.
+- `Features/Settings/Views/Components/HoldToConfirmButton.swift`: destructive press-and-hold pill (default 7.5s, ease-out cubic — fast start, slow finish). Eight persuasion labels cycle as progress advances (`Keep holding...` → `Goodbye.`). Light haptic ticks fire on every 10% of progress (medium past 80%, heavy on completion). The pill shakes increasingly past 55% of progress. Cancellation collapses the fill in 0.25s.
+- `Features/Settings/Views/Components/AccountFarewellCard.swift`: animated sad-face card shown for ~4s after deletion — amber gradient face, blinking eyes (every ~2.8s), endlessly-falling teardrop, sad-mouth quadratic curve, plus copy "We're sad to see you go. / Your account is gone, your pings have faded. Thanks for being part of PingIt."
+- `Features/Settings/Views/Components/BlockedUserRow.swift`: avatar (40pt circle with placeholder glyph) + username + amber-tinted `Unblock` capsule pill on a 64pt-min row.
+- `Features/Settings/Views/Components/BlockedUsersEmptyState.swift`: 88pt circular glyph + Syne bold title + DM Sans regular body. Used for both the "no blocks" and the "error loading blocks" states.
+
+### Changed
+- `Features/Settings/Views/SettingsView.swift`: full rewrite. Removed `List` / `Form` / `Toggle` / `.alert()` / `Section`; replaced with `SettingsSection` cards, `SettingsRow`, `PingItToggle`, custom Sign Out + two-step Delete Account modals. Added `NavigationStack(path: $path)` driving `SettingsRoute`. Title now uses `Syne ExtraBold 30pt`. Delete Account section is its own destructive-bordered card outside the Legal section.
+- `Features/Settings/Views/BlockedUsersView.swift`: full rewrite. Removed system `List` / `.alert()` / `ContentUnavailableView`. Uses `AuthScreenHeader` for the back button + title, a single rounded card holding `BlockedUserRow` entries separated by `SettingsRowDivider`, `BlockedUsersEmptyState` for no-blocks/error states, and `PingItConfirmationDialog` for unblock confirmation. The dialog's confirm button is amber (`UnblockConfirmButtonStyle`), not destructive — unblocking is recoverable.
+- `Core/Services/AuthService.swift`: split `deleteAccount()` into `deleteAccountRecord()` (Cloud Function only) and a follow-up `signOut()`. The original `deleteAccount()` is preserved and chains the two so existing callers are unaffected. The split exists so `AccountFarewellCard` can render before the auth state listener navigates back to Welcome.
+
+---
+
 ## [2026-06-01] — Authentication screens UI overhaul (Sign In, Create Account, Forgot Password, Terms, Privacy)
 
 ### Added

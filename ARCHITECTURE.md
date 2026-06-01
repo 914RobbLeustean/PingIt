@@ -91,10 +91,21 @@ All UI code in the app MUST use the tokens and components defined under `PingIt/
 - `AuthCTAButtonStyle` — auth-form CTA with enabled/disabled state colour transition (amber fill → surface fill) and glow.
 - `RadarBackground` — animated decorative background; respects `accessibilityReduceMotion`.
 - `PingItLogoMark` / `PingItWordmark` — the brand-mark composition used on the Welcome screen.
-- `AuthBackButton` / `AuthScreenHeader` — shared 38pt dark-circle back button and title row used on every non-Welcome auth screen.
+- `AuthBackButton` / `AuthScreenHeader` — shared 38pt dark-circle back button and title row used on every non-Welcome auth screen (also consumed by `BlockedUsersView`).
 - `AuthInputField` / `AuthPasswordField` — 52pt rounded surface inputs with leading SF Symbol icon, optional trailing slot, and (for passwords) an eye toggle.
 - `AuthCheckbox` — 20pt rounded square checkbox with amber fill + bold white SF Symbol checkmark when checked.
 - `AuthFieldHint` — 12pt DM Sans helper text with `error` / `soft` / `success` tone variants.
+
+The Settings feature owns (added 2026-06-01):
+- `SettingsSection` — rounded `pingSurface` card with optional uppercase section label; `isDestructive` variant swaps the hairline border for a 20% `pingHot` tint (used by the Delete Account container).
+- `SettingsRow` — generic 52pt-min row with `DM Sans Medium 15pt` label, optional `labelColor` override, optional tap action, and a `ViewBuilder` trailing slot. Convenience initializer renders a `SettingsChevron` when no trailing view is supplied.
+- `SettingsRowDivider` — 1pt `pingBorder` hairline inset 18pt from the leading edge.
+- `PingItToggle` — custom 48×28 capsule toggle; off-state uses `pingSurfaceElevated`, on-state uses `pingLive`; sliding white thumb animated with `spring(response: 0.25, dampingFraction: 0.7)`.
+- `PingItConfirmationDialog` — generic ZStack overlay with a dimmed backdrop, a centered `pingSurfaceElevated` card, spring scale + opacity transition, and tap-to-dismiss on the backdrop. Auxiliary primitives: `DialogTitleBlock`, `DialogButtonRow`, `DialogSecondaryButtonStyle`, `DialogDestructiveButtonStyle`. Use this instead of system `.alert()` / `.confirmationDialog()`.
+- `HoldToConfirmButton` — destructive press-and-hold pill (default 7.5s, ease-out cubic). Fill ramps left-to-right; eight persuasion labels cycle as progress advances; the pill shakes increasingly past 55%; light haptic taps fire every 10% of progress (medium past 80%, heavy on completion). Cancellation collapses the fill in 0.25s.
+- `AccountFarewellCard` — animated sad-face card (amber gradient face, blinking eyes, repeating teardrop, sad mouth) shown for ~4s after account deletion before sign-out is finalized.
+- `BlockedUserRow` — avatar + username + amber-tinted `Unblock` pill on a single 64pt-min row.
+- `BlockedUsersEmptyState` — circular glyph + Syne title + DM Sans body; replaces `ContentUnavailableView` for the no-blocks / error states.
 
 **Legal screens render natively.** `Features/Authentication/Models/LegalDocument.swift` parses the bundled `terms.html` / `privacy.html` resources into a small `LegalDocument` block model (`heading`, `sectionHeading`, `updated`, `paragraph`, `bullets`), and `Features/Authentication/Views/LegalDocumentView.swift` renders those blocks with the design tokens. The previous `WKWebView`-based `WebContentView` was removed.
 
@@ -246,11 +257,24 @@ PingIt/
 │   │       ├── ProfileImageSection.swift   AsyncImage + PhotosPicker + camera
 │   │       └── CameraPickerView.swift      UIKit camera wrapper
 │   └── Settings/
+│       ├── Models/
+│       │   └── SettingsRoute.swift              Navigation route enum (blockedUsers, termsOfService, privacyPolicy)
 │       ├── ViewModels/
-│       │   └── BlockedUsersViewModel.swift  Loads blocked users with profiles, unblock action
+│       │   ├── BlockedUsersViewModel.swift      Loads blocked users with profiles, unblock action
+│       │   └── DeleteAccountViewModel.swift     @Observable @MainActor; tracks delete-flow step (confirmIntent → reauthenticate → farewell), password input, loading + error state; splits reauth + deleteAccountRecord from finalizeSignOut
 │       └── Views/
-│           ├── SettingsView.swift           Sign out, notifications + privacy toggles, Privacy & Safety, Legal (Terms + Privacy)
-│           └── BlockedUsersView.swift       List of blocked users with unblock confirmation
+│           ├── SettingsView.swift               Custom Settings tab: SettingsSection cards, PingItToggle, custom Sign Out + Delete Account modals (hold-to-confirm + farewell card), NavigationStack driving SettingsRoute
+│           ├── BlockedUsersView.swift           Custom Blocked Users list with AuthScreenHeader, BlockedUserRow cards, and PingItConfirmationDialog for unblock
+│           └── Components/
+│               ├── SettingsSection.swift            Rounded card container with optional uppercase label; isDestructive variant tints border with pingHot
+│               ├── SettingsRow.swift                Generic settings row with label color override and trailing ViewBuilder slot; default trailing renders SettingsChevron
+│               ├── SettingsRowDivider.swift         1pt pingBorder hairline divider, inset 18pt leading
+│               ├── PingItToggle.swift               Custom 48×28 capsule toggle with spring-animated thumb
+│               ├── PingItConfirmationDialog.swift   Custom modal overlay with dimmed backdrop; includes DialogTitleBlock, DialogButtonRow, DialogSecondaryButtonStyle, DialogDestructiveButtonStyle
+│               ├── HoldToConfirmButton.swift        Destructive press-and-hold pill (7.5s ease-out fill, cycling labels, haptic ticks, shake past 55%)
+│               ├── AccountFarewellCard.swift        Animated sad-face card shown after account deletion before sign-out
+│               ├── BlockedUserRow.swift             Avatar + username + amber Unblock pill row
+│               └── BlockedUsersEmptyState.swift     Circular glyph + Syne title + DM Sans body for empty/error states
 
 └── Resources/
     ├── ClujNapoca.geojson           Cluj-Napoca admin boundary (OSM)
@@ -436,7 +460,12 @@ SettingsView ──▶ BlockedUsersView ──observes──▶ BlockedUsersView
 
 MapView ── uses ──▶ NotificationService.updateLastKnownLocation (on first location fix)
 
-SettingsView ── deleteAccount ──▶ AuthService.reauthenticate + AuthService.deleteAccount ──▶ Cloud Function
+SettingsView ── deleteAccount ──▶ DeleteAccountViewModel
+   ├─ AuthService.reauthenticate(password:)
+   ├─ AuthService.deleteAccountRecord() ──▶ deleteAccount Cloud Function
+   ├─ AccountFarewellCard shown for ~4s
+   └─ AuthService.signOut() ──▶ auth listener routes to Welcome
+The split exists so the farewell card can render before the auth state flips and SettingsView is unmounted; AuthService.deleteAccount() (the legacy combined method) is preserved and just chains the two steps.
 
 PingItApp ── .task ──▶ NotificationService.requestPermission + registerFCMToken
           └─ sets UNUserNotificationCenter.delegate + Messaging.delegate
