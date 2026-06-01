@@ -94,6 +94,10 @@ final class ChatViewModel {
             hasMoreMessages = older.count >= pageSize
             allMessages = older + allMessages
             applyBlockFilter()
+            // Restart the live listener so the newly-loaded older messages
+            // also receive reaction / edit updates.
+            stopObserving()
+            startListeningForNewMessages()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -101,7 +105,11 @@ final class ChatViewModel {
 
     private func startListeningForNewMessages() {
         guard let chatService, listenerRegistration == nil else { return }
-        let after = allMessages.last?.createdAt ?? Date.now
+        // Subscribe from just before the oldest loaded message so reaction
+        // updates (and any other modifications) on existing messages reach
+        // the client — otherwise Firestore filters them out.
+        let oldestLoaded = allMessages.first?.createdAt
+        let after = oldestLoaded.map { $0.addingTimeInterval(-0.001) } ?? Date.distantPast
 
         listenerRegistration = chatService.observeNewMessages(chatId: chatId, after: after) { [weak self] result in
             guard let self else { return }
