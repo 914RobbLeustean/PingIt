@@ -24,6 +24,7 @@ struct ChatView: View {
     @State private var viewModel: ChatViewModel
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
     @State private var reportTarget: ReportTarget?
+    @State private var actionOverlayMessage: ChatMessage?
 
     let pingCreatorId: String
 
@@ -100,6 +101,19 @@ struct ChatView: View {
                 blockService: blockService
             )
         }
+        .overlay {
+            if let message = actionOverlayMessage {
+                MessageActionOverlay(
+                    isCurrentUser: message.senderId == viewModel.currentUserId,
+                    onReaction: { emoji in handleReaction(on: message, emoji: emoji) },
+                    onReport: { handleReportTap(for: message) },
+                    onBlock: { handleBlockTap(for: message) },
+                    onDismiss: { actionOverlayMessage = nil }
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.18), value: actionOverlayMessage?.id)
     }
 
     // MARK: - Message Scroll View
@@ -128,8 +142,7 @@ struct ChatView: View {
                             showSenderInfo: viewModel.isFirstInGroup(message),
                             isSenderPrivate: viewModel.isSenderPrivate(for: message),
                             currentUserId: viewModel.currentUserId,
-                            onReport: { handleReportTap(for: message) },
-                            onBlock: { handleBlockTap(for: message) },
+                            onLongPress: { actionOverlayMessage = message },
                             onReaction: { emoji in handleReaction(on: message, emoji: emoji) }
                         )
                     }

@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import CoreLocation
+import UIKit
 
 struct MessageBubbleView: View {
     let message: ChatMessage
@@ -9,9 +10,13 @@ struct MessageBubbleView: View {
     let showSenderInfo: Bool
     let isSenderPrivate: Bool
     let currentUserId: String?
-    let onReport: () -> Void
-    let onBlock: () -> Void
+    let onLongPress: () -> Void
     let onReaction: (String) -> Void
+
+    private func handleLongPress() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        onLongPress()
+    }
 
     private var isLocationMessage: Bool {
         message.messageType == Constants.MessageType.location
@@ -40,25 +45,7 @@ struct MessageBubbleView: View {
                 }
 
                 bubbleContent
-                    .contextMenu {
-                        Section("React") {
-                            ForEach(Constants.Reaction.available, id: \.key) { reaction in
-                                Button(reaction.emoji) {
-                                    onReaction(reaction.emoji)
-                                }
-                            }
-                        }
-                        if !isCurrentUser {
-                            Section {
-                                Button("Report Message", systemImage: "exclamationmark.bubble") {
-                                    onReport()
-                                }
-                                Button("Block User", systemImage: "hand.raised", role: .destructive) {
-                                    onBlock()
-                                }
-                            }
-                        }
-                    }
+                    .onLongPressGesture(minimumDuration: 0.35, perform: handleLongPress)
 
                 if let reactions = message.reactions, !reactions.isEmpty {
                     ReactionSummaryView(
@@ -159,37 +146,40 @@ private struct ChatLocationBubble: View {
 
     var body: some View {
         Button(action: openInMaps) {
-            VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .bottomLeading) {
                 Map(initialPosition: .region(MKCoordinateRegion(
                     center: coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
                 ))) {
                     Marker(locationName ?? "Shared location", coordinate: coordinate)
                 }
-                .frame(width: 220, height: 140)
+                .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
                 .allowsHitTesting(false)
-                .clipShape(.rect(cornerRadius: 14))
-                .padding(4)
 
-                if let locationName {
-                    HStack(spacing: 6) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 12))
-                        Text(locationName)
-                            .font(.dmSans(.medium, size: 13, relativeTo: .footnote))
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(isCurrentUser ? .black.opacity(0.7) : Color.pingTextSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 8)
-                    .padding(.top, 2)
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.55)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 64)
+                .frame(maxWidth: .infinity, alignment: .bottom)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(locationName ?? "Shared location")
+                        .font(.dmSans(.semiBold, size: 13, relativeTo: .footnote))
+                        .lineLimit(1)
                 }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 10)
             }
-            .background(isCurrentUser ? Color.pingAccent : Color.pingSurface)
+            .frame(width: 230, height: 150)
             .clipShape(bubbleShape)
             .overlay(
                 bubbleShape
-                    .stroke(Color.white.opacity(isCurrentUser ? 0 : 0.07), lineWidth: 1)
+                    .stroke(Color.white.opacity(isCurrentUser ? 0.2 : 0.07), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
