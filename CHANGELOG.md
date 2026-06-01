@@ -6,6 +6,24 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Audit sweep: SuspendedAccountView, PasswordStrengthView, Ping Unavailable toasts
+
+### Changed
+- `Features/Authentication/Views/SuspendedAccountView.swift`: full redesign. Dark `pingBackground`, an exclamation hero with two concentric `pingHot` rings + glow, Syne ExtraBold 26pt title, DM Sans body on `pingTextPrimary` and a contact line on `pingTextSecondary`. Sign Out is now a 52pt surface capsule with a hairline border instead of `.borderedProminent`.
+- `Features/Authentication/Views/Components/PasswordStrengthView.swift`: strength bar segments now use `pingHot` (weak), `pingAccent` (moderate), `pingLive` (strong) with `pingBorder` for empty slots. Rule list switched to DM Sans on `pingTextPrimary` / `pingTextSecondary`, with a `pingLive` checkmark on satisfied rules.
+- `Features/Map/Views/MapView.swift`: removed the system `.alert("Ping Unavailable")`. The state now drives a `MapAlertChip` (error severity, `mappin.slash` icon) inserted into the alert stack and auto-dismisses after 3 seconds.
+- `Features/Ping/Views/PingDetailView.swift`: same alert replaced with a top-overlay `MapAlertChip` that animates in with spring + opacity transition, then pops the screen back after 2 seconds via a `task(id:)` driven by `viewModel.pingUnavailable`.
+
+### Files significantly modified
+- `PingIt/Features/Authentication/Views/SuspendedAccountView.swift`
+- `PingIt/Features/Authentication/Views/Components/PasswordStrengthView.swift`
+- `PingIt/Features/Map/Views/MapView.swift`
+- `PingIt/Features/Ping/Views/PingDetailView.swift`
+- `ARCHITECTURE.md`
+- `project_status.md`
+
+---
+
 ## [2026-06-01] — Chat reactions overlay + smoother location bubble
 
 ### Added
