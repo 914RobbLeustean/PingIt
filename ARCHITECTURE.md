@@ -107,6 +107,13 @@ The Settings feature owns (added 2026-06-01):
 - `BlockedUserRow` — avatar + username + amber-tinted `Unblock` pill on a single 64pt-min row.
 - `BlockedUsersEmptyState` — circular glyph + Syne title + DM Sans body; replaces `ContentUnavailableView` for the no-blocks / error states.
 
+The Profile feature owns (added 2026-06-01):
+- `ProfileAvatarBlock` — 86pt avatar circle with the user's initial letter (Syne ExtraBold 36pt white on `pingAccent`) or `AsyncImage` if a profile photo URL exists; 3pt `pingAccent` 40% stroke, 12pt amber glow shadow; 28pt `pingAccent` circle at bottom-right with SF Symbol pencil for photo editing.
+- `ProfileStatsCard` — 3-column HStack in a rounded `pingSurface` card with `pingBorder` stroke; each column shows a Syne ExtraBold 22pt amber value + DM Sans Regular 11pt uppercase label. Displays ping count, total boosts received, and relative member age.
+- `ProfileInfoCard` — 3-row information card (Username, Email, Member since) in a `pingSurface` card. Username row supports inline editing: the text swaps to a `TextField` when `isEditing` is true, with optional error text below.
+- `PhotoSourcePicker` — Bottom sheet with drag handle, "Profile Photo" title, and action rows (Choose from Library, Take Photo, Remove Photo) in a `pingSurface` card. Uses `SettingsRowButtonStyle` and `SettingsRowDivider` for consistent row styling.
+- `SettingsRowButtonStyle` — Shared `ButtonStyle` for tappable rows; white 3% highlight on press with 0.12s ease-out animation. Promoted from Settings (was private) for cross-feature reuse.
+
 **Legal screens render natively.** `Features/Authentication/Models/LegalDocument.swift` parses the bundled `terms.html` / `privacy.html` resources into a small `LegalDocument` block model (`heading`, `sectionHeading`, `updated`, `paragraph`, `bullets`), and `Features/Authentication/Views/LegalDocumentView.swift` renders those blocks with the design tokens. The previous `WKWebView`-based `WebContentView` was removed.
 
 ### Actual File Listing (as of 2026-05-07)
@@ -251,11 +258,15 @@ PingIt/
 │   │       └── ReportView.swift            Form: reason picker, details text field, block offer
 │   ├── Profile/
 │   │   ├── ViewModels/
-│   │   │   └── ProfileViewModel.swift      Profile CRUD, Storage upload
+│   │   │   └── ProfileViewModel.swift      Profile CRUD, stats computation, username edit mode, Storage upload
 │   │   └── Views/
-│   │       ├── ProfileView.swift           Username edit, photo management
-│   │       ├── ProfileImageSection.swift   AsyncImage + PhotosPicker + camera
-│   │       └── CameraPickerView.swift      UIKit camera wrapper
+│   │       ├── ProfileView.swift           Redesigned profile screen: avatar block, stats card, info card, photo source sheet
+│   │       ├── CameraPickerView.swift      UIKit camera wrapper
+│   │       └── Components/
+│   │           ├── ProfileAvatarBlock.swift     86pt avatar circle (initial letter or AsyncImage), amber glow, edit pencil overlay
+│   │           ├── ProfileStatsCard.swift       3-column HStack (Pings / Boosts / Member age) in pingSurface card
+│   │           ├── ProfileInfoCard.swift        Username (inline-editable) / Email / Member since rows in pingSurface card
+│   │           └── PhotoSourcePicker.swift      Bottom sheet: Choose from Library / Take Photo / Remove Photo
 │   └── Settings/
 │       ├── Models/
 │       │   └── SettingsRoute.swift              Navigation route enum (blockedUsers, termsOfService, privacyPolicy)
@@ -452,7 +463,10 @@ CreatePingView ──observes──▶ CreatePingViewModel ──calls──▶ 
                                                             AnalyticsService (logs ping_created)
 
 ProfileView ──observes──▶ ProfileViewModel ──calls──▶ UserService ──reads/writes──▶ Firestore (users + usernames)
+                                                      ImageStorageService ──calls──▶ Firebase Storage
+                                                      PingService.fetchPings(byCreatorId:) ──reads──▶ Firestore (pings)
                                                       AuthService ──calls──▶ Firebase Auth
+             └─ PhotoSourcePicker ──▶ PhotosPicker / CameraPickerView / PingItConfirmationDialog (remove photo)
 
 ReportView ──observes──▶ ReportViewModel ──calls──▶ ReportService ──calls──▶ submitReport Cloud Function
 

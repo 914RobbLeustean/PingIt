@@ -6,6 +6,26 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Profile screen UI overhaul
+
+### Added
+- `Features/Profile/Views/Components/ProfileAvatarBlock.swift`: 86pt avatar circle (initial letter Syne ExtraBold 36pt on pingAccent background, or AsyncImage when a profile photo URL exists). 3pt pingAccent 40% stroke, 12pt amber glow shadow. 28pt edit-pencil circle at bottom-right triggers the photo source picker.
+- `Features/Profile/Views/Components/ProfileStatsCard.swift`: 3-column HStack (Pings / Boosts / Member age) in a pingSurface card. Values in Syne ExtraBold 22pt amber, labels in DM Sans Regular 11pt uppercase secondary.
+- `Features/Profile/Views/Components/ProfileInfoCard.swift`: 3-row info card (Username / Email / Member since) with inline-editable username TextField. Error text shown below the username row when editing.
+- `Features/Profile/Views/Components/PhotoSourcePicker.swift`: bottom sheet with drag handle, "Profile Photo" Syne title, and action rows (Choose from Library / Take Photo / Remove Photo) using SettingsRowButtonStyle.
+- `Core/Protocols/PingServicing.swift`: added `fetchPings(byCreatorId:)` to the protocol.
+- `Core/Services/PingService.swift`: implemented `fetchPings(byCreatorId:)` — Firestore query on `creatorId` field.
+
+### Changed
+- `Features/Profile/Views/ProfileView.swift`: full rewrite. Removed `NavigationStack` / `Form` / `ScrollView` with system toolbar. Replaced with dark background, custom "Profile" header with edit/save/cancel buttons, ProfileAvatarBlock, ProfileStatsCard, ProfileInfoCard, photo source sheet overlay, and PingItConfirmationDialog for remove photo confirmation.
+- `Features/Profile/ViewModels/ProfileViewModel.swift`: added PingService dependency, stats computation (pingCount, totalBoosts, memberAge, memberSinceFormatted, avatarInitial), edit-mode state (beginEditingUsername, cancelEditingUsername). Photo-related methods retained and unchanged.
+- `Features/Settings/Views/Components/SettingsRow.swift`: promoted `SettingsRowButtonStyle` from private to internal for cross-feature reuse (consumed by PhotoSourcePicker).
+
+### Removed
+- `Features/Profile/Views/ProfileImageSection.swift`: replaced by ProfileAvatarBlock + PhotoSourcePicker.
+
+---
+
 ## [2026-06-01] — Settings tab UI overhaul (Settings, Blocked Users, Sign Out, Delete Account)
 
 ### Added

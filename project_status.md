@@ -141,6 +141,15 @@
   - **Location share reverse geocoding:** Shared locations now display actual addresses.
   - **Constant naming:** `maxProfileImageSizeBytes` → `maxImageSizeBytes`.
 
+## Completed (UI Overhaul — Profile)
+- **Profile screen redesign (2026-06-01):** Full UI overhaul matching the HTML prototype's dark design system. Replaced the old `Form`/`List`/system controls with custom components.
+  - **`ProfileAvatarBlock`** — 86pt amber avatar circle with the user's initial letter or `AsyncImage` photo, 3pt amber border at 40% opacity, 12pt glow shadow, 28pt amber edit-pencil overlay.
+  - **`ProfileStatsCard`** — 3-column stats card (Pings / Boosts / Member age) with Syne ExtraBold 22pt amber values, DM Sans 11pt uppercase labels, `pingSurface` card with `pingBorder` stroke.
+  - **`ProfileInfoCard`** — Username (inline-editable TextField), Email, and Member Since rows in a `pingSurface` card with `SettingsRowDivider` separators.
+  - **`PhotoSourcePicker`** — Bottom sheet with Choose from Library / Take Photo / Remove Photo actions. Remove uses `PingItConfirmationDialog`.
+  - **`PingService.fetchPings(byCreatorId:)`** — New Firestore query for profile stats computation.
+  - `SettingsRowButtonStyle` promoted from private to internal for cross-feature reuse. Old `ProfileImageSection` removed (replaced by `ProfileAvatarBlock`).
+
 ## Up Next
 - **Beta Testing implementation:** Blocked on Apple Developer Program enrollment ($99/yr, 2-5 day approval). See `docs/BETA_TESTING.md` for full checklist.
 
