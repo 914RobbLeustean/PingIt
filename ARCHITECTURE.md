@@ -284,8 +284,8 @@ PingIt/
 │   │   ├── ViewModels/
 │   │   │   └── OnboardingViewModel.swift  3-page tutorial state, completes via UserService + Analytics
 │   │   └── Views/
-│   │       ├── OnboardingView.swift       TabView(.page) container with Skip/Next/Get Started buttons
-│   │       └── OnboardingPageView.swift   Reusable page: SF Symbol, title, subtitle
+│   │       ├── OnboardingView.swift       Design-system 3-page tutorial: dark background, Skip pill, hidden-indicator TabView for swipe, custom capsule page indicator, amber Get Started / Next CTA
+│   │       └── OnboardingPageView.swift   Emoji hero in pingSurface plate with TimelineView pulse rings + amber accent badge, Syne ExtraBold title, DM Sans subtitle
 │   ├── Report/
 │   │   ├── ViewModels/
 │   │   │   └── ReportViewModel.swift       Reason selection, submit, block offer after success

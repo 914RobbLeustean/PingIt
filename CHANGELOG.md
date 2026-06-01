@@ -6,6 +6,24 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Onboarding flow redesign + Report keyboard dismiss
+
+### Changed
+- `Features/Onboarding/Views/OnboardingView.swift`: full rewrite. Drops the default `TabView(.page)` indicator and `.borderedProminent` button. New layout: `pingBackground` ignoresSafeArea, an `OnboardingTopBar` with a Skip pill (surface + hairline border) that hides on the last page, a swipeable `TabView` with the system indicator hidden, a custom `OnboardingPageIndicator` (capsules that grow the active dot from 8pt to 28pt with a spring), and an `OnboardingPrimaryButton` — a 56pt amber capsule CTA with `pingAccent` glow that shows "Next →" or "Get Started" depending on page. Page content moved into a small `OnboardingPageContent` struct array so copy lives in one place.
+- `Features/Onboarding/Views/OnboardingPageView.swift`: full rewrite. Drops the SF Symbol hero. New `OnboardingHero` renders a 156pt `pingSurface` plate with hairline border + amber glow shadow, a 76pt category-style emoji centered, an amber 44pt accent badge at the top-right (different SF Symbol per page: `sparkles` / `plus` / `bolt.fill`), and twin `TimelineView`-driven pulse rings behind the plate (Reduce Motion replaces them with a static thin ring). Title is Syne ExtraBold 28pt, subtitle is DM Sans 15pt on `pingTextSecondary` with 4pt line spacing.
+
+### Fixed
+- `Features/Report/Views/ReportView.swift`: added `.scrollDismissesKeyboard(.interactively)` so the details `TextEditor` keyboard can be dismissed by swiping the scroll view, matching the pattern already used in the auth screens.
+
+### Files significantly modified
+- `PingIt/Features/Onboarding/Views/OnboardingView.swift`
+- `PingIt/Features/Onboarding/Views/OnboardingPageView.swift`
+- `PingIt/Features/Report/Views/ReportView.swift`
+- `ARCHITECTURE.md`
+- `project_status.md`
+
+---
+
 ## [2026-06-01] — Report and Block UI overhaul
 
 ### Changed
