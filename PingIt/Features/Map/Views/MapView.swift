@@ -14,7 +14,6 @@ struct MapView: View {
     @State private var cameraPosition: MapCameraPosition = .region(Self.clujRegion)
     @State private var hasMovedToUserLocation = false
     @State private var showCreatePing = false
-    @State private var selectedPing: Ping?
     @State private var sheetPing: Ping?
     @State private var sheetCreator: User?
     @State private var detailPing: Ping?
@@ -32,138 +31,27 @@ struct MapView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Map(position: $cameraPosition) {
-                    UserAnnotation()
+            ZStack(alignment: .top) {
+                mapLayer
 
-                    ForEach(viewModel.unclusteredPings) { ping in
-                        Annotation(
-                            ping.text,
-                            coordinate: viewModel.displayCoordinates[ping.id ?? ""]
-                                ?? CLLocationCoordinate2D(
-                                    latitude: ping.location.latitude,
-                                    longitude: ping.location.longitude
-                                ),
-                            anchor: .bottom
-                        ) {
-                            PingAnnotationView(
-                                ping: ping,
-                                isHot: viewModel.hotPingIds.contains(ping.id ?? "")
-                            ) {
-                                showPingSheet(ping)
-                            }
-                        }
-                        .annotationTitles(.hidden)
-                    }
+                MapTopGradient()
+                    .allowsHitTesting(false)
 
-                    ForEach(viewModel.clusters) { cluster in
-                        Annotation(
-                            "\(cluster.count) pings",
-                            coordinate: cluster.center
-                        ) {
-                            PingClusterAnnotationView(
-                                count: cluster.count,
-                                containsHotPing: cluster.containsHotPing
-                            )
-                            .onTapGesture(perform: { zoomToCluster(cluster) })
-                        }
-                        .annotationTitles(.hidden)
-                    }
-                }
-                .mapControls {
-                    MapUserLocationButton()
-                    MapCompass()
-                    MapScaleView()
-                }
-                .mapStyle(.standard)
-                .onMapCameraChange(frequency: .onEnd) { context in
-                    viewModel.visibleRegion = context.region
-                    viewModel.updateClusters()
-                }
+                MapHeader(onRecenter: handleRecenterTap)
 
-                if let errorMessage = viewModel.errorMessage {
-                    VStack {
-                        Spacer()
-                        Label(errorMessage, systemImage: "wifi.exclamationmark")
-                            .font(.callout)
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .clipShape(.rect(cornerRadius: 12))
-                            .padding()
-                    }
-                } else if viewModel.isLoading {
-                    ProgressView()
-                } else if viewModel.pings.isEmpty {
-                    VStack {
-                        Spacer()
-                        Label("No pings nearby. Be the first to create one!", systemImage: "mappin.slash")
-                            .font(.callout)
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .clipShape(.rect(cornerRadius: 12))
-                            .padding()
-                    }
-                    .accessibilityElement(children: .combine)
-                }
-
-                if viewModel.authorizationStatus == .denied || viewModel.authorizationStatus == .restricted {
-                    VStack {
-                        HStack {
-                            Image(systemName: "location.slash")
-                                .foregroundStyle(.red)
-                            Text("Location access denied. Enable in Settings to see your position.")
-                                .font(.subheadline)
-                            Spacer()
-                            Button("Open Settings", action: handleOpenSettings)
-                                .font(.subheadline)
-                                .bold()
-                        }
-                        .padding()
-                        .background(.ultraThinMaterial)
-                        .clipShape(.rect(cornerRadius: 12))
-                        .padding(.horizontal)
-                        .accessibilityElement(children: .combine)
-                        Spacer()
-                    }
-                    .padding(.top)
-                }
-
-                if !authService.isEmailVerified && showVerificationBanner {
-                    VStack {
-                        EmailVerificationBannerView(
-                            onResend: handleResendVerification,
-                            onDismiss: { showVerificationBanner = false }
-                        )
-                        Spacer()
-                    }
-                    .padding(.top)
-                    .task {
-                        while !Task.isCancelled {
-                            try? await Task.sleep(for: .seconds(5))
-                            try? await authService.reloadUser()
-                            if authService.isEmailVerified {
-                                break
-                            }
-                        }
-                    }
-                }
+                MapAlertStack(
+                    alerts: alerts,
+                    topPadding: 110
+                )
             }
-            .navigationTitle("Map")
+            .ignoresSafeArea(edges: .top)
+            .toolbar(.hidden, for: .navigationBar)
             .overlay(alignment: .bottomTrailing) {
-                Button(action: handleCreatePingTap) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.black)
-                        .frame(width: 60, height: 60)
-                        .background(Color.pingAccent)
-                        .clipShape(.circle)
-                        .shadow(color: Color.pingAccent.opacity(0.55), radius: 14)
-                        .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing, 20)
-                .padding(.bottom, 20)
-                .accessibilityLabel("Create Ping")
+                MapCreatePingFAB(action: handleCreatePingTap)
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 20)
+                    .opacity(sheetPing == nil ? 1 : 0)
+                    .animation(.easeOut(duration: 0.2), value: sheetPing == nil)
             }
             .navigationDestination(item: $detailPing) { ping in
                 PingDetailView(ping: ping)
@@ -194,10 +82,10 @@ struct MapView: View {
             }
             .onAppear(perform: handleReappear)
             .onDisappear(perform: handleDisappear)
-            .onChange(of: blockService.blockedUserIds) { _, _ in
+            .onChange(of: blockService.blockedUserIds) {
                 viewModel.applyBlockFilter()
             }
-            .onChange(of: viewModel.userLocation?.coordinate.latitude) { _, _ in
+            .onChange(of: viewModel.userLocation?.coordinate.latitude) {
                 guard let location = viewModel.userLocation else { return }
                 moveToUserLocation(location)
                 uploadLocationIfNeeded(location)
@@ -216,7 +104,139 @@ struct MapView: View {
             } message: {
                 Text("This ping is no longer available.")
             }
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(5))
+                    try? await authService.reloadUser()
+                    if authService.isEmailVerified { break }
+                }
+            }
         }
+    }
+
+    // MARK: - Map Layer
+
+    private var mapLayer: some View {
+        Map(position: $cameraPosition) {
+            UserAnnotation()
+
+            ForEach(viewModel.unclusteredPings) { ping in
+                Annotation(
+                    ping.text,
+                    coordinate: viewModel.displayCoordinates[ping.id ?? ""]
+                        ?? CLLocationCoordinate2D(
+                            latitude: ping.location.latitude,
+                            longitude: ping.location.longitude
+                        ),
+                    anchor: .center
+                ) {
+                    PingAnnotationView(
+                        ping: ping,
+                        isHot: viewModel.hotPingIds.contains(ping.id ?? "")
+                    ) {
+                        showPingSheet(ping)
+                    }
+                }
+                .annotationTitles(.hidden)
+            }
+
+            ForEach(viewModel.clusters) { cluster in
+                Annotation(
+                    "\(cluster.count) pings",
+                    coordinate: cluster.center
+                ) {
+                    Button { zoomToCluster(cluster) } label: {
+                        PingClusterAnnotationView(
+                            count: cluster.count,
+                            containsHotPing: cluster.containsHotPing
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .annotationTitles(.hidden)
+            }
+        }
+        .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+        .mapControls {}
+        .mapControlVisibility(.hidden)
+        .onMapCameraChange(frequency: .onEnd) { context in
+            viewModel.visibleRegion = context.region
+            viewModel.updateClusters()
+        }
+    }
+
+    // MARK: - Alerts
+
+    private var alerts: [MapAlertItem] {
+        var items: [MapAlertItem] = []
+
+        if let errorMessage = viewModel.errorMessage {
+            items.append(.init(
+                id: "error",
+                builder: {
+                    AnyView(
+                        MapAlertChip(
+                            severity: .error,
+                            icon: "wifi.exclamationmark",
+                            title: "Connection issue",
+                            message: errorMessage
+                        )
+                    )
+                }
+            ))
+        }
+
+        if viewModel.authorizationStatus == .denied
+            || viewModel.authorizationStatus == .restricted {
+            items.append(.init(
+                id: "location-denied",
+                builder: {
+                    AnyView(
+                        MapAlertChip(
+                            severity: .warning,
+                            icon: "location.slash",
+                            title: "Location off",
+                            message: "Enable location to see your position.",
+                            primaryAction: .init(label: "Settings", handler: handleOpenSettings)
+                        )
+                    )
+                }
+            ))
+        }
+
+        if !authService.isEmailVerified && showVerificationBanner {
+            items.append(.init(
+                id: "email",
+                builder: {
+                    AnyView(
+                        EmailVerificationBannerView(
+                            onResend: handleResendVerification,
+                            onDismiss: { showVerificationBanner = false }
+                        )
+                    )
+                }
+            ))
+        }
+
+        if viewModel.errorMessage == nil
+            && !viewModel.isLoading
+            && viewModel.pings.isEmpty {
+            items.append(.init(
+                id: "empty",
+                builder: {
+                    AnyView(
+                        MapAlertChip(
+                            severity: .info,
+                            icon: "sparkles",
+                            title: "Be the first",
+                            message: "No pings nearby. Tap + to create one."
+                        )
+                    )
+                }
+            ))
+        }
+
+        return items
     }
 
     // MARK: - Actions
@@ -262,10 +282,22 @@ struct MapView: View {
         }
     }
 
+    private func handleRecenterTap() {
+        if let location = viewModel.userLocation {
+            withAnimation(.easeInOut(duration: 0.6)) {
+                cameraPosition = .region(MKCoordinateRegion(
+                    center: location.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                ))
+            }
+        } else if viewModel.authorizationStatus == .notDetermined {
+            viewModel.requestLocationPermission()
+        }
+    }
+
     // MARK: - Lifecycle
 
     private func handleReappear() {
-        // Re-attach listener after returning from another tab (task already configured)
         viewModel.startObserving()
     }
 
@@ -363,5 +395,119 @@ struct MapView: View {
     private func handleSheetViewDetails(ping: Ping) {
         sheetPing = nil
         detailPing = ping
+    }
+}
+
+// MARK: - Top Gradient
+
+private struct MapTopGradient: View {
+    var body: some View {
+        LinearGradient(
+            colors: [Color.pingBackground.opacity(0.92), .clear],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(height: 160)
+        .frame(maxWidth: .infinity, alignment: .top)
+        .ignoresSafeArea(edges: .top)
+    }
+}
+
+// MARK: - Header (title + recenter)
+
+private struct MapHeader: View {
+    let onRecenter: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center) {
+            Text("Map")
+                .font(.syne(.extraBold, size: 28, relativeTo: .largeTitle))
+                .foregroundStyle(Color.pingTextPrimary)
+                .tracking(-0.5)
+                .accessibilityAddTraits(.isHeader)
+
+            Spacer()
+
+            MapRecenterButton(action: onRecenter)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 58)
+    }
+}
+
+private struct MapRecenterButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "location.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.pingAccent)
+                .frame(width: 42, height: 42)
+                .background(.ultraThinMaterial, in: .circle)
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Re-center on my location")
+    }
+}
+
+// MARK: - FAB
+
+private struct MapCreatePingFAB: View {
+    let action: () -> Void
+
+    @State private var glow: CGFloat = 14
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(.black)
+                .frame(width: 60, height: 60)
+                .background(Color.pingAccent, in: .circle)
+                .shadow(color: Color.pingAccent.opacity(0.55), radius: glow)
+                .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Create Ping")
+        .task {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+                glow = 24
+            }
+        }
+    }
+}
+
+// MARK: - Alert Stack
+
+struct MapAlertItem: Identifiable {
+    let id: String
+    let builder: () -> AnyView
+}
+
+private struct MapAlertStack: View {
+    let alerts: [MapAlertItem]
+    let topPadding: CGFloat
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(alerts) { alert in
+                alert.builder()
+                    .transition(
+                        .move(edge: .top)
+                            .combined(with: .opacity)
+                    )
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, topPadding)
+        .frame(maxWidth: .infinity, alignment: .top)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: alerts.map(\.id))
     }
 }
