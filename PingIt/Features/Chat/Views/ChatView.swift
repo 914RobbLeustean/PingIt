@@ -36,101 +36,35 @@ struct ChatView: View {
         @Bindable var viewModel = viewModel
 
         VStack(spacing: 0) {
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    if viewModel.hasMoreMessages && !viewModel.isLoading {
-                        Button(action: handleLoadMore) {
-                            if viewModel.isLoadingMore {
-                                ProgressView()
-                            } else {
-                                Text("Load earlier messages")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .disabled(viewModel.isLoadingMore)
-                    }
+            ChatHeader(
+                ping: viewModel.currentPing,
+                onBack: { dismiss() }
+            )
 
-                    ForEach(viewModel.messages) { message in
-                        MessageBubbleView(
-                            message: message,
-                            isCurrentUser: message.senderId == viewModel.currentUserId,
-                            sender: viewModel.userCache[message.senderId],
-                            showSenderInfo: viewModel.isFirstInGroup(message),
-                            isSenderPrivate: viewModel.isSenderPrivate(for: message),
-                            currentUserId: viewModel.currentUserId,
-                            onReport: {
-                                if let id = message.id {
-                                    reportTarget = ReportTarget(
-                                        type: .message,
-                                        targetId: id,
-                                        ownerId: message.senderId,
-                                        content: message.text
-                                    )
-                                }
-                            },
-                            onBlock: {
-                                Task {
-                                    try? await blockService.blockUser(message.senderId)
-                                    viewModel.applyBlockFilter()
-                                }
-                            },
-                            onReaction: { emoji in
-                                guard let messageId = message.id else { return }
-                                Task {
-                                    await viewModel.toggleReaction(on: messageId, emoji: emoji)
-                                }
-                            }
-                        )
-                    }
-                }
-                .padding()
-            }
-            .scrollPosition($scrollPosition)
-            .defaultScrollAnchor(.bottom)
-            .scrollDismissesKeyboard(.immediately)
-            .overlay {
-                if let errorMessage = viewModel.errorMessage {
-                    ContentUnavailableView(
-                        "Chat unavailable",
-                        systemImage: "wifi.exclamationmark",
-                        description: Text(errorMessage)
-                    )
-                } else if viewModel.isLoading {
-                    ProgressView()
-                } else if viewModel.messages.isEmpty {
-                    ContentUnavailableView(
-                        "No messages yet",
-                        systemImage: "bubble.left.and.bubble.right",
-                        description: Text("Be the first to say something!")
-                    )
-                }
-            }
-
-            Divider()
-
-            HStack(spacing: 8) {
-                Button("Share Location", systemImage: "location", action: handleShareLocation)
-                    .labelStyle(.iconOnly)
-                    .font(.title2)
-                    .accessibilityHint("Shares your current location in the chat")
-
-                TextField("Message...", text: $viewModel.messageText, axis: .vertical)
-                    .lineLimit(1...4)
-                    .textFieldStyle(.roundedBorder)
-
-                Button("Send", systemImage: "arrow.up.circle.fill", action: handleSend)
-                    .labelStyle(.iconOnly)
-                    .font(.title2)
-                    .disabled(viewModel.canSend == false)
-                    .accessibilityHint("Sends your message")
-            }
-            .padding()
+            messageScrollView
         }
-        .navigationTitle("Chat")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.pingBackground)
+        .toolbar(.hidden, for: .navigationBar)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            MessageInputBar(
+                text: $viewModel.messageText,
+                isSending: viewModel.isSending,
+                canSend: viewModel.canSend,
+                onSend: handleSend,
+                onShareLocation: handleShareLocation
+            )
+        }
         .task {
-            viewModel.configure(authService: authService, chatService: chatService, pingService: pingService, userService: userService, contentModerationService: contentModerationService, blockService: blockService, rateLimitService: rateLimitService, analyticsService: analyticsService)
+            viewModel.configure(
+                authService: authService,
+                chatService: chatService,
+                pingService: pingService,
+                userService: userService,
+                contentModerationService: contentModerationService,
+                blockService: blockService,
+                rateLimitService: rateLimitService,
+                analyticsService: analyticsService
+            )
             await viewModel.loadInitialMessages()
             viewModel.startObservingPing()
             await viewModel.joinChat()
@@ -143,7 +77,7 @@ struct ChatView: View {
                 await vm.leaveChat()
             }
         }
-        .onChange(of: viewModel.messages.count) { _, _ in
+        .onChange(of: viewModel.messages.count) {
             scrollToBottom()
         }
         .onChange(of: blockService.blockedUserIds) { _, newValue in
@@ -168,7 +102,128 @@ struct ChatView: View {
         }
     }
 
+    // MARK: - Message Scroll View
+
+    private var messageScrollView: some View {
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                if viewModel.hasMoreMessages && !viewModel.isLoading {
+                    ChatLoadEarlierButton(
+                        isLoading: viewModel.isLoadingMore,
+                        action: handleLoadMore
+                    )
+                    .padding(.bottom, 4)
+                }
+
+                let entries = buildEntries(from: viewModel.messages)
+                ForEach(entries) { entry in
+                    switch entry.kind {
+                    case .separator(let date):
+                        ChatDateSeparator(date: date)
+                    case .message(let message):
+                        MessageBubbleView(
+                            message: message,
+                            isCurrentUser: message.senderId == viewModel.currentUserId,
+                            sender: viewModel.userCache[message.senderId],
+                            showSenderInfo: viewModel.isFirstInGroup(message),
+                            isSenderPrivate: viewModel.isSenderPrivate(for: message),
+                            currentUserId: viewModel.currentUserId,
+                            onReport: { handleReportTap(for: message) },
+                            onBlock: { handleBlockTap(for: message) },
+                            onReaction: { emoji in handleReaction(on: message, emoji: emoji) }
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+        }
+        .scrollPosition($scrollPosition)
+        .defaultScrollAnchor(.bottom)
+        .scrollDismissesKeyboard(.interactively)
+        .scrollIndicators(.hidden)
+        .overlay {
+            messageStateOverlay
+        }
+    }
+
+    @ViewBuilder
+    private var messageStateOverlay: some View {
+        if let errorMessage = viewModel.errorMessage {
+            ChatStateView(
+                icon: "wifi.exclamationmark",
+                title: "Chat unavailable",
+                message: errorMessage,
+                tint: Color.pingHot
+            )
+        } else if viewModel.isLoading {
+            ProgressView()
+                .tint(Color.pingAccent)
+        } else if viewModel.messages.isEmpty {
+            ChatStateView(
+                icon: "bubble.left.and.bubble.right",
+                title: "No messages yet",
+                message: "Be the first to say something!",
+                tint: Color.pingTextSecondary
+            )
+        }
+    }
+
+    // MARK: - Entries
+
+    private struct Entry: Identifiable {
+        enum Kind {
+            case separator(Date)
+            case message(ChatMessage)
+        }
+
+        let id: String
+        let kind: Kind
+    }
+
+    private func buildEntries(from messages: [ChatMessage]) -> [Entry] {
+        var entries: [Entry] = []
+        var lastDay: Date?
+        let calendar = Calendar.current
+
+        for message in messages {
+            let day = message.createdAt.map { calendar.startOfDay(for: $0) }
+            if let day, day != lastDay {
+                entries.append(.init(id: "sep-\(day.timeIntervalSinceReferenceDate)", kind: .separator(day)))
+                lastDay = day
+            }
+            let id = message.id ?? UUID().uuidString
+            entries.append(.init(id: id, kind: .message(message)))
+        }
+        return entries
+    }
+
     // MARK: - Actions
+
+    private func handleReportTap(for message: ChatMessage) {
+        guard let id = message.id else { return }
+        reportTarget = ReportTarget(
+            type: .message,
+            targetId: id,
+            ownerId: message.senderId,
+            content: message.text
+        )
+    }
+
+    private func handleBlockTap(for message: ChatMessage) {
+        Task {
+            try? await blockService.blockUser(message.senderId)
+            viewModel.applyBlockFilter()
+        }
+    }
+
+    private func handleReaction(on message: ChatMessage, emoji: String) {
+        guard let messageId = message.id else { return }
+        Task {
+            await viewModel.toggleReaction(on: messageId, emoji: emoji)
+        }
+    }
 
     private func handleShareLocation() {
         guard let location = locationService.currentLocation else {
@@ -193,20 +248,79 @@ struct ChatView: View {
     }
 
     private func handleSend() {
-        Task {
-            await viewModel.sendMessage()
-        }
+        Task { await viewModel.sendMessage() }
     }
 
     private func handleLoadMore() {
-        Task {
-            await viewModel.loadMoreMessages()
-        }
+        Task { await viewModel.loadMoreMessages() }
     }
 
     private func scrollToBottom() {
         withAnimation {
             scrollPosition.scrollTo(edge: .bottom)
         }
+    }
+}
+
+// MARK: - Load Earlier Button
+
+private struct ChatLoadEarlierButton: View {
+    let isLoading: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .controlSize(.mini)
+                        .tint(Color.pingTextSecondary)
+                } else {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Load earlier messages")
+                        .font(.dmSans(.medium, size: 12, relativeTo: .caption))
+                }
+            }
+            .foregroundStyle(Color.pingTextSecondary)
+            .padding(.horizontal, 14)
+            .frame(height: 32)
+            .background(Color.pingSurface, in: .capsule)
+            .overlay(
+                Capsule().strokeBorder(Color.pingBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading)
+    }
+}
+
+// MARK: - State View
+
+private struct ChatStateView: View {
+    let icon: String
+    let title: String
+    let message: String
+    let tint: Color
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 36, weight: .light))
+                .foregroundStyle(tint)
+
+            Text(title)
+                .font(.syne(.bold, size: 18, relativeTo: .headline))
+                .foregroundStyle(Color.pingTextPrimary)
+
+            Text(message)
+                .font(.dmSans(.regular, size: 13, relativeTo: .footnote))
+                .foregroundStyle(Color.pingTextSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+        }
+        .padding(24)
+        .accessibilityElement(children: .combine)
     }
 }
