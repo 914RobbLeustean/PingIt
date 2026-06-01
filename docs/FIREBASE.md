@@ -40,7 +40,7 @@ See `firestore.rules` in the project root.
 |---|---|---|---|---|---|
 | `users` | Authenticated `get`; no `list` | Owner only, requires username reservation | Owner only for safe profile/preference fields | Denied | Client cannot edit `email`, `createdAt`, `suspensionStatus`, or `suspensionExpiresAt`. Safe fields include `hasCompletedOnboarding`. |
 | `usernames` | Public `get`; no `list` | Signed-in owner only | Denied | Owner can delete old reservation during rename | Used for username availability without public user listing. |
-| `pings` | Authenticated | Creator only, active status, zero counters, valid expiry, optional `imageUrl` string, optional `category` string | Denied | Denied | Delete and counter changes use callables. `imageUrl` and `category` validated as string if present. |
+| `pings` | Authenticated | Creator only, active status, zero counters, valid expiry, optional `imageUrl` string, optional `category` string, optional `description` string (≤500 chars) | Denied | Denied | Delete and counter changes use callables. `imageUrl`, `category`, and `description` validated as string if present. |
 | `chats` | Authenticated | Valid ping creation flow only | Denied | Denied | Participant counts are server-owned. |
 | `chatMessages` | Authenticated | Sender only, active ping, moderation flag false or absent, optional location fields | `safeReactionUpdate()`: only `reactions` field modifiable by any signed-in non-suspended user | Denied | Message sends remain client-side. Location messages validated: `messageType`, `latitude`, `longitude`, `locationName` allowed in create. |
 | `chatParticipants` | Denied | Denied | Denied | Denied | `joinChat` / `leaveChat` own this collection. |

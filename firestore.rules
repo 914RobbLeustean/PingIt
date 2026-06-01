@@ -137,6 +137,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           "creatorId",
           "text",
+          "description",
           "category",
           "location",
           "geohash",
@@ -150,6 +151,7 @@ service cloud.firestore {
         ])
         && (!hasField(request.resource.data, "imageUrl") || request.resource.data.imageUrl is string)
         && (!hasField(request.resource.data, "category") || request.resource.data.category is string)
+        && (!hasField(request.resource.data, "description") || (request.resource.data.description is string && request.resource.data.description.size() <= 500))
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 280
