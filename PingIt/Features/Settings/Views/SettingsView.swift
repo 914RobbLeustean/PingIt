@@ -4,98 +4,226 @@ struct SettingsView: View {
     @Environment(AuthService.self) private var authService
     @Environment(UserService.self) private var userService
     @Environment(DataExportService.self) private var dataExportService
-    @State private var showSignOutConfirmation = false
-    @State private var isExportingData = false
-    @State private var exportedFileURL: URL?
-    @State private var showShareSheet = false
-    @State private var errorMessage: String?
+
+    @State private var path: [SettingsRoute] = []
+
     @State private var isPrivateProfile = UserDefaults.standard.bool(forKey: "pref_isPrivateProfile")
     @State private var notifyNearbyPings = UserDefaults.standard.object(forKey: "pref_notifyNearbyPings") as? Bool ?? true
     @State private var notifyHotPings = UserDefaults.standard.object(forKey: "pref_notifyHotPings") as? Bool ?? true
     @State private var hasLoadedPreferences = false
-    @State private var showDeleteConfirmation = false
-    @State private var showPasswordPrompt = false
-    @State private var deletePassword = ""
-    @State private var isDeletingAccount = false
+
+    @State private var isExportingData = false
+    @State private var exportedFileURL: URL?
+    @State private var showShareSheet = false
+    @State private var errorMessage: String?
+
+    @State private var showSignOutDialog = false
+    @State private var showDeleteFlow = false
+    @State private var deleteViewModel = DeleteAccountViewModel()
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section("Account") {
-                    Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive, action: handleSignOutTap)
-                        .alert("Sign out of PingIt?", isPresented: $showSignOutConfirmation) {
-                            Button("Sign Out", role: .destructive, action: handleConfirmSignOut)
-                            Button("Cancel", role: .cancel) {}
+        NavigationStack(path: $path) {
+            ZStack {
+                Color.pingBackground.ignoresSafeArea()
+
+                content
+
+                PingItConfirmationDialog(isPresented: showSignOutDialog, onDismiss: dismissSignOutDialog) {
+                    DialogTitleBlock(
+                        title: "Sign out of PingIt?",
+                        message: "You'll need to sign in again to see your pings."
+                    )
+                    DialogButtonRow {
+                        Button("Cancel", action: dismissSignOutDialog)
+                            .buttonStyle(DialogSecondaryButtonStyle())
+                    } trailing: {
+                        Button("Sign Out", action: confirmSignOut)
+                            .buttonStyle(DialogDestructiveButtonStyle())
+                    }
+                }
+
+                deleteAccountDialog
+            }
+            .navigationBarHidden(true)
+            .navigationDestination(for: SettingsRoute.self) { route in
+                switch route {
+                case .blockedUsers:
+                    BlockedUsersView()
+                case .termsOfService:
+                    TermsOfServiceView()
+                case .privacyPolicy:
+                    PrivacyPolicyView()
+                }
+            }
+        }
+        .task { await loadPreferences() }
+        .onChange(of: notifyNearbyPings) { _, newValue in
+            guard hasLoadedPreferences else { return }
+            savePreference("notifyNearbyPings", value: newValue)
+        }
+        .onChange(of: notifyHotPings) { _, newValue in
+            guard hasLoadedPreferences else { return }
+            savePreference("notifyHotPings", value: newValue)
+        }
+        .onChange(of: isPrivateProfile) { _, newValue in
+            guard hasLoadedPreferences else { return }
+            savePreference("isPrivateProfile", value: newValue)
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = exportedFileURL {
+                ActivityViewRepresentable(items: [url])
+            }
+        }
+    }
+
+    private var content: some View {
+        VStack(spacing: 0) {
+            Text("Settings")
+                .font(.syne(.extraBold, size: 30, relativeTo: .largeTitle))
+                .tracking(-0.5)
+                .foregroundStyle(Color.pingTextPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    accountSection
+                    notificationsSection
+                    privacySection
+                    legalSection
+                    deleteAccountSection
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.dmSans(.medium, size: 13, relativeTo: .footnote))
+                            .foregroundStyle(Color.pingHot)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
+                }
+                .padding(.top, 4)
+                .padding(.bottom, 90)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private var accountSection: some View {
+        SettingsSection("Account") {
+            SettingsRow("Sign Out", labelColor: Color.pingHot, action: { showSignOutDialog = true }) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Color.pingHot)
+            }
+        }
+    }
+
+    private var notificationsSection: some View {
+        SettingsSection("Notifications") {
+            SettingsRow("Nearby Pings") {
+                PingItToggle(isOn: $notifyNearbyPings, accessibilityLabel: "Nearby Pings")
+            }
+            SettingsRowDivider()
+            SettingsRow("Hot Pings") {
+                PingItToggle(isOn: $notifyHotPings, accessibilityLabel: "Hot Pings")
+            }
+        }
+    }
+
+    private var privacySection: some View {
+        SettingsSection("Privacy & Safety") {
+            SettingsRow("Private Profile") {
+                PingItToggle(isOn: $isPrivateProfile, accessibilityLabel: "Private Profile")
+            }
+            SettingsRowDivider()
+            SettingsRow("Blocked Users", action: { path.append(.blockedUsers) })
+            SettingsRowDivider()
+            SettingsRow(
+                "Export My Data",
+                labelColor: Color.pingAccent,
+                action: handleExportData
+            ) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(isExportingData ? Color.pingAccent.opacity(0.4) : Color.pingAccent)
+            }
+        }
+    }
+
+    private var legalSection: some View {
+        SettingsSection("Legal") {
+            SettingsRow("Terms of Service", action: { path.append(.termsOfService) })
+            SettingsRowDivider()
+            SettingsRow("Privacy Policy", action: { path.append(.privacyPolicy) })
+        }
+    }
+
+    private var deleteAccountSection: some View {
+        SettingsSection(isDestructive: true) {
+            SettingsRow("Delete Account", labelColor: Color.pingHot, action: openDeleteFlow) {
+                EmptyView()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var deleteAccountDialog: some View {
+        switch deleteViewModel.step {
+        case .confirmIntent:
+            PingItConfirmationDialog(isPresented: showDeleteFlow, onDismiss: dismissDeleteFlow) {
+                DialogTitleBlock(
+                    title: "Delete account?",
+                    message: "This is permanent. All your pings disappear."
+                )
+                DialogButtonRow {
+                    Button("Keep it", action: dismissDeleteFlow)
+                        .buttonStyle(DialogSecondaryButtonStyle())
+                } trailing: {
+                    Button("Delete", action: { deleteViewModel.advanceToReauthenticate() })
+                        .buttonStyle(DialogDestructiveButtonStyle())
+                }
+            }
+        case .reauthenticate:
+            PingItConfirmationDialog(isPresented: showDeleteFlow, onDismiss: dismissDeleteFlow) {
+                DialogTitleBlock(
+                    title: "Confirm your password",
+                    message: "Re-enter your password to permanently delete this account."
+                )
+                VStack(spacing: 10) {
+                    AuthPasswordField(
+                        placeholder: "Password",
+                        text: Bindable(deleteViewModel).password,
+                        isVisible: Bindable(deleteViewModel).isPasswordVisible,
+                        submitLabel: .done
+                    )
+
+                    if let error = deleteViewModel.errorMessage {
+                        AuthFieldHint(message: error, tone: .error)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+
+                DialogButtonRow {
+                    Button("Cancel", action: dismissDeleteFlow)
+                        .buttonStyle(DialogSecondaryButtonStyle())
+                } trailing: {
+                    Button(action: handleConfirmDelete) {
+                        if deleteViewModel.isDeleting {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("Confirm Delete")
                         }
-                }
-
-                Section("Notifications") {
-                    Toggle("Nearby Pings", isOn: $notifyNearbyPings)
-                    Toggle("Hot Pings", isOn: $notifyHotPings)
-                }
-                .onChange(of: notifyNearbyPings) { _, newValue in
-                    guard hasLoadedPreferences else { return }
-                    savePreference("notifyNearbyPings", value: newValue)
-                }
-                .onChange(of: notifyHotPings) { _, newValue in
-                    guard hasLoadedPreferences else { return }
-                    savePreference("notifyHotPings", value: newValue)
-                }
-
-                Section("Privacy & Safety") {
-                    Toggle("Private Profile", isOn: $isPrivateProfile)
-                    NavigationLink("Blocked Users", destination: BlockedUsersView())
-                    Button("Export My Data", systemImage: "square.and.arrow.up", action: handleExportData)
-                        .disabled(isExportingData)
-                }
-                .onChange(of: isPrivateProfile) { _, newValue in
-                    guard hasLoadedPreferences else { return }
-                    savePreference("isPrivateProfile", value: newValue)
-                }
-
-                Section("Legal") {
-                    NavigationLink("Terms of Service", destination: TermsOfServiceView())
-                    NavigationLink("Privacy Policy", destination: PrivacyPolicyView())
-                }
-
-                Section {
-                    Button("Delete Account", role: .destructive) {
-                        showDeleteConfirmation = true
                     }
-                    .disabled(isDeletingAccount)
-                }
-
-                if let errorMessage {
-                    Section {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
-            .navigationTitle("Settings")
-            .task {
-                await loadPreferences()
-            }
-            .alert("Delete your account?", isPresented: $showDeleteConfirmation) {
-                Button("Delete", role: .destructive) {
-                    showPasswordPrompt = true
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will permanently delete your account and all your data. This cannot be undone.")
-            }
-            .alert("Confirm your password", isPresented: $showPasswordPrompt) {
-                SecureField("Password", text: $deletePassword)
-                Button("Confirm Delete", role: .destructive) {
-                    handleDeleteAccount()
-                }
-                Button("Cancel", role: .cancel) {
-                    deletePassword = ""
-                }
-            }
-            .sheet(isPresented: $showShareSheet) {
-                if let url = exportedFileURL {
-                    ActivityViewRepresentable(items: [url])
+                    .buttonStyle(DialogDestructiveButtonStyle(
+                        isEnabled: deleteViewModel.canConfirmDelete,
+                        isLoading: deleteViewModel.isDeleting
+                    ))
+                    .disabled(!deleteViewModel.canConfirmDelete)
                 }
             }
         }
@@ -103,11 +231,12 @@ struct SettingsView: View {
 
     // MARK: - Actions
 
-    private func handleSignOutTap() {
-        showSignOutConfirmation = true
+    private func dismissSignOutDialog() {
+        showSignOutDialog = false
     }
 
-    private func handleConfirmSignOut() {
+    private func confirmSignOut() {
+        showSignOutDialog = false
         do {
             try authService.signOut()
         } catch {
@@ -115,14 +244,37 @@ struct SettingsView: View {
         }
     }
 
+    private func openDeleteFlow() {
+        deleteViewModel.configure(authService: authService)
+        deleteViewModel.reset()
+        showDeleteFlow = true
+    }
+
+    private func dismissDeleteFlow() {
+        showDeleteFlow = false
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            deleteViewModel.reset()
+        }
+    }
+
+    private func handleConfirmDelete() {
+        Task {
+            await deleteViewModel.confirmDelete()
+            if deleteViewModel.errorMessage == nil {
+                showDeleteFlow = false
+            }
+        }
+    }
+
     private func handleExportData() {
+        guard !isExportingData else { return }
         isExportingData = true
         errorMessage = nil
         Task {
             do {
                 let jsonData = try await dataExportService.exportUserData()
-                let tempDir = FileManager.default.temporaryDirectory
-                let fileURL = tempDir.appending(path: "PingIt-data-export.json")
+                let fileURL = URL.temporaryDirectory.appending(path: "PingIt-data-export.json")
                 try jsonData.write(to: fileURL)
                 exportedFileURL = fileURL
                 showShareSheet = true
@@ -130,22 +282,6 @@ struct SettingsView: View {
                 errorMessage = "Data export failed. Please try again."
             }
             isExportingData = false
-        }
-    }
-
-    private func handleDeleteAccount() {
-        let password = deletePassword
-        deletePassword = ""
-        isDeletingAccount = true
-
-        Task {
-            do {
-                try await authService.reauthenticate(password: password)
-                try await authService.deleteAccount()
-            } catch {
-                errorMessage = error.localizedDescription
-                isDeletingAccount = false
-            }
         }
     }
 
