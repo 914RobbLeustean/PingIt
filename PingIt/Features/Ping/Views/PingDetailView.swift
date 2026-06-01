@@ -159,13 +159,27 @@ struct PingDetailView: View {
                 )
             }
         }
-        .alert("Ping Unavailable", isPresented: $viewModel.pingUnavailable) {
-            Button("OK") {
+        .overlay(alignment: .top) {
+            if viewModel.pingUnavailable {
+                MapAlertChip(
+                    severity: .error,
+                    icon: "mappin.slash",
+                    title: "Ping unavailable",
+                    message: "This ping is no longer available."
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 60)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.pingUnavailable)
+        .task(id: viewModel.pingUnavailable) {
+            guard viewModel.pingUnavailable else { return }
+            try? await Task.sleep(for: .seconds(2))
+            if !Task.isCancelled {
                 navigateToChat = false
                 dismiss()
             }
-        } message: {
-            Text("This ping is no longer available.")
         }
         .task {
             viewModel.configure(

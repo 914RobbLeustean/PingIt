@@ -99,10 +99,12 @@ struct MapView: View {
                     Task { await handleNotificationNavigation(pingId: pingId) }
                 }
             }
-            .alert("Ping Unavailable", isPresented: $showPingUnavailableAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("This ping is no longer available.")
+            .task(id: showPingUnavailableAlert) {
+                guard showPingUnavailableAlert else { return }
+                try? await Task.sleep(for: .seconds(3))
+                if !Task.isCancelled {
+                    showPingUnavailableAlert = false
+                }
             }
             .task {
                 while !Task.isCancelled {
@@ -169,6 +171,22 @@ struct MapView: View {
 
     private var alerts: [MapAlertItem] {
         var items: [MapAlertItem] = []
+
+        if showPingUnavailableAlert {
+            items.append(.init(
+                id: "ping-unavailable",
+                builder: {
+                    AnyView(
+                        MapAlertChip(
+                            severity: .error,
+                            icon: "mappin.slash",
+                            title: "Ping unavailable",
+                            message: "This ping is no longer available."
+                        )
+                    )
+                }
+            ))
+        }
 
         if let errorMessage = viewModel.errorMessage {
             items.append(.init(
