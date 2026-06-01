@@ -3,6 +3,7 @@ protocol UserServicing {
     func fetchUser(id: String) async throws -> User
     func updateUser(id: String, data: [String: Any]) async throws
     func mergeUser(id: String, data: [String: Any]) async throws
+    func ensureUserProfileExists(uid: String, email: String) async throws -> User
     func updateUsername(id: String, currentUsername: String?, newUsername: String) async throws
     func isUsernameTaken(_ username: String) async throws -> Bool
 }

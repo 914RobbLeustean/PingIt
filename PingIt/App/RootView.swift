@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseAuth
 
 struct RootView: View {
     @Environment(AuthService.self) private var authService
@@ -46,16 +47,26 @@ struct RootView: View {
     }
 
     private func checkSuspension() async {
-        guard let userId = authService.currentUser?.uid else {
+        guard let firebaseUser = authService.currentUser else {
             currentUserProfile = nil
             isCheckingSuspension = false
             return
         }
         isCheckingSuspension = true
         do {
-            currentUserProfile = try await userService.fetchUser(id: userId)
+            currentUserProfile = try await userService.fetchUser(id: firebaseUser.uid)
         } catch {
-            currentUserProfile = nil
+            // Auth user with no Firestore doc — backfill so onboarding and
+            // every other feature has a valid doc to read/update.
+            let email = Auth.auth().currentUser?.email ?? ""
+            if let backfilled = try? await userService.ensureUserProfileExists(
+                uid: firebaseUser.uid,
+                email: email
+            ) {
+                currentUserProfile = backfilled
+            } else {
+                currentUserProfile = nil
+            }
         }
         isCheckingSuspension = false
     }

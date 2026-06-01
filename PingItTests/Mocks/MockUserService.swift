@@ -40,6 +40,11 @@ final class MockUserService: UserServicing {
         if let error = errorToThrow { throw error }
     }
 
+    func ensureUserProfileExists(uid: String, email: String) async throws -> User {
+        if let error = errorToThrow { throw error }
+        return User(username: "mock", email: email, usernameLowercase: "mock")
+    }
+
     func updateUsername(id: String, currentUsername: String?, newUsername: String) async throws {
         updateUsernameCalled = true
         lastUpdatedUsername = newUsername
