@@ -21,6 +21,7 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
     @DocumentID var id: String?
     var creatorId: String
     var text: String
+    var category: String?
     var location: GeoPoint
     var geohash: String
     var expiresAt: Date

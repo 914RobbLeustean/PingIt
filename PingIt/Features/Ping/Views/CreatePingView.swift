@@ -16,146 +16,104 @@ struct CreatePingView: View {
     @State private var showPhotoPicker = false
     @State private var showCamera = false
     @State private var pickerItem: PhotosPickerItem?
+    @State private var showLocationPicker = false
 
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        NavigationStack {
-            Form {
-                textSection
+        VStack(spacing: 0) {
+            CreatePingHeader(onDismiss: handleDismiss)
 
-                PingPhotoSectionView(
-                    selectedImageData: viewModel.selectedImageData,
-                    isProcessingImage: viewModel.isProcessingImage,
-                    onRemove: { viewModel.removeSelectedImage() },
-                    showPhotoPicker: $showPhotoPicker,
-                    showCamera: $showCamera
-                )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    CreatePingCategorySection(
+                        selectedCategory: $viewModel.selectedCategory
+                    )
 
-                locationSection
+                    CreatePingTextSection(
+                        text: $viewModel.text,
+                        characterCount: viewModel.characterCount,
+                        isOverLimit: viewModel.isOverLimit
+                    )
 
-                expirationSection(viewModel: viewModel)
+                    CreatePingPhotoSection(
+                        selectedImageData: viewModel.selectedImageData,
+                        isProcessingImage: viewModel.isProcessingImage,
+                        onRemove: { viewModel.removeSelectedImage() },
+                        showPhotoPicker: $showPhotoPicker,
+                        showCamera: $showCamera
+                    )
 
-                if let errorMessage = viewModel.errorMessage {
-                    Section {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.red)
+                    CreatePingExpirySection(
+                        selectedIndex: $viewModel.selectedExpirationIndex,
+                        isCustomDuration: $viewModel.isCustomDuration,
+                        customExpiryDate: $viewModel.customExpiryDate,
+                        customExpiryRange: viewModel.customExpiryRange
+                    )
+
+                    CreatePingLocationSection(
+                        locationDisplayText: viewModel.locationDisplayText,
+                        hasLocation: viewModel.selectedLocation != nil,
+                        onTap: { showLocationPicker = true }
+                    )
+
+                    if let errorMessage = viewModel.errorMessage {
+                        CreatePingErrorBanner(message: errorMessage)
                     }
                 }
+                .padding(.bottom, 100)
             }
             .scrollDismissesKeyboard(.immediately)
-            .navigationTitle("Create Ping")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: handleCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Create", action: handleCreate)
-                        .disabled(viewModel.canCreate == false)
-                }
-            }
-            .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
-            .fullScreenCover(isPresented: $showCamera) {
-                CameraPickerView { image in
-                    viewModel.handleCameraImage(image)
-                }
-            }
-            .onChange(of: pickerItem) { _, newItem in
-                guard let newItem else { return }
-                Task {
-                    await viewModel.handleSelectedPhoto(item: newItem)
-                    pickerItem = nil
-                }
-            }
-            .task {
-                viewModel.configure(
-                    authService: authService,
-                    pingService: pingService,
-                    chatService: chatService,
-                    locationService: locationService,
-                    contentModerationService: contentModerationService,
-                    rateLimitService: rateLimitService,
-                    analyticsService: analyticsService
-                )
-            }
-            .onChange(of: viewModel.didCreatePing) { _, didCreate in
-                if didCreate {
-                    createdPingLocation = viewModel.selectedLocation
-                    dismiss()
-                }
+            .scrollIndicators(.hidden)
+
+            CreatePingButton(
+                canCreate: viewModel.canCreate,
+                isCreating: viewModel.isCreating,
+                action: handleCreate
+            )
+        }
+        .background(Color.pingSurface)
+        .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPickerView { image in
+                viewModel.handleCameraImage(image)
             }
         }
-    }
-
-    // MARK: - Sections
-
-    private var textSection: some View {
-        @Bindable var viewModel = viewModel
-        return Section("What's happening?") {
-            TextField("Describe your activity...", text: $viewModel.text, axis: .vertical)
-                .lineLimit(3...6)
-
-            HStack {
-                Spacer()
-                Text("\(viewModel.characterCount) / \(Constants.Ping.maxTextLength)")
-                    .font(.caption)
-                    .foregroundStyle(viewModel.isOverLimit ? .red : .secondary)
-                    .accessibilityLabel("Character count")
-                    .accessibilityValue("\(viewModel.characterCount) of \(Constants.Ping.maxTextLength)")
+        .sheet(isPresented: $showLocationPicker) {
+            LocationPickerView(
+                selectedLocation: $viewModel.selectedLocation,
+                selectedLocationName: $viewModel.selectedLocationName
+            )
+        }
+        .onChange(of: pickerItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                await viewModel.handleSelectedPhoto(item: newItem)
+                pickerItem = nil
             }
         }
-    }
-
-    private var locationSection: some View {
-        @Bindable var viewModel = viewModel
-        return Section("Location") {
-            NavigationLink {
-                LocationPickerView(
-                    selectedLocation: $viewModel.selectedLocation,
-                    selectedLocationName: $viewModel.selectedLocationName
-                )
-            } label: {
-                HStack {
-                    Label(
-                        viewModel.locationDisplayText,
-                        systemImage: viewModel.selectedLocation != nil ? "mappin.circle.fill" : "mappin.circle"
-                    )
-                    Spacer()
-                }
-                .foregroundStyle(viewModel.selectedLocation != nil ? .primary : .secondary)
-            }
-            .accessibilityHint("Opens a map to choose the ping location")
+        .task {
+            viewModel.configure(
+                authService: authService,
+                pingService: pingService,
+                chatService: chatService,
+                locationService: locationService,
+                contentModerationService: contentModerationService,
+                rateLimitService: rateLimitService,
+                analyticsService: analyticsService
+            )
         }
-    }
-
-    private func expirationSection(viewModel: CreatePingViewModel) -> some View {
-        @Bindable var viewModel = viewModel
-        return Section("Expires in") {
-            Picker("Expiration", selection: $viewModel.selectedExpirationIndex) {
-                ForEach(0..<4, id: \.self) { index in
-                    Text(self.viewModel.expirationLabel(for: index)).tag(index)
-                }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: viewModel.selectedExpirationIndex) { _, newValue in
-                self.viewModel.isCustomDuration = newValue == 3
-            }
-
-            if viewModel.isCustomDuration {
-                DatePicker(
-                    "Expires at",
-                    selection: $viewModel.customExpiryDate,
-                    in: self.viewModel.customExpiryRange,
-                    displayedComponents: .hourAndMinute
-                )
-                .accessibilityLabel("Custom ping expiry time")
+        .onChange(of: viewModel.didCreatePing) { _, didCreate in
+            if didCreate {
+                createdPingLocation = viewModel.selectedLocation
+                dismiss()
             }
         }
     }
 
     // MARK: - Actions
 
-    private func handleCancel() {
+    private func handleDismiss() {
         dismiss()
     }
 

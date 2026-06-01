@@ -144,16 +144,31 @@ struct MapView: View {
                 }
             }
             .navigationTitle("Map")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Create Ping", systemImage: "plus", action: handleCreatePingTap)
+            .overlay(alignment: .bottomTrailing) {
+                Button(action: handleCreatePingTap) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 60, height: 60)
+                        .background(Color.pingAccent)
+                        .clipShape(.circle)
+                        .shadow(color: Color.pingAccent.opacity(0.55), radius: 14)
+                        .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
                 }
+                .buttonStyle(.plain)
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
+                .accessibilityLabel("Create Ping")
             }
             .navigationDestination(item: $selectedPing) { ping in
                 PingDetailView(ping: ping)
             }
             .sheet(isPresented: $showCreatePing, onDismiss: handleCreatePingDismiss) {
                 CreatePingView(createdPingLocation: $createdPingLocation)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.hidden)
+                    .presentationCornerRadius(28)
+                    .interactiveDismissDisabled(false)
             }
             .task {
                 viewModel.configure(pingService: pingService, locationService: locationService, blockService: blockService)

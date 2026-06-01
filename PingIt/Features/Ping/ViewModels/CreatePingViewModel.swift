@@ -16,6 +16,7 @@ final class CreatePingViewModel {
     private var isConfigured = false
 
     var text = ""
+    var selectedCategory: PingCategory?
     var selectedExpirationIndex = 1 // Default: 24hr
     var isCustomDuration = false
     var customExpiryDate = Calendar.current.date(byAdding: .hour, value: 6, to: Date.now) ?? Date.now
@@ -32,7 +33,7 @@ final class CreatePingViewModel {
 
     var canCreate: Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && !isOverLimit && !isCreating && selectedLocation != nil
+        return !trimmed.isEmpty && !isOverLimit && !isCreating && selectedCategory != nil
     }
 
     var locationDisplayText: String {
@@ -178,6 +179,7 @@ final class CreatePingViewModel {
             let ping = Ping(
                 creatorId: currentUser.uid,
                 text: trimmed,
+                category: selectedCategory?.rawValue,
                 location: GeoPoint(
                     latitude: coordinate.latitude,
                     longitude: coordinate.longitude

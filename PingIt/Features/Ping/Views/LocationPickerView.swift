@@ -9,58 +9,158 @@ struct LocationPickerView: View {
     @Binding var selectedLocationName: String?
 
     @State private var searchText = ""
-    @State private var searchResults: [MKLocalSearchCompletion] = []
     @State private var searchCompleter = LocationSearchCompleter()
     @State private var showMapPicker = false
-    @State private var mapPickerCoordinate: CLLocationCoordinate2D?
+    @State private var showSearch = false
     @State private var errorMessage: String?
 
     var body: some View {
-        List {
-            if let errorMessage {
-                Section {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.red)
-                }
-            }
+        VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.white.opacity(0.12))
+                    .frame(width: 36, height: 4)
+                    .padding(.top, 14)
+                    .padding(.bottom, 16)
 
-            Section {
-                Button("Use Current Location", systemImage: "location.fill", action: handleUseCurrentLocation)
-                    .foregroundStyle(.blue)
-
-                Button("Set Location on Map", systemImage: "map", action: handleShowMapPicker)
-                    .foregroundStyle(.blue)
-            }
-
-            Section("Search Address") {
-                TextField("Search for a place...", text: $searchText)
-                    .autocorrectionDisabled()
-                    .onChange(of: searchText) { _, newValue in
-                        searchCompleter.search(query: newValue)
-                    }
-
-                ForEach(searchCompleter.results, id: \.self) { completion in
-                    Button(action: { handleSearchResultTap(completion) }) {
-                        VStack(alignment: .leading) {
-                            Text(completion.title)
-                                .font(.body)
-                            Text(completion.subtitle)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                HStack {
+                    Text("Choose Location")
+                        .font(.syne(.extraBold, size: 22, relativeTo: .title2))
+                        .foregroundStyle(Color.pingTextPrimary)
+                    Spacer()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.pingTextSecondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color.pingSurfaceElevated)
+                            .clipShape(.circle)
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(Color.pingBorder, lineWidth: 1)
+                            )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss")
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    if let errorMessage {
+                        CreatePingErrorBanner(message: errorMessage)
+                    }
+
+                    VStack(spacing: 0) {
+                        LocationOptionRow(
+                            icon: "location.fill",
+                            label: "Use Current Location",
+                            action: handleUseCurrentLocation
+                        )
+
+                        SettingsRowDivider()
+
+                        LocationOptionRow(
+                            icon: "map.fill",
+                            label: "Set Location on Map",
+                            action: handleShowMapPicker
+                        )
+
+                        SettingsRowDivider()
+
+                        LocationOptionRow(
+                            icon: "magnifyingglass",
+                            label: "Search Address",
+                            action: { showSearch.toggle() }
+                        )
+                    }
+                    .background(Color.pingSurfaceElevated)
+                    .clipShape(.rect(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(Color.pingBorder, lineWidth: 1)
+                    )
+                    .padding(.horizontal, 20)
+
+                    if showSearch {
+                        searchSection
+                    }
+                }
+                .padding(.top, 8)
+            }
+            .scrollIndicators(.hidden)
         }
-        .navigationTitle("Choose Location")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.pingSurface)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(28)
         .sheet(isPresented: $showMapPicker) {
             MapPinPickerView(
                 initialCoordinate: locationService.currentLocation?.coordinate ?? Constants.Cluj.center,
                 onConfirm: handleMapPinConfirm
             )
         }
+    }
+
+    private var searchSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.pingTextSecondary)
+
+                TextField("Search for a place...", text: $searchText)
+                    .font(.dmSans(.regular, size: 14, relativeTo: .body))
+                    .foregroundStyle(Color.pingTextPrimary)
+                    .autocorrectionDisabled()
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 48)
+            .background(Color.pingSurfaceElevated)
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(Color.pingBorder, lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+            .onChange(of: searchText) { _, newValue in
+                searchCompleter.search(query: newValue)
+            }
+
+            if !searchCompleter.results.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(searchCompleter.results, id: \.self) { completion in
+                        Button(action: { handleSearchResultTap(completion) }) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(completion.title)
+                                    .font(.dmSans(.medium, size: 14, relativeTo: .body))
+                                    .foregroundStyle(Color.pingTextPrimary)
+                                Text(completion.subtitle)
+                                    .font(.dmSans(.regular, size: 12, relativeTo: .caption))
+                                    .foregroundStyle(Color.pingTextSecondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 48)
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(SettingsRowButtonStyle())
+                    }
+                }
+                .background(Color.pingSurfaceElevated)
+                .clipShape(.rect(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.pingBorder, lineWidth: 1)
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+            }
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSearch)
     }
 
     // MARK: - Actions
@@ -99,8 +199,6 @@ struct LocationPickerView: View {
         dismiss()
     }
 
-    // MARK: - Search Resolution
-
     private func resolveSearchResult(_ completion: MKLocalSearchCompletion) async -> CLLocationCoordinate2D? {
         let request = MKLocalSearch.Request(completion: completion)
         request.region = MKCoordinateRegion(
@@ -109,7 +207,7 @@ struct LocationPickerView: View {
         )
         do {
             let response = try await MKLocalSearch(request: request).start()
-            return response.mapItems.first?.location.coordinate
+            return response.mapItems.first?.placemark.coordinate
         } catch {
             return nil
         }
@@ -153,5 +251,38 @@ extension LocationSearchCompleter: MKLocalSearchCompleterDelegate {
 
     func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
         results = []
+    }
+}
+
+// MARK: - Location Option Row
+
+struct LocationOptionRow: View {
+    let icon: String
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.pingAccent)
+                    .frame(width: 24)
+
+                Text(label)
+                    .font(.dmSans(.medium, size: 15, relativeTo: .body))
+                    .foregroundStyle(Color.pingTextPrimary)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.pingTextSecondary)
+            }
+            .padding(.horizontal, 18)
+            .frame(minHeight: 52)
+            .contentShape(.rect)
+        }
+        .buttonStyle(SettingsRowButtonStyle())
     }
 }
