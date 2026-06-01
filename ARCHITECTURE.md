@@ -115,7 +115,11 @@ The Profile feature owns (added 2026-06-01):
 - `SettingsRowButtonStyle` — Shared `ButtonStyle` for tappable rows; white 3% highlight on press with 0.12s ease-out animation. Promoted from Settings (was private) for cross-feature reuse.
 
 The Map feature owns (added 2026-06-01):
-- `MapPingSheet` — Custom bottom overlay card that appears when tapping a map marker. Shows author avatar, urgency label, title (with category emoji), optional description, boost/member stats, and JOIN CHAT + Details capsule buttons. Slides up with spring animation; tapping outside dismisses. Not a system `.sheet` — implemented as a ZStack overlay with backdrop tap.
+- `MapPingSheet` — Native `.sheet` (presentation detents `[280, .medium, .large]`) presenting a compact ping preview when tapping a map marker. Author avatar, urgency label, title (with category emoji), optional description, boost/member stats, and JOIN CHAT + Details capsule buttons.
+- `PingAnnotationView` — Map marker built from `Color.pingSurface` dot with an accent-colored border (amber default, `pingHot` for hot or critical), category emoji content, dual SwiftUI pulse rings (`scaleEffect` + `opacity` via `Task`-scheduled `repeatForever` animation, faster cadence when critical), boost-count capsule badge (`pingAccent` background, `pingBackground` border), and a continuous horizontal shake when urgency is `.critical`. All animations respect `accessibilityReduceMotion`.
+- `PingClusterAnnotationView` — Same surface treatment as the individual marker. Diameter scales with count (46 / 52 / 58 pt at <10 / <100 / ≥100). Accent + border + label color flip to `pingHot` if any member is hot or critical.
+- `MapAlertChip` — Glass alert pill used for transient map-level notifications. 3pt animated accent stripe (capsule with breathing shadow), SF Symbol icon, title + optional subtitle, optional inline action capsule, optional dismiss button. Background blends `pingSurface 85%` over `.ultraThinMaterial` with a leading accent gradient overlay (`.plusLighter`). Slides in from above on first appearance.
+- `EmailVerificationBannerView` — Now a thin wrapper that configures `MapAlertChip` with the email-verification copy and Resend/Dismiss actions.
 
 The Feed feature owns (added 2026-06-01):
 - `FeedSortChip` — Capsule toggle chip; selected state uses `pingAccent` 13% background fill + amber border; unselected uses `pingSurface` + `pingBorder`. DM Sans Medium 12pt label.
@@ -134,7 +138,7 @@ PingIt/
 ├── App/
 │   ├── PingItApp.swift              @main, FirebaseApp.configure(), environment injection, notification routing, analytics + crashlytics + performance user tracking
 │   ├── RootView.swift               Auth gate with suspension + onboarding checks: Auth or Suspended or Onboarding or MainTabView
-│   ├── MainTabView.swift            Tab bar (Map, Feed, Profile, Settings) with tab selection for notification navigation
+│   ├── MainTabView.swift            Tab bar (Map, Feed, Profile, Settings) tinted `pingAccent` for selected tab; handles notification navigation
 │   └── NavigationRouter.swift       @Observable router for push notification → ping navigation
 ├── Core/
 │   ├── Models/
@@ -226,11 +230,12 @@ PingIt/
 │   │   ├── ViewModels/
 │   │   │   └── MapViewModel.swift   Ping listener lifecycle, map state; filters expired + blocked; hotPingIds; manual clustering; overlapping pin offset
 │   │   └── Views/
-│   │       ├── MapView.swift              MapKit map with annotations, email verification banner, MapPingSheet overlay
-│   │       ├── MapPingSheet.swift         Custom bottom overlay: compact ping preview card with spring-animated slide-up
-│   │       ├── PingAnnotationView.swift   Custom ping marker with hot ping visual treatment
-│   │       ├── PingClusterAnnotationView.swift  Cluster annotation with count and hot-ping indicator
-│   │       └── EmailVerificationBannerView.swift  Dismissable banner for unverified users
+│   │       ├── MapView.swift              SwiftUI Map: floating "Map" title, glass recenter button, top gradient, amber FAB, MapAlertChip stack, MapPingSheet sheet; POIs hidden, flat elevation
+│   │       ├── MapPingSheet.swift         Native .sheet with presentation detents for compact ping preview
+│   │       ├── PingAnnotationView.swift   Emoji-in-dot marker with dual SwiftUI pulse rings, boost badge, accent border, critical shake
+│   │       ├── PingClusterAnnotationView.swift  Surface-styled cluster, count label, size scales with member count, hot/critical border
+│   │       ├── MapAlertChip.swift         Glass alert pill with animated accent stripe (warning, error, info severities)
+│   │       └── EmailVerificationBannerView.swift  Configures MapAlertChip with verify-email copy + resend/dismiss
 │   ├── Ping/
 │   │   ├── Models/
 │   │   │   └── PingCategory.swift         Enum with 9 categories (sports, study, social, music, food, skate, chill, gaming, art) + label + emoji

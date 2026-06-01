@@ -6,6 +6,32 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Map screen UI overhaul
+
+### Added
+- `Features/Map/Views/MapAlertChip.swift`: new floating glass-pill alert component with `info` / `warning` / `error` severities. 3pt animated accent stripe (`pingAccent` or `pingHot`) with breathing shadow, SF Symbol icon, title + optional subtitle, optional inline action capsule, optional dismiss button. Layered background of `pingSurface 85%` over `.ultraThinMaterial` with a `.plusLighter` accent gradient overlay. Slides in from above with spring animation; respects `accessibilityReduceMotion`.
+
+### Changed
+- `Features/Map/Views/PingAnnotationView.swift`: full rewrite. Renders the ping's category emoji inside a `pingSurface` dot with a 2.5pt accent border (`pingAccent` default, `pingHot` when hot or critical). Two SwiftUI pulse rings (`scaleEffect` 0.7→2.4 + opacity 0.55→0, `repeatForever`, 2.8s normal / 1.8s critical, second ring delayed by half a cycle). Boost-count capsule badge (`pingAccent` with `pingBackground` border) overlaid top-right. Continuous horizontal shake on critical urgency. All animations gated on `accessibilityReduceMotion`.
+- `Features/Map/Views/PingClusterAnnotationView.swift`: rebuilt with the same surface treatment as the marker. Diameter scales 46 / 52 / 58pt at <10 / <100 / ≥100 members; label uses Syne ExtraBold 16 / 14pt and inherits the border accent. Border + label flip to `pingHot` when any member is hot or critical. Displays `999+` for very large clusters.
+- `Features/Map/Views/MapView.swift`: hidden the system navigation bar in favor of a floating Syne ExtraBold 28pt "Map" title, a glass `pingAccent` recenter button (`.ultraThinMaterial` 42pt circle) that flies the camera to the user's location, and a top gradient overlay (`pingBackground 92%` → clear, 160pt) for legibility. Map style is `.standard(elevation: .flat, pointsOfInterest: .excludingAll)` with `.mapControlVisibility(.hidden)`. Error / location-denied / email-verification / empty-state notifications now render through the new `MapAlertChip` stack below the title with spring transitions. The amber FAB now lives in a private `MapCreatePingFAB` view with its own breathing glow and hides itself while the ping sheet is presented.
+- `Features/Map/Views/EmailVerificationBannerView.swift`: reduced to a thin wrapper that configures `MapAlertChip` (warning severity, envelope icon, Resend action, Dismiss button).
+- `App/MainTabView.swift`: added `.tint(Color.pingAccent)` so selected tabs render amber instead of the system blue.
+
+### Files created
+- `PingIt/Features/Map/Views/MapAlertChip.swift`
+
+### Files significantly modified
+- `PingIt/Features/Map/Views/MapView.swift`
+- `PingIt/Features/Map/Views/PingAnnotationView.swift`
+- `PingIt/Features/Map/Views/PingClusterAnnotationView.swift`
+- `PingIt/Features/Map/Views/EmailVerificationBannerView.swift`
+- `PingIt/App/MainTabView.swift`
+- `ARCHITECTURE.md`
+- `project_status.md`
+
+---
+
 ## [2026-06-01] — Ping Detail + Map Ping Sheet UI overhaul + description field
 
 ### Added
