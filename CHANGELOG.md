@@ -6,6 +6,41 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Stability fixes: empty chat crash, onboarding loop, missing user doc
+
+### Fixed
+- `Features/Chat/ViewModels/ChatViewModel.swift`: empty chats no longer crash on entry. The live-reactions cursor fell back to `Date.distantPast` when no messages were loaded; Firebase `Timestamp(date:)` overflows on that value (`-62135769600` seconds) and throws an uncaught `NSException` ("Invalid timestamp: Timestamp seconds out of range"), freezing the app on the map → chat transition. Fall back to `Date.now` instead.
+- `Features/Chat/Views/ChatView.swift`: `leaveChat` in `onDisappear` previously hopped back to `MainActor` for a Cloud Function call, which could block app termination on slow networks and trigger a SIGKILL watchdog kill (`0x8BADF00D`). Now runs as a background-priority detached task wrapped in a 5-second `TaskGroup` timeout, so the OS can reclaim the process cleanly even if the call hangs.
+- `Features/Chat/Views/Components/ChatBubbleShape.swift`: returns an empty path for zero-sized rects and clamps every corner radius to a non-negative cap, eliminating invalid `addArc` parameters during transient layout passes.
+- `Features/Ping/Views/PingDetailView.swift`: the ping-unavailable auto-dismiss task no longer fires when `navigateToChat` is true. Previously it could pop `PingDetailView` while the user was inside the pushed `ChatView`, tearing both screens down at once.
+
+### Changed (onboarding resilience)
+- `Features/Onboarding/ViewModels/OnboardingViewModel.swift`: errors from the completion write now surface to the UI instead of being silently swallowed. Adds `isSubmitting`, `errorMessage`, and `forceLocalComplete()` for a "Continue Anyway" escape hatch.
+- `Features/Onboarding/Views/OnboardingView.swift`: shows a red `OnboardingErrorCard` with a "Continue Anyway" pill when the completion write fails. Primary button shows a `ProgressView` while submitting and disables Skip during the write.
+- `Core/Protocols/UserServicing.swift` + `Core/Services/UserService.swift`: added `mergeUser(id:data:)` using `setData(merge: true)` (creates the doc if missing) and `ensureUserProfileExists(uid:email:)` which atomically backfills a placeholder user doc (`user_<uid-prefix>`) + username reservation when the Auth user exists but the Firestore doc does not.
+- `App/RootView.swift`: when `fetchUser` fails (e.g. orphan Auth account from a partially-failed signup), now falls through to `ensureUserProfileExists` so any broken account self-heals on the next launch.
+- `Features/Onboarding/ViewModels/OnboardingViewModel.swift`: now writes via `mergeUser` instead of `updateUser` so the flag write succeeds whether the doc exists or not.
+
+### Added
+- `Features/Feed/Views/PingFeedCardView.swift`: `CreatorAvatar` now loads `profileImageUrl` via `AsyncImage` with the colored-initial circle as the fallback. Previously it ignored the URL entirely, so feed cards never showed real profile photos.
+
+### Files significantly modified
+- `PingIt/Features/Chat/ViewModels/ChatViewModel.swift`
+- `PingIt/Features/Chat/Views/ChatView.swift`
+- `PingIt/Features/Chat/Views/Components/ChatBubbleShape.swift`
+- `PingIt/Features/Ping/Views/PingDetailView.swift`
+- `PingIt/Features/Onboarding/ViewModels/OnboardingViewModel.swift`
+- `PingIt/Features/Onboarding/Views/OnboardingView.swift`
+- `PingIt/Core/Protocols/UserServicing.swift`
+- `PingIt/Core/Services/UserService.swift`
+- `PingIt/App/RootView.swift`
+- `PingIt/Features/Feed/Views/PingFeedCardView.swift`
+- `PingItTests/Mocks/MockUserService.swift`
+- `ARCHITECTURE.md`
+- `project_status.md`
+
+---
+
 ## [2026-06-01] — Audit sweep: SuspendedAccountView, PasswordStrengthView, Ping Unavailable toasts
 
 ### Changed

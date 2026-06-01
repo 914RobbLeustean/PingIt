@@ -157,7 +157,7 @@ PingIt/
 │   │   ├── AuthServicing.swift                          Auth service contract (+ isEmailVerified, sendEmailVerification, reloadUser)
 │   │   ├── PingServicing.swift                          Ping service contract (+ callable-backed delete/boost, image upload, pre-ID create)
 │   │   ├── ChatServicing.swift                          Chat service contract (+ callable-backed join/leave, toggleReaction)
-│   │   ├── UserServicing.swift                          User profile + username reservation contract
+│   │   ├── UserServicing.swift                          User profile + username reservation contract (+ mergeUser, ensureUserProfileExists for orphan-account recovery)
 │   │   ├── LocationServicing.swift                      Location service contract
 │   │   ├── BlockServicing.swift                         Block/unblock, real-time bidirectional listeners
 │   │   ├── ContentModeratingServicing.swift             Text moderation (check → .allowed/.blocked)
@@ -173,7 +173,7 @@ PingIt/
 │   │   ├── AuthService.swift            Firebase Auth wrapper, auth state listener, email verification
 │   │   ├── PingService.swift            Ping creation/read/listen, callable delete and boost, image upload
 │   │   ├── ChatService.swift            Messages, callable join/leave, snapshot listener, toggleReaction
-│   │   ├── UserService.swift            User profile CRUD + usernames reservation documents
+│   │   ├── UserService.swift            User profile CRUD + usernames reservation documents (+ mergeUser uses setData(merge: true); ensureUserProfileExists backfills a placeholder doc when an Auth user has no Firestore doc)
 │   │   ├── LocationService.swift        CLLocationManager, GeoJSON boundary check
 │   │   ├── BlockService.swift           @Observable @MainActor; two Firestore snapshot listeners for real-time bidirectional blocking
 │   │   ├── ContentModerationService.swift  Bundle wordlist, localizedStandardContains matching
@@ -530,7 +530,7 @@ PingItApp ── .task ──▶ NotificationService.requestPermission + registe
           └─ .onReceive(PingItOpenPing) ──▶ NavigationRouter.pendingPingId
           └─ .onChange(of: auth.uid) ──▶ AnalyticsService.setUserId + CrashReportingService.setUserId
 
-RootView ── checks ──▶ UserService.fetchUser (suspension + onboarding gate)
+RootView ── checks ──▶ UserService.fetchUser (suspension + onboarding gate); falls through to UserService.ensureUserProfileExists if the Firestore doc is missing
          └─ if suspended ──▶ SuspendedAccountView
          └─ if not onboarded ──▶ OnboardingView ──observes──▶ OnboardingViewModel ──calls──▶ UserService + AnalyticsService
          └─ if onboarded ──▶ MainTabView
