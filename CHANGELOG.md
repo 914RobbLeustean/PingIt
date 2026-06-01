@@ -6,6 +6,25 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-01] — Feed screen UI overhaul
+
+### Added
+- `Features/Feed/Views/Components/FeedSortChip.swift`: capsule toggle chip with selected (amber 13% fill + amber border) and unselected (pingSurface + pingBorder) states. DM Sans Medium 12pt label.
+- `Features/Feed/Views/Components/FeedHotBadge.swift`: red capsule "HOT" badge, DM Sans Bold 10pt white on pingHot, 0.8pt tracking.
+- `Features/Feed/Views/Components/FeedLivePulse.swift`: pulsing green dot (7pt, scale 1→1.3, opacity 1→0.6, 1.5s infinite) + "LIVE" label in DM Sans SemiBold 11pt pingLive.
+- `Features/Feed/Views/Components/FeedEmptyState.swift`: pin emoji (40pt) + "Nothing happening yet." (Syne Bold 18pt) + "Drop one and start something." (DM Sans 14pt secondary).
+- `Features/Feed/ViewModels/FeedViewModel.swift`: added `PingUrgency` enum (`.critical` <1.5h, `.urgent` <6h, `.normal`) with color property; `visiblePings` computed property filtering expired pings; `urgency(for:)` method; `removeExpiredPings()` for the 60s timer; `chipLabel` on `FeedSortOption`.
+
+### Changed
+- `Features/Feed/Views/FeedView.swift`: full rewrite. Replaced system `NavigationTitle`, toolbar `Menu` sort picker, `ContentUnavailableView`, and `ProgressView` with custom dark header (Syne ExtraBold 30pt "Feed" + FeedLivePulse), 3 sort chips (Hot/New/Expiring), lazy card list on pingBackground, custom empty state, and a 60-second expiry timer.
+- `Features/Feed/Views/PingFeedCardView.swift`: full rewrite. Urgency edge bar (3pt red/amber/clear), creator avatar circle (26pt with initial letter), @username, FeedHotBadge, Syne Bold 17pt title, urgency-colored countdown label, boost count (amber when >0), participant count, optional media indicator icon. Card border turns pingHot 20% with 8% shadow when isHot.
+- `Features/Feed/ViewModels/FeedViewModel.swift`: dropped `.nearest` sort option. Changed default sort to `.hottest`. Added expiry filtering to `sortedPings` via `visiblePings`.
+
+### Removed
+- `FeedSortOption.nearest` / `.displayName` — replaced by `.chipLabel` and the 3 prototype sort options.
+
+---
+
 ## [2026-06-01] — Profile screen UI overhaul
 
 ### Added

@@ -53,6 +53,17 @@
   - **Sign Out modal:** Replaces the system `.alert()` with a custom `PingItConfirmationDialog` showing red destructive confirm + neutral cancel.
   - **`SettingsRoute` enum:** `NavigationStack(path:)` drives in-tab routing to Blocked Users / Terms of Service / Privacy Policy. The Terms and Privacy screens were styled in a prior session and are reused as-is.
 
+## Completed (UI Overhaul — Feed)
+- **Feed screen redesign (2026-06-01):** Full UI overhaul matching the HTML prototype's dark design system. Replaced system `NavigationTitle`, `Menu`, `ContentUnavailableView`, and default card styling.
+  - **Custom header:** Syne ExtraBold 30pt "Feed" title with `FeedLivePulse` (pulsing green dot + "LIVE" label, 1.5s infinite animation).
+  - **Sort chips:** 3 capsule toggles (Hot/New/Expiring) using `FeedSortChip`; selected state = amber fill (13%) + amber border, unselected = `pingSurface` + `pingBorder`. Replaces the old toolbar `Menu` sort picker.
+  - **Urgency system:** `PingUrgency` enum (`.critical` <1.5h, `.urgent` <6h, `.normal`) drives two independent visual signals per card: (1) left edge bar (3pt red or amber), (2) urgency-colored countdown label text + weight.
+  - **Hot ping signals:** Cards with `isHot` get `pingHot` 20% border + `pingHot` 8% shadow + `FeedHotBadge` (red capsule "HOT"). These are independent of urgency — a critical + hot ping shows both red edge and red border simultaneously.
+  - **Card layout:** Avatar circle (26pt, Syne ExtraBold initial on hue-from-username background), `@username`, title (Syne Bold 17pt), meta row (urgency countdown, optional media icon, boost count with amber text when >0, participant count). No image preview — media pings show a subtle photo icon only.
+  - **60-second expiry timer:** `Timer.scheduledTimer` fires every 60s to remove expired pings, keeping the feed fresh without waiting for the next Firestore snapshot.
+  - **Empty state:** `FeedEmptyState` with pin emoji (40pt) + "Nothing happening yet." (Syne Bold 18pt) + "Drop one and start something." (DM Sans 14pt secondary).
+  - **ViewModel changes:** Dropped `.nearest` sort option (prototype doesn't show it). Added `visiblePings` (filters expired), `urgency(for:)`, `removeExpiredPings()`, `chipLabel` display property.
+
 ## Completed (Phase 1 — Sprint 3: Cloud Functions + Notifications)
 - **Phase 1 Sprint 3 (2026-04-20):** First backend work — Cloud Functions + push notifications.
   - **Cloud Functions Setup:** TypeScript Cloud Functions with Firebase Admin SDK, health check endpoint.

@@ -114,6 +114,14 @@ The Profile feature owns (added 2026-06-01):
 - `PhotoSourcePicker` — Bottom sheet with drag handle, "Profile Photo" title, and action rows (Choose from Library, Take Photo, Remove Photo) in a `pingSurface` card. Uses `SettingsRowButtonStyle` and `SettingsRowDivider` for consistent row styling.
 - `SettingsRowButtonStyle` — Shared `ButtonStyle` for tappable rows; white 3% highlight on press with 0.12s ease-out animation. Promoted from Settings (was private) for cross-feature reuse.
 
+The Feed feature owns (added 2026-06-01):
+- `FeedSortChip` — Capsule toggle chip; selected state uses `pingAccent` 13% background fill + amber border; unselected uses `pingSurface` + `pingBorder`. DM Sans Medium 12pt label.
+- `FeedHotBadge` — Red capsule badge ("HOT") with DM Sans Bold 10pt white text on `pingHot` background, 0.8pt letter tracking.
+- `FeedLivePulse` — 7pt pulsing green dot (scale 1→1.3, opacity 1→0.6 on 1.5s infinite animation) + "LIVE" label in DM Sans SemiBold 11pt `pingLive`.
+- `FeedEmptyState` — Pin emoji (40pt) + Syne Bold 18pt title + DM Sans Regular 14pt subtitle for zero-ping state.
+- `PingFeedCardView` — Composite card with: urgency edge bar (3pt red <1.5h / amber <6h), avatar circle with initial letter, `@username` label, hot badge, Syne Bold 17pt title, urgency-colored countdown label, boost/member counts, optional media indicator. Card border turns `pingHot` 20% when `isHot`, with subtle red shadow.
+- `PingUrgency` — Enum (`.critical` / `.urgent` / `.normal`) derived from time remaining; used by card edge bar and countdown label color.
+
 **Legal screens render natively.** `Features/Authentication/Models/LegalDocument.swift` parses the bundled `terms.html` / `privacy.html` resources into a small `LegalDocument` block model (`heading`, `sectionHeading`, `updated`, `paragraph`, `bullets`), and `Features/Authentication/Views/LegalDocumentView.swift` renders those blocks with the design tokens. The previous `WKWebView`-based `WebContentView` was removed.
 
 ### Actual File Listing (as of 2026-05-07)
@@ -241,10 +249,15 @@ PingIt/
 │   │       └── LocationMessageView.swift   Inline mini-map card for shared locations, tap to open Apple Maps
 │   ├── Feed/
 │   │   ├── ViewModels/
-│   │   │   └── FeedViewModel.swift      Independent ping listener, sort/filter, creator cache, distance formatting
+│   │   │   └── FeedViewModel.swift      Ping listener, sort/filter, creator cache, distance, urgency + expiry timer
 │   │   └── Views/
-│   │       ├── FeedView.swift           NavigationStack with sort menu, lazy card list, empty state
-│   │       └── PingFeedCardView.swift   Card: text, creator, countdown, distance, boost/participant counts, hot badge, image thumbnail
+│   │       ├── FeedView.swift           Custom header with live pulse, sort chips (Hot/New/Expiring), card list, empty state
+│   │       ├── PingFeedCardView.swift   Urgency edge bar, avatar, hot badge, urgency-colored countdown, media indicator
+│   │       └── Components/
+│   │           ├── FeedSortChip.swift       Capsule toggle chip (selected = amber fill + border)
+│   │           ├── FeedHotBadge.swift        Red capsule "HOT" badge for high-engagement pings
+│   │           ├── FeedLivePulse.swift       Pulsing green dot + "LIVE" label for feed header
+│   │           └── FeedEmptyState.swift      Pin emoji + copy for zero-ping state
 │   ├── Onboarding/
 │   │   ├── ViewModels/
 │   │   │   └── OnboardingViewModel.swift  3-page tutorial state, completes via UserService + Analytics
@@ -496,6 +509,9 @@ FeedView ──observes──▶ FeedViewModel ──calls──▶ PingService 
                                                   BlockService (filters blocked creators)
                                                   UserService (creator profile cache)
                                                   AnalyticsService (logs feed_viewed, feed_sort_changed)
+         └─ 60s expiry timer removes stale pings from feed in real time
+         └─ sort chips: Hot (hotScore), New (createdAt), Expiring (expiresAt)
+         └─ urgency signals: red edge (<1.5h), amber edge (<6h), red border+badge (isHot)
          └─ navigates to PingDetailView on card tap
 
 NavigationRouter ──observed by──▶ MainTabView (tab switch) + MapView (ping navigation)
