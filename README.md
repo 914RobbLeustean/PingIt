@@ -24,9 +24,7 @@
 
 ## Demo
 
-<p align="center">
-  <video src="demo.mp4" width="300" />
-</p>
+https://github.com/user-attachments/assets/7d8afd71-2ce4-4578-a978-8b5fdb884d44
 
 ---
 
