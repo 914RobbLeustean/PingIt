@@ -28,64 +28,77 @@ struct PingItApp: App {
     @State private var pingRecapService = PingRecapService()
     @State private var followService = FollowService()
     @State private var navigationRouter = NavigationRouter()
+    @State private var isShowingSplash = true
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(authService)
-                .environment(pingService)
-                .environment(chatService)
-                .environment(userService)
-                .environment(locationService)
-                .environment(contentModerationService)
-                .environment(blockService)
-                .environment(reportService)
-                .environment(rateLimitService)
-                .environment(notificationService)
-                .environment(analyticsService)
-                .environment(crashReportingService)
-                .environment(performanceService)
-                .environment(imageStorageService)
-                .environment(dataExportService)
-                .environment(pingRecapService)
-                .environment(followService)
-                .environment(navigationRouter)
-                .onChange(of: authService.currentUser?.uid) { _, newUid in
-                    if let uid = newUid {
-                        analyticsService.setUserId(uid)
-                        crashReportingService.setUserId(uid)
-                    } else {
-                        analyticsService.setUserId(nil)
-                        crashReportingService.setUserId(nil)
-                        blockService.stopObserving()
-                        rateLimitService.resetForSignOut()
+            ZStack {
+                RootView()
+
+                if isShowingSplash {
+                    SplashView {
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            isShowingSplash = false
+                        }
                     }
+                    .transition(.opacity)
+                    .zIndex(1)
                 }
-                .onReceive(NotificationCenter.default.publisher(for: .init("PingItOpenPing"))) { notification in
-                    if let pingId = notification.userInfo?["pingId"] as? String {
-                        navigationRouter.pendingPingId = pingId
-                    }
+            }
+            .environment(authService)
+            .environment(pingService)
+            .environment(chatService)
+            .environment(userService)
+            .environment(locationService)
+            .environment(contentModerationService)
+            .environment(blockService)
+            .environment(reportService)
+            .environment(rateLimitService)
+            .environment(notificationService)
+            .environment(analyticsService)
+            .environment(crashReportingService)
+            .environment(performanceService)
+            .environment(imageStorageService)
+            .environment(dataExportService)
+            .environment(pingRecapService)
+            .environment(followService)
+            .environment(navigationRouter)
+            .onChange(of: authService.currentUser?.uid) { _, newUid in
+                if let uid = newUid {
+                    analyticsService.setUserId(uid)
+                    crashReportingService.setUserId(uid)
+                } else {
+                    analyticsService.setUserId(nil)
+                    crashReportingService.setUserId(nil)
+                    blockService.stopObserving()
+                    rateLimitService.resetForSignOut()
                 }
-                .onReceive(NotificationCenter.default.publisher(for: .init("PingItOpenRecap"))) { notification in
-                    if let recapId = notification.userInfo?["recapId"] as? String {
-                        navigationRouter.pendingRecapId = recapId
-                    }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .init("PingItOpenPing"))) { notification in
+                if let pingId = notification.userInfo?["pingId"] as? String {
+                    navigationRouter.pendingPingId = pingId
                 }
-                .onOpenURL { url in
-                    if case .ping(let pingId) = DeepLink(url: url) {
-                        navigationRouter.pendingPingId = pingId
-                    }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .init("PingItOpenRecap"))) { notification in
+                if let recapId = notification.userInfo?["recapId"] as? String {
+                    navigationRouter.pendingRecapId = recapId
                 }
-                .task {
-                    FontRegistrationCheck.run()
-                    UNUserNotificationCenter.current().delegate = notificationService
-                    Messaging.messaging().delegate = notificationService
-                    let granted = await notificationService.requestPermission()
-                    if granted {
-                        await notificationService.registerFCMToken()
-                    }
+            }
+            .onOpenURL { url in
+                if case .ping(let pingId) = DeepLink(url: url) {
+                    navigationRouter.pendingPingId = pingId
                 }
-                .preferredColorScheme(.dark)
+            }
+            .task {
+                FontRegistrationCheck.run()
+                UNUserNotificationCenter.current().delegate = notificationService
+                Messaging.messaging().delegate = notificationService
+                let granted = await notificationService.requestPermission()
+                if granted {
+                    await notificationService.registerFCMToken()
+                }
+            }
+            .preferredColorScheme(.dark)
         }
     }
 }
