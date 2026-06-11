@@ -94,11 +94,10 @@ private struct SplashRing: View {
             .scaleEffect(expanded ? 16 : 1)
             .opacity(expanded ? 0 : 0.8)
             .onAppear {
-                withAnimation(
-                    .easeOut(duration: 2.4)
-                        .repeatForever(autoreverses: false)
-                        .delay(delay)
-                ) {
+                // Single-shot: the splash only lives for ~one ring cycle, and
+                // a repeatForever restart would pop a fresh bright ring in a
+                // single frame mid-fade-out.
+                withAnimation(.easeOut(duration: 2.4).delay(delay)) {
                     expanded = true
                 }
             }
