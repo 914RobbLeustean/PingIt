@@ -54,12 +54,16 @@ PingIt/
 │   └── Utilities/           Extensions, constants, helpers
 ├── Features/                One folder per feature, each containing:
 │   ├── Authentication/      ViewModels/ + Views/
-│   ├── Map/
-│   ├── Ping/
+│   ├── Map/                 (incl. heatmap overlay: HeatCell model + MapCircle rendering)
+│   ├── Ping/                (create, detail, edit)
 │   ├── Chat/
+│   ├── Feed/
 │   ├── Onboarding/
 │   ├── Profile/
-│   └── Settings/
+│   ├── Recap/               Post-event story recaps (ghost markers, photo carousel)
+│   ├── Report/
+│   ├── Settings/
+│   └── Social/              User search, follow system, read-only user profiles
 └── Resources/               Assets, GeoJSON, config files
 ```
 
@@ -562,7 +566,9 @@ ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls�
 | Service | Responsibility | Status |
 |---------|---------------|--------|
 | **AuthService** | Sign up, sign in, sign out, password reset, session state, email verification | Implemented |
-| **PingService** | Client-side ping creation/read/listen, callable-backed delete and boost, boost-state lookup | Implemented |
+| **PingService** | Client-side ping creation/read/listen, callable-backed delete/boost/RSVP/update, boost+RSVP state lookup, 7-day fetch for heatmap | Implemented |
+| **FollowService** | Callable-backed user search + follow toggle; direct Firestore reads for follow state and Following list | Implemented |
+| **PingRecapService** | Recap listeners (active recaps, photos subcollection), recap photo upload (Storage + Firestore) | Implemented |
 | **ChatService** | Messages, snapshot listeners, callable-backed join/leave participant tracking | Implemented |
 | **UserService** | Profile read/write, username reservation get/create/delete during signup and rename | Implemented |
 | **LocationService** | CLLocationManager wrapper, boundary check | Implemented |
@@ -572,7 +578,7 @@ ForgotPasswordView ──observes──▶ ForgotPasswordViewModel ──calls�
 | **ReportService** | Calls `submitReport`, maps duplicate report callable error to user-visible `reportAlreadySubmitted` | Implemented |
 | **ServerTime** | Firebase RTDB `.info/serverTimeOffset` for clock-skew correction; `ServerTime.now` | Implemented (utility enum) |
 | **NotificationService** | FCM token registration, APNs permission, foreground notification display, lastKnownLocation update | Implemented |
-| **AnalyticsService** | Wraps FirebaseAnalytics for event logging (`ping_created`, `chat_joined`, `boost_used`, `onboarding_completed`, `reaction_toggled`, `location_shared`, `feed_viewed`, `feed_sort_changed`) and user ID tracking | Implemented |
+| **AnalyticsService** | Wraps FirebaseAnalytics for event logging (`ping_created`, `ping_edited`, `ping_shared`, `rsvp_toggled`, `chat_joined`, `boost_used`, `onboarding_completed`, `reaction_toggled`, `location_shared`, `feed_viewed`, `feed_sort_changed`) and user ID tracking | Implemented |
 | **CrashReportingService** | Wraps FirebaseCrashlytics for crash/non-fatal error reporting and user ID tracking | Implemented |
 | **ImageStorageService** | Wraps Firebase Storage for profile image upload/delete; protocol-abstracted for testability | Implemented |
 | **DataExportService** | Calls `exportUserData` callable, returns JSON data for GDPR Article 20 portability | Implemented |
@@ -592,14 +598,19 @@ Services are created as `@State` in `PingItApp` and injected via `.environment()
 ```
 functions/src/
 ├── index.ts                      App initialization, exports all functions
-├── expirePings.ts                Scheduled: every 5 minutes, batch-expires pings via shared cleanup
-├── pingCleanup.ts                Shared chunked cleanup for ping chat/messages/participants/boosts
-├── pingCallables.ts              Callable: deletePing, boostPing, joinChat, leaveChat
-├── reportCallables.ts            Callable: submitReport with deterministic report IDs
-├── deleteAccount.ts              Callable: GDPR cascading delete (pings, chats, messages, boosts, blocks, reports, storage, auth)
+├── expirePings.ts                Scheduled: every 5 minutes, batch-expires pings, creates recaps from RSVPs, GCs expired recaps
+├── pingCleanup.ts                Shared chunked cleanup for ping chat/messages/participants/boosts/rsvps
+├── pingCallables.ts              Callable: deletePing, updatePing, boostPing, rsvpPing, joinChat, leaveChat
+├── socialCallables.ts            Callable: toggleFollow, searchUsers
+├── followNotifications.ts        Firestore triggers: 4 follow-activity pushes (new follower, ping, RSVP, recap photo)
+├── blockTriggers.ts              Firestore trigger: severFollowsOnBlock — block deletes both follow edges + counters
+├── recapTriggers.ts              Firestore trigger: onRecapPhotoCreated maintains recap photoCount
+├── cleanupRecaps.ts              Shared: deletes expired recap docs + photos subcollection + Storage files
+├── reportCallables.ts            Callable: submitReport with deterministic report IDs (pings, messages, users)
+├── deleteAccount.ts              Callable: GDPR cascading delete (pings, chats, messages, boosts, rsvps, follows, blocks, reports, storage, auth)
 ├── sendNearbyNotification.ts     Firestore trigger: pings onCreate → 2km Haversine filter → FCM push
 ├── sendHotPingNotification.ts    Firestore triggers: boosts onCreate + chatParticipants onWrite → hot score check → FCM push
-├── moderateImage.ts              Storage trigger: onObjectFinalized → Vision API SafeSearch → auto-remove or flag for review
+├── moderateImage.ts              Storage trigger: onObjectFinalized → Vision API SafeSearch → auto-remove or flag (ping + recap photos)
 ├── removeContent.ts              Callable: admin emergency content removal (ping, message, user suspension) with audit trail
 └── exportUserData.ts             Callable: GDPR data export — collects all user data and returns JSON
 ```
@@ -688,6 +699,44 @@ Data Export (callable):
     → require auth
     → collect: user profile, pings, messages, boosts, blocks, reports, chat participations
     → return JSON object with all user data (GDPR Article 20 portability)
+
+RSVP (callable):
+  rsvpPing({ pingId })
+    → require auth, non-suspended user, active ping, non-creator, no bidirectional block
+    → toggle deterministic rsvps/{pingId}_{uid} + FieldValue.increment(±1) on pings.rsvpCount
+    → return { rsvpCount, isAttending }
+
+Ping Edit (callable):
+  updatePing({ pingId, text, description?, category })
+    → require auth, non-suspended user, active ping, creator-only
+    → validate: text ≤280, description ≤500, category in whitelist
+    → update text/category, set/delete description, stamp editedAt (serverTimestamp)
+    → clients receive the change live via existing ping listeners
+
+Recap Lifecycle:
+  expirePings (cron) → for each expiring ping with RSVPs:
+    → create pingRecaps/{pingId} { attendeeIds (from rsvps), location, title,
+      recapWindowClosesAt (+2h), ghostExpiresAt (+24h), photoCount: 0 }
+    → FCM to attendees → cleanupPing (also deletes rsvps)
+  onRecapPhotoCreated → increment photoCount (skips isModerated docs)
+  moderateImage (recap_photos/) → transactional isModerated flag + photoCount decrement
+  expirePings (cron) → cleanupExpiredRecaps: delete recap docs + photos + Storage after ghostExpiresAt
+
+Follow System (callables + triggers):
+  toggleFollow({ targetUserId })
+    → require auth, non-suspended, not-self, target exists
+    → new follows rejected if target isPrivateProfile or bidirectional block
+    → transaction: create/delete follows/{followerId}_{followedId} + increment/decrement
+      followerCount/followingCount on both user docs
+  searchUsers({ query })
+    → prefix query on usernameLowercase where isPrivateProfile == false (composite index)
+    → filters self + bidirectional blocks; returns safe fields only
+  followNotifications (4 onDocumentCreated triggers)
+    → follows → "X started following you"; pings/rsvps/recap photos → pushes to actor's followers
+    → all suppressed if actor went private (dormancy), recipient disabled notifyFollowActivity,
+      or a bidirectional block exists
+  severFollowsOnBlock (blocks onCreate)
+    → transactionally delete both follow edges + fix all four counters
 ```
 
 ---

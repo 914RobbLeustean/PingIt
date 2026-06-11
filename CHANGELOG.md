@@ -6,6 +6,68 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-11] — Deep links, RSVP + recaps, Social tab, heatmap, ping editing, launch experience
+
+### Added — Deep Link Sharing
+- `Core/Utilities/DeepLink.swift`: parses `pingit://ping/{id}` and `https://pingit-dev.web.app/ping/{id}`; `shareURL(forPingId:)` builds share links.
+- Share button on Ping Detail via `ShareLink(item: url.absoluteString)` — shared as a plain String because URL items hit a pasteboard quirk that yields binary-plist garbage on "Copy".
+- `public/ping/index.html` + `public/index.html`: dark-themed hosted fallback page ("Open in PingIt" fires the custom scheme); `firebase.json` hosting block with `/ping/**` rewrite.
+- `Info.plist`: `CFBundleURLTypes` registers the `pingit` scheme; `.onOpenURL` in `PingItApp` routes to the ping.
+
+### Added — RSVP System
+- `rsvps/{pingId}_{userId}` collection (deterministic IDs, like boosts); `rsvpPing` callable toggles attendance with suspension/block/active checks and `FieldValue.increment` counter sync.
+- `Ping.rsvpCount` (optional for backward compat) + `attendingCount`; "I'm Going" capsule on Ping Detail, "N going" counts on map sheet and feed cards — all live via existing listeners.
+- RSVP cleanup wired into `pingCleanup.ts` and `deleteAccount.ts`.
+
+### Added — Post-Event Story Recaps
+- `expirePings.ts` now creates `pingRecaps/{pingId}` from RSVPs at expiry (`attendeeIds`), notifies attendees, and GCs expired recaps (`cleanupRecaps.ts`: docs + photos subcollection + Storage files after `ghostExpiresAt`).
+- `Features/Recap/`: ghost 📸 map annotation (24h), `RecapStorySheet` photo carousel, `PhotosPicker` submission (max 3/user, 2h window), `RecapStoryViewModel`.
+- `recapTriggers.ts`: `onRecapPhotoCreated` maintains `photoCount`; `moderateImage.ts` extended to recap photos (transactional flag + counter decrement).
+- Empty recaps are hidden from non-attendees (`PingRecap.isVisibleOnMap(to:)`) so the map never shows hollow ghosts.
+
+### Added — Social Tab (follow system)
+- New 5th tab: debounced username search (500ms), follow/unfollow pills, Following list, read-only `UserProfileView` (stats, follow button, report/block).
+- `socialCallables.ts`: `toggleFollow` (transactional edge + counters, rejects private targets), `searchUsers` (prefix query on `usernameLowercase`, public profiles only, composite index in new `firestore.indexes.json`).
+- `followNotifications.ts`: 4 push triggers (new follower / ping created / RSVP / recap photo), all respecting `notifyFollowActivity`, privacy dormancy, and bidirectional blocks.
+- `blockTriggers.ts`: `severFollowsOnBlock` deletes both follow edges and fixes all four counters.
+- Going private = dormant follows (hidden from search, muted notifications, "Gone private" rows); `deleteAccount.ts` cleans follow edges both directions.
+- Live follower count on own Profile tab via `observeUser` listener; `notifyFollowActivity` toggle in Settings.
+
+### Added — Map Heatmap Overlay
+- Flame toggle in map header renders 7-day activity blobs (`MapCircle` core + halo per cell), amber→red by intensity.
+- `Features/Map/Models/HeatCell.swift`: ~130m grid bucketing, weight = recency factor (1.0→0.25 over 7d) × boost multiplier, normalized; 30-min cache in `MapViewModel`.
+
+### Added — Ping Editing (creator-only, live)
+- `updatePing` callable mirrors the boost/rsvp transaction pattern (auth, suspension, active, creator checks; length + category whitelist validation; `editedAt` stamp; clearing description deletes the field).
+- Pencil button in Ping Detail nav bar (owner only) opens `EditPingView` reusing the create-flow text/description/category sections; `EditPingViewModel` mirrors create validation incl. moderation wordlist; Save gated on actual changes.
+- "· edited" marker in the detail author row; `Ping.==` now includes `category`/`editedAt` so category-only edits propagate through map-sheet sync and detail listeners.
+
+### Added — Image caching
+- `Core/Utilities/ImageCache.swift`: 50MB `NSCache` keyed by URL; `CachedAsyncImage.swift`: drop-in `AsyncImage` replacement that checks the cache synchronously in `body` — cached avatars render on the first frame with zero placeholder flash.
+- All 7 avatar sites converted (social rows, map sheet, detail, feed, chat bubbles, profile, blocked users); `RetryableAsyncImage` rewritten on the same cache for ping/recap photos (3-attempt retry kept). `URLSession` `.returnCacheDataElseLoad` adds disk persistence across launches.
+
+### Added — Launch experience
+- `LaunchScreen.storyboard` rebuilt: brand amber ping dot as a pre-rendered `LaunchDot` imageset (launch storyboards render neither custom fonts nor runtime attributes — the old Syne wordmark silently fell back to system font).
+- `App/SplashView.swift`: animated splash whose first frame matches the storyboard pixel-for-pixel; radar rings (single-shot — repeatForever popped a bright ring mid-fade), wordmark + tagline reveal, then a 0.55s fade with 1.08× scale into the already-loaded app. Honors Reduce Motion.
+
+### Fixed
+- `Ping.hotScore` now uses `ServerTime.now` instead of the device clock, matching every other time computation.
+- Live updates: RSVP/boost/participant counters update live on Ping Detail (full ping merge in `startObservingPing`), map sheet syncs with the listener (`syncSheetPing`), follower count ticks live on Profile.
+- Anonymous identity leak: private creators' real avatars no longer flash on the map sheet, feed cards, or Social Following rows (components receive `nil` creator when identity is hidden).
+- Blocked users vanish live from Social search results, the Following list, and recap photo carousels (`applyBlockFilter` driven by `BlockService.blockedUserIds` — both block directions); in-flight fetches are filtered on arrival. Map/feed/chat already live-filtered.
+- Chat "query requires an index": added `chatMessages (chatId, createdAt)` composite indexes (both sort orders) to `firestore.indexes.json`.
+- Map alert chips (empty state, location off, connection issue) are now dismissable with an X and stay dismissed for the session; a new error re-surfaces the connection chip. Fixes the empty-state chip overlapping the heatmap toggle.
+- Shared scheme `TestAction` build configuration corrected Release → Debug so `@testable import PingIt` resolves.
+
+### Security/Rules
+- New rules: `rsvps`, `follows` (own outgoing edges readable), `pingRecaps` + nested `photos` (attendee-gated submission window); `safeUserUpdate` allows `notifyFollowActivity`; `safePingCreate` allows `rsvpCount` (must be 0). Ping updates remain client-forbidden — edits go through the callable.
+- Ops note: newly created v2 callables may deploy without public invoker permission (clients see `UNAUTHENTICATED`); fix via `gcloud functions add-invoker-policy-binding`.
+
+### Tests
+- 192 → 262 tests; new suites: `EditPingViewModelTests` (13), `DeepLinkTests` (11), `PingRecapTests` (11), `SocialViewModelTests` (10), `HeatCellTests` (10), `UserProfileViewModelTests` (7), `ImageCacheTests` (4); new mocks: `MockFollowService`, `MockPingRecapService`.
+
+---
+
 ## [2026-06-01] — Stability fixes: empty chat crash, onboarding loop, missing user doc
 
 ### Fixed
