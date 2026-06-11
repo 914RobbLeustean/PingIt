@@ -15,6 +15,7 @@ final class AnalyticsService: AnalyticsServicing {
         static let feedSortChanged = "feed_sort_changed"
         static let pingShared = "ping_shared"
         static let rsvpToggled = "rsvp_toggled"
+        static let pingEdited = "ping_edited"
     }
 
     enum ParameterName {

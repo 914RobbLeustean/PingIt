@@ -105,6 +105,75 @@ export async function hasBlockingRelationshipInTransaction(
   return !blockedByUser.empty || !blockedByOther.empty;
 }
 
+const PING_CATEGORIES = new Set([
+  "sports", "study", "social", "music", "food", "skate", "chill", "gaming", "art",
+]);
+const MAX_PING_TEXT_LENGTH = 280;
+const MAX_PING_DESCRIPTION_LENGTH = 500;
+
+export const updatePing = onCall({ region: "europe-west3" }, async (request) => {
+  const uid = requireAuthUid(request);
+  const data = requireData(request.data);
+  const pingId = requireString(data, "pingId");
+
+  const text = requireString(data, "text");
+  if (text.length > MAX_PING_TEXT_LENGTH) {
+    throw new HttpsError("invalid-argument", "Ping text is too long.");
+  }
+
+  const category = requireString(data, "category");
+  if (!PING_CATEGORIES.has(category)) {
+    throw new HttpsError("invalid-argument", "Unknown category.");
+  }
+
+  const rawDescription = data.description;
+  let description: string | undefined;
+  if (rawDescription !== undefined && rawDescription !== null) {
+    if (typeof rawDescription !== "string") {
+      throw new HttpsError("invalid-argument", "description must be a string.");
+    }
+    description = rawDescription.trim();
+    if (description.length === 0) {
+      description = undefined;
+    } else if (description.length > MAX_PING_DESCRIPTION_LENGTH) {
+      throw new HttpsError("invalid-argument", "Ping description is too long.");
+    }
+  }
+
+  const db = getFirestore();
+
+  return db.runTransaction(async (transaction) => {
+    const pingRef = db.collection("pings").doc(pingId);
+    const userRef = db.collection("users").doc(uid);
+
+    const [pingDoc, userDoc] = await Promise.all([
+      transaction.get(pingRef),
+      transaction.get(userRef),
+    ]);
+
+    const pingData = pingDoc.data();
+    if (!pingDoc.exists || !pingData) {
+      throw new HttpsError("not-found", "Ping not found.");
+    }
+
+    assertNotSuspended(userDoc);
+    assertActivePing(pingData);
+
+    if (pingData.creatorId !== uid) {
+      throw new HttpsError("permission-denied", "Only the creator can edit this ping.");
+    }
+
+    transaction.update(pingRef, {
+      text,
+      category,
+      description: description ?? FieldValue.delete(),
+      editedAt: FieldValue.serverTimestamp(),
+    });
+
+    return { success: true };
+  });
+});
+
 export const deletePing = onCall({ region: "europe-west3" }, async (request) => {
   const uid = requireAuthUid(request);
   const pingId = requireString(requireData(request.data), "pingId");

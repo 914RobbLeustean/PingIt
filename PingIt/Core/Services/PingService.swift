@@ -36,6 +36,22 @@ final class PingService: PingServicing {
         }
     }
 
+    func updatePing(pingId: String, text: String, description: String?, category: String) async throws {
+        var payload: [String: Any] = [
+            "pingId": pingId,
+            "text": text,
+            "category": category,
+        ]
+        if let description {
+            payload["description"] = description
+        }
+        do {
+            _ = try await functions.httpsCallable("updatePing").call(payload)
+        } catch {
+            throw PingItError.firestoreWriteFailed(underlying: error)
+        }
+    }
+
     /// Creates a ping and its associated chat atomically using a batched write.
     /// Rate limiting is deferred to a Cloud Function (Phase 1).
     func createPingWithChat(_ ping: Ping) async throws {
