@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Privacy Policy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #1c1c1e;
+    background: #ffffff;
+    padding: 16px;
+    margin: 0;
+    -webkit-text-size-adjust: 100%;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #f2f2f7; background: #000000; }
+  }
+  h1 { font-size: 1.5em; margin-top: 0; }
+  h2 { font-size: 1.2em; margin-top: 1.5em; }
+  h3 { font-size: 1.05em; margin-top: 1em; }
+  p, li { margin-bottom: 0.5em; }
+  ul { padding-left: 1.5em; }
+  .updated { color: #8e8e93; font-size: 0.9em; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #c6c6c8; font-size: 0.95em; }
+  @media (prefers-color-scheme: dark) {
+    th, td { border-bottom-color: #38383a; }
+  }
+</style>
+</head>
+<body>
+<h1>Privacy Policy</h1>
+<p class="updated">Last updated: May 2026</p>
+
+<p>PingIt ("we", "our", "the app") is committed to protecting your privacy. This policy explains what data we collect, why, and how you can exercise your rights under the General Data Protection Regulation (GDPR) and other applicable data protection laws.</p>
+
+<h2>1. Data We Collect</h2>
+
+<table>
+  <tr><th>Data</th><th>Purpose</th><th>Stored Where</th></tr>
+  <tr><td>Email address</td><td>Authentication, account recovery</td><td>Firebase Authentication</td></tr>
+  <tr><td>Username</td><td>Public identity within the app</td><td>Cloud Firestore</td></tr>
+  <tr><td>Location (lat/lng)</td><td>Display and create pings on the map</td><td>Cloud Firestore</td></tr>
+  <tr><td>Chat messages</td><td>Real-time group chat within pings</td><td>Cloud Firestore</td></tr>
+  <tr><td>Profile photo (optional)</td><td>User avatar</td><td>Firebase Storage</td></tr>
+  <tr><td>Device token (FCM)</td><td>Push notifications</td><td>Cloud Firestore</td></tr>
+  <tr><td>Analytics events</td><td>App improvement, usage insights</td><td>Firebase Analytics (Google)</td></tr>
+  <tr><td>Crash reports</td><td>Stability monitoring</td><td>Firebase Crashlytics (Google)</td></tr>
+</table>
+
+<h2>2. Firebase Services</h2>
+<p>PingIt uses the following Firebase (Google) services:</p>
+<ul>
+  <li><strong>Firebase Authentication</strong> — email/password sign-in.</li>
+  <li><strong>Cloud Firestore</strong> — stores user profiles, pings, chats, and related data.</li>
+  <li><strong>Firebase Storage</strong> — stores user-uploaded profile images.</li>
+  <li><strong>Firebase Analytics</strong> — collects anonymous usage events (e.g. pings created, chats joined) to help us improve the app. No personally identifiable information is shared with advertisers.</li>
+  <li><strong>Firebase Crashlytics</strong> — collects crash reports and device diagnostics to help us fix bugs. Reports include device model, OS version, and stack traces.</li>
+  <li><strong>Cloud Functions</strong> — server-side logic for content moderation, boosts, reports, and account management.</li>
+  <li><strong>Cloud Vision API</strong> — automated image moderation for profile photos.</li>
+</ul>
+
+<h2>3. How We Use Your Data</h2>
+<ul>
+  <li>To provide and operate the PingIt service.</li>
+  <li>To authenticate your identity and secure your account.</li>
+  <li>To display pings and chats to other users based on location.</li>
+  <li>To send push notifications you have opted into.</li>
+  <li>To enforce our Terms of Service and community guidelines.</li>
+  <li>To monitor app stability and improve performance.</li>
+</ul>
+
+<h2>4. Data Retention</h2>
+<ul>
+  <li><strong>Pings</strong> expire automatically after their set duration (1–48 hours). Expired pings and their associated chat messages are removed by a scheduled cleanup process.</li>
+  <li><strong>Account data</strong> is retained as long as your account is active.</li>
+  <li><strong>Deleted accounts</strong> — when you delete your account, your authentication record and Firestore profile are removed. Some data (e.g. chat messages you sent) may be retained in anonymised form for moderation logs.</li>
+</ul>
+
+<h2>5. Your Rights (GDPR)</h2>
+<p>If you are in the European Economic Area, you have the right to:</p>
+<ul>
+  <li><strong>Access</strong> — request a copy of the personal data we hold about you.</li>
+  <li><strong>Rectification</strong> — correct inaccurate data (you can update your username and profile in the app).</li>
+  <li><strong>Erasure</strong> — delete your account and associated data via the app's Settings screen.</li>
+  <li><strong>Restriction</strong> — request that we limit processing of your data.</li>
+  <li><strong>Portability</strong> — request your data in a machine-readable format.</li>
+  <li><strong>Object</strong> — object to processing based on legitimate interests.</li>
+</ul>
+<p>To exercise any of these rights, contact us at the address below.</p>
+
+<h2>6. Data Sharing</h2>
+<p>We do not sell your personal data. We share data only with:</p>
+<ul>
+  <li><strong>Google/Firebase</strong> — as our infrastructure provider, under their data processing terms.</li>
+  <li><strong>Law enforcement</strong> — if required by law or to protect the safety of our users.</li>
+</ul>
+
+<h2>7. Security</h2>
+<p>We use industry-standard security measures including encrypted connections (TLS), Firebase Security Rules, server-authoritative writes for sensitive operations, and automated content moderation. However, no system is perfectly secure.</p>
+
+<h2>8. Children's Privacy</h2>
+<p>PingIt is not intended for users under 16. We do not knowingly collect data from children under 16. If you believe a child under 16 has created an account, please contact us.</p>
+
+<h2>9. Changes to This Policy</h2>
+<p>We may update this Privacy Policy from time to time. We will notify users of significant changes through the app. Continued use after changes constitutes acceptance.</p>
+
+<h2>10. Contact</h2>
+<p>For privacy inquiries or to exercise your GDPR rights, contact:</p>
+<p><strong>pingit.app.contact@gmail.com</strong></p>
+</body>
+</html>

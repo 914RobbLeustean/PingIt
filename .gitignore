@@ -1,0 +1,45 @@
+# Xcode
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods (if used)
+Pods/
+
+# Firebase
+GoogleService-Info.plist
+
+# Cloud Functions
+functions/node_modules/
+functions/lib/
+
+# Environment
+.env.example
+functions/.env*
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Documentation (local only, except runbooks)
+docs/*
+!docs/ADMIN_MODERATION_RUNBOOK.md
+
+# Git worktrees
+.worktrees/
+
+# AI tooling
+.claude/
+.agents/
+.codex/
+skills-lock.json
+CLAUDE.md
+

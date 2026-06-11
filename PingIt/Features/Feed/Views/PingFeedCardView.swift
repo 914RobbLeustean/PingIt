@@ -1,0 +1,311 @@
+import SwiftUI
+
+struct PingFeedCardView: View {
+    let ping: Ping
+    let creator: User?
+    let distanceText: String?
+    let urgency: PingUrgency
+    let isHot: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 0) {
+            UrgencyEdgeBar(urgency: urgency, animate: !reduceMotion)
+
+            VStack(alignment: .leading, spacing: 6) {
+                AuthorRow(creator: creator, isHot: isHot, category: ping.category)
+                TitleRow(ping: ping)
+                MetaRow(
+                    ping: ping,
+                    urgency: urgency,
+                    distanceText: distanceText
+                )
+            }
+            .padding(14)
+            .padding(.leading, 2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.pingSurface)
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(hotBorderColor, lineWidth: isHot ? 1.5 : 1)
+        )
+        .shadow(color: isHot ? Color.pingHot.opacity(0.18) : .clear, radius: isHot ? 14 : 10)
+        .modifier(CriticalPulseModifier(isActive: urgency == .critical && !reduceMotion))
+        .accessibilityElement(children: .combine)
+    }
+
+    private var hotBorderColor: Color {
+        if isHot { return .pingHot.opacity(0.35) }
+        return .pingBorder
+    }
+}
+
+// MARK: - Critical Pulse Modifier
+
+private struct CriticalPulseModifier: ViewModifier {
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        if isActive {
+            content
+                .phaseAnimator([false, true]) { view, phase in
+                    view
+                        .scaleEffect(phase ? 0.985 : 1.0)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.pingHot.opacity(phase ? 0.06 : 0.0))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(Color.pingHot.opacity(phase ? 0.25 : 0.08), lineWidth: 1)
+                        )
+                } animation: { phase in
+                    .easeInOut(duration: phase ? 2.4 : 2.0)
+                }
+        } else {
+            content
+        }
+    }
+}
+
+// MARK: - Urgency Edge Bar
+
+private struct UrgencyEdgeBar: View {
+    let urgency: PingUrgency
+    let animate: Bool
+
+    var body: some View {
+        if urgency != .normal {
+            Rectangle()
+                .fill(urgency.color)
+                .frame(width: 4)
+                .overlay(alignment: .top) {
+                    if urgency == .urgent, animate {
+                        UrgencyShimmer()
+                    }
+                }
+                .clipped()
+        }
+    }
+}
+
+// MARK: - Urgency Shimmer
+
+private struct UrgencyShimmer: View {
+    var body: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [.clear, .white.opacity(0.4), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .frame(height: 30)
+            .phaseAnimator([false, true]) { view, phase in
+                view.offset(y: phase ? 80 : -30)
+            } animation: { phase in
+                phase
+                    ? .easeInOut(duration: 1.8)
+                    : .easeInOut(duration: 0.01)
+            }
+    }
+}
+
+// MARK: - Author Row
+
+private struct AuthorRow: View {
+    let creator: User?
+    let isHot: Bool
+    let category: String?
+
+    // A private creator must stay anonymous everywhere — avatar included.
+    private var hideIdentity: Bool {
+        creator?.isPrivateProfile == true
+    }
+
+    var body: some View {
+        HStack {
+            HStack(spacing: 8) {
+                CreatorAvatar(creator: hideIdentity ? nil : creator, size: 26)
+
+                Text("@\(displayName)")
+                    .font(.dmSans(.medium, size: 12, relativeTo: .caption))
+                    .foregroundStyle(Color.pingTextSecondary)
+
+                if let pingCategory = category.flatMap(PingCategory.init(rawValue:)) {
+                    FeedCategoryTag(category: pingCategory)
+                }
+            }
+
+            Spacer()
+
+            if isHot {
+                FeedHotBadge()
+            }
+        }
+    }
+
+    private var displayName: String {
+        if let creator, !creator.isPrivateProfile {
+            return creator.username
+        }
+        return "anonymous"
+    }
+}
+
+// MARK: - Feed Category Tag
+
+private struct FeedCategoryTag: View {
+    let category: PingCategory
+
+    var body: some View {
+        Text("\(category.emoji) \(category.label)")
+            .font(.dmSans(.medium, size: 10, relativeTo: .caption2))
+            .foregroundStyle(Color.pingAccent.opacity(0.85))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(Color.pingAccent.opacity(0.1))
+            .clipShape(.capsule)
+    }
+}
+
+// MARK: - Creator Avatar
+
+private struct CreatorAvatar: View {
+    let creator: User?
+    let size: CGFloat
+
+    var body: some View {
+        if let urlString = creator?.profileImageUrl, let url = URL(string: urlString) {
+            CachedAsyncImage(url: url) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                initialFallback
+            }
+            .frame(width: size, height: size)
+            .clipShape(.circle)
+        } else {
+            initialFallback
+        }
+    }
+
+    private var initialFallback: some View {
+        Circle()
+            .fill(avatarColor)
+            .frame(width: size, height: size)
+            .overlay(
+                Text(initial)
+                    .font(.syne(.extraBold, size: size * 0.4))
+                    .foregroundStyle(.white)
+            )
+    }
+
+    private var initial: String {
+        let name = creator?.username ?? "?"
+        return String(name.prefix(1)).uppercased()
+    }
+
+    private var avatarColor: Color {
+        guard let name = creator?.username else { return .pingTextSecondary }
+        var hash = 0
+        for char in name.unicodeScalars {
+            hash = Int(char.value) &+ (hash &<< 6) &+ (hash &<< 16) &- hash
+        }
+        let hue = Double(abs(hash) % 360) / 360.0
+        return Color(hue: hue, saturation: 0.6, brightness: 0.8)
+    }
+}
+
+// MARK: - Title Row
+
+private struct TitleRow: View {
+    let ping: Ping
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(ping.text)
+                .font(.syne(.bold, size: 17, relativeTo: .headline))
+                .foregroundStyle(Color.pingTextPrimary)
+                .lineSpacing(2)
+                .lineLimit(2)
+
+            if let description = ping.description,
+               !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(description)
+                    .font(.dmSans(.regular, size: 13, relativeTo: .footnote))
+                    .foregroundStyle(Color.pingTextSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.leading, 34)
+    }
+}
+
+// MARK: - Meta Row
+
+private struct MetaRow: View {
+    let ping: Ping
+    let urgency: PingUrgency
+    let distanceText: String?
+
+    var body: some View {
+        HStack(spacing: 14) {
+            UrgencyTimeLabel(ping: ping, urgency: urgency)
+
+            if ping.imageUrl != nil {
+                Image(systemName: "photo")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.pingTextSecondary.opacity(0.6))
+            }
+
+            HStack(spacing: 3) {
+                Image(systemName: "flame")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.pingTextSecondary)
+                Text("\(ping.boostCount)")
+                    .font(.dmSans(.regular, size: 12, relativeTo: .caption))
+                    .foregroundStyle(ping.boostCount > 0 ? Color.pingAccent : .pingTextSecondary)
+            }
+
+            HStack(spacing: 3) {
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.pingTextSecondary)
+                Text("\(ping.attendingCount)")
+                    .font(.dmSans(.regular, size: 12, relativeTo: .caption))
+                    .foregroundStyle(ping.attendingCount > 0 ? Color.pingLive : .pingTextSecondary)
+            }
+
+            HStack(spacing: 3) {
+                Image(systemName: "person.2")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.pingTextSecondary)
+                Text("\(ping.participantCount)")
+                    .font(.dmSans(.regular, size: 12, relativeTo: .caption))
+                    .foregroundStyle(Color.pingTextSecondary)
+            }
+        }
+        .padding(.leading, 34)
+    }
+}
+
+// MARK: - Urgency Time Label
+
+private struct UrgencyTimeLabel: View {
+    let ping: Ping
+    let urgency: PingUrgency
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "clock")
+                .font(.system(size: 12))
+            Text(ping.expiresAt.countdownDescription)
+                .font(.dmSans(urgency == .normal ? .regular : .semiBold, size: 12, relativeTo: .caption))
+        }
+        .foregroundStyle(urgency.color)
+    }
+}

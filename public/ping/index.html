@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You're invited to a ping — PingIt</title>
+<meta property="og:title" content="You're invited to a ping on PingIt">
+<meta property="og:description" content="Something is happening nearby in Cluj-Napoca. Open PingIt to join the chat.">
+<meta property="og:type" content="website">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0a0a0f;
+    color: #f5f5f7;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    background: #13131f;
+    border: 1px solid #232336;
+    border-radius: 24px;
+    padding: 40px 28px;
+  }
+  .mark {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(245, 166, 35, 0.12);
+    border: 2px solid rgba(245, 166, 35, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    margin: 0 auto 20px;
+  }
+  .wordmark {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #f5a623;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: #8a8a98;
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .btn:active { opacity: 0.8; }
+  .btn-primary {
+    background: #f5a623;
+    color: #000;
+    margin-bottom: 12px;
+    box-shadow: 0 6px 24px rgba(245, 166, 35, 0.3);
+  }
+  .btn-secondary {
+    background: #1d1d2c;
+    color: #f5f5f7;
+    border: 1px solid #2a2a3c;
+  }
+  .footnote {
+    margin-top: 22px;
+    font-size: 12px;
+    color: #55555f;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="mark" id="categoryEmoji">⚡</div>
+  <div class="wordmark">PingIt</div>
+  <h1 id="pingTitle">You're invited to a ping</h1>
+  <p class="subtitle" id="pingSubtitle">Something is happening nearby in Cluj-Napoca. Open the app to see it on the map and join the chat.</p>
+  <a class="btn btn-primary" id="openBtn" href="#">Open in PingIt</a>
+  <a class="btn btn-secondary" href="https://apps.apple.com/app/pingit" id="downloadBtn">Download PingIt</a>
+  <p class="footnote">Pings are ephemeral — this one may have already expired.</p>
+</div>
+
+<script type="module">
+  const CATEGORY_EMOJI = {
+    sports: "🏀", study: "📚", social: "🍻", music: "🎸", food: "🍕",
+    skate: "🛹", chill: "☕", gaming: "🎮", art: "🎨",
+  };
+
+  const segments = window.location.pathname.split("/").filter(Boolean);
+  const pingId = segments[0] === "ping" && segments[1] ? segments[1] : null;
+
+  if (pingId) {
+    document.getElementById("openBtn").href = `pingit://ping/${pingId}`;
+  }
+
+  // Progressive enhancement: fetch the ping title via Firestore if anonymous
+  // auth is enabled on the project. The page works fully without this.
+  if (pingId) {
+    try {
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      const { getAuth, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+      const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+
+      const app = initializeApp({
+        apiKey: "AIzaSyBGWR8FbZKIaY_yCYEXYGV4Hr7gW79Y-HE",
+        authDomain: "pingit-dev.firebaseapp.com",
+        projectId: "pingit-dev",
+      });
+
+      await signInAnonymously(getAuth(app));
+      const snapshot = await getDoc(doc(getFirestore(app), "pings", pingId));
+
+      if (snapshot.exists() && snapshot.data().status === "active") {
+        const ping = snapshot.data();
+        document.getElementById("pingTitle").textContent = ping.text;
+        document.getElementById("pingSubtitle").textContent =
+          "This is happening right now in Cluj-Napoca. Open the app to join the chat before it expires.";
+        if (ping.category && CATEGORY_EMOJI[ping.category]) {
+          document.getElementById("categoryEmoji").textContent = CATEGORY_EMOJI[ping.category];
+        }
+      } else {
+        document.getElementById("pingTitle").textContent = "This ping has expired";
+        document.getElementById("pingSubtitle").textContent =
+          "Pings are ephemeral — this one is gone. Download PingIt to catch the next one.";
+      }
+    } catch (error) {
+      // Anonymous auth not enabled or network issue — keep the generic copy.
+      console.debug("Ping preview unavailable:", error);
+    }
+  }
+</script>
+</body>
+</html>
