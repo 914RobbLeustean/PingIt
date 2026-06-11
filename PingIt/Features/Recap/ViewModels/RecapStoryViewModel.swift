@@ -7,6 +7,7 @@ import PhotosUI
 final class RecapStoryViewModel {
     private var recapService: (any PingRecapServicing)?
     private var authService: (any AuthServicing)?
+    private var blockService: (any BlockServicing)?
     private var photosListener: ListenerHandle?
     private var isConfigured = false
 
@@ -21,7 +22,12 @@ final class RecapStoryViewModel {
     }
 
     var visiblePhotos: [PingRecapPhoto] {
-        photos.filter { !$0.isModerated }
+        // Reading blockedUserIds (via isBlocked) inside this computed
+        // property lets SwiftUI's observation re-render the sheet the
+        // moment a block lands — photos from blocked users vanish live.
+        photos.filter {
+            !$0.isModerated && !(blockService?.isBlocked($0.submitterId) ?? false)
+        }
     }
 
     var canSubmitPhoto: Bool {
@@ -33,11 +39,13 @@ final class RecapStoryViewModel {
 
     func configure(
         recapService: any PingRecapServicing,
-        authService: any AuthServicing
+        authService: any AuthServicing,
+        blockService: (any BlockServicing)? = nil
     ) {
         guard !isConfigured else { return }
         self.recapService = recapService
         self.authService = authService
+        self.blockService = blockService
         isConfigured = true
     }
 

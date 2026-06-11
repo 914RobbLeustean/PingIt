@@ -18,6 +18,7 @@ final class SocialViewModel {
     private(set) var followingIds: Set<String> = []
     private(set) var isLoadingFollowing = false
     private(set) var togglingUserIds: Set<String> = []
+    private(set) var blockedUserIds: Set<String> = []
     var errorMessage: String?
 
     var isShowingSearchResults: Bool {
@@ -42,11 +43,24 @@ final class SocialViewModel {
 
         do {
             let users = try await followService.fetchFollowing(currentUserId: currentUserId)
+                .filter { $0.id.map { !blockedUserIds.contains($0) } ?? true }
             following = users
             followingIds = Set(users.compactMap(\.id))
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// Mirrors MapViewModel.applyBlockFilter: the block listener fires the
+    /// instant a block lands (either direction), and the blocked user
+    /// disappears from search results and the Following list immediately —
+    /// without waiting for the server-side follow sever to propagate.
+    func applyBlockFilter(blockedIds: Set<String>) {
+        blockedUserIds = blockedIds
+        guard !blockedIds.isEmpty else { return }
+        results.removeAll { blockedIds.contains($0.userId) }
+        following.removeAll { $0.id.map(blockedIds.contains) ?? false }
+        followingIds.subtract(blockedIds)
     }
 
     func isFollowing(_ userId: String) -> Bool {
@@ -109,7 +123,8 @@ final class SocialViewModel {
         do {
             let found = try await followService.searchUsers(query: query)
             guard !Task.isCancelled else { return }
-            results = found
+            // In-flight responses can land after a block; filter on arrival.
+            results = found.filter { !blockedUserIds.contains($0.userId) }
         } catch {
             guard !Task.isCancelled else { return }
             errorMessage = error.localizedDescription

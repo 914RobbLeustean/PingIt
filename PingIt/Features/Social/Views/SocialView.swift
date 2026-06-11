@@ -3,6 +3,7 @@ import SwiftUI
 struct SocialView: View {
     @Environment(FollowService.self) private var followService
     @Environment(AuthService.self) private var authService
+    @Environment(BlockService.self) private var blockService
     @State private var viewModel = SocialViewModel()
     @State private var selectedUserId: String?
 
@@ -45,7 +46,11 @@ struct SocialView: View {
             }
             .task {
                 viewModel.configure(followService: followService, authService: authService)
+                viewModel.applyBlockFilter(blockedIds: blockService.blockedUserIds)
                 await viewModel.loadFollowing()
+            }
+            .onChange(of: blockService.blockedUserIds) { _, newValue in
+                viewModel.applyBlockFilter(blockedIds: newValue)
             }
         }
     }
