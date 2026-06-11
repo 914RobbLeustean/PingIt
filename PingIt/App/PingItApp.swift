@@ -37,11 +37,17 @@ struct PingItApp: App {
 
                 if isShowingSplash {
                     SplashView {
-                        withAnimation(.easeOut(duration: 0.5)) {
+                        withAnimation(.easeOut(duration: 0.55)) {
                             isShowingSplash = false
                         }
                     }
-                    .transition(.opacity)
+                    // Fade while scaling slightly past the viewer — reads as
+                    // the camera pushing through the splash into the app.
+                    .transition(
+                        UIAccessibility.isReduceMotionEnabled
+                            ? .opacity
+                            : .opacity.combined(with: .scale(scale: 1.08))
+                    )
                     .zIndex(1)
                 }
             }
