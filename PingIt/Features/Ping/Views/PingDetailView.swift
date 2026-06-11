@@ -13,6 +13,7 @@ struct PingDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showBlockConfirmation = false
     @State private var showReportSheet = false
+    @State private var showEditSheet = false
     @State private var navigateToChat = false
 
     init(ping: Ping) {
@@ -26,7 +27,8 @@ struct PingDetailView: View {
             DetailNavBar(
                 onBack: { dismiss() },
                 shareURL: viewModel.ping.id.flatMap(DeepLink.shareURL(forPingId:)),
-                onShareTapped: logShareEvent
+                onShareTapped: logShareEvent,
+                onEdit: viewModel.isCreator ? { showEditSheet = true } : nil
             )
 
             ScrollView {
@@ -34,6 +36,7 @@ struct PingDetailView: View {
                     DetailAuthorTimerRow(
                         creator: viewModel.shouldHideCreatorIdentity ? nil : viewModel.creator,
                         createdAt: viewModel.ping.createdAt,
+                        isEdited: viewModel.ping.editedAt != nil,
                         expiresAt: viewModel.ping.expiresAt,
                         urgency: viewModel.urgency,
                         countdownText: viewModel.countdownText,
@@ -159,6 +162,13 @@ struct PingDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showEditSheet) {
+            // The live ping listener delivers the saved changes back to
+            // this screen (and the map/feed) — no manual refresh needed.
+            EditPingView(ping: viewModel.ping)
+                .presentationDetents([.large])
+                .presentationCornerRadius(28)
+        }
         .sheet(isPresented: $showReportSheet) {
             if let pingId = viewModel.ping.id {
                 ReportView(
@@ -260,6 +270,7 @@ private struct DetailNavBar: View {
     let onBack: () -> Void
     var shareURL: URL?
     var onShareTapped: (() -> Void)?
+    var onEdit: (() -> Void)?
 
     var body: some View {
         HStack {
@@ -274,6 +285,14 @@ private struct DetailNavBar: View {
                 .foregroundStyle(Color.pingTextPrimary)
 
             Spacer()
+
+            if let onEdit {
+                Button(action: onEdit) {
+                    DetailNavBarIcon(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Edit this ping")
+            }
 
             if let shareURL {
                 // Share the URL as a plain String: URL items can hit a
@@ -315,6 +334,7 @@ private struct DetailNavBarIcon: View {
 private struct DetailAuthorTimerRow: View {
     let creator: User?
     let createdAt: Date?
+    let isEdited: Bool
     let expiresAt: Date
     let urgency: PingUrgency
     let countdownText: String
@@ -331,7 +351,7 @@ private struct DetailAuthorTimerRow: View {
                         .foregroundStyle(Color.pingTextPrimary)
 
                     if let createdAt {
-                        Text(createdAt.relativeDescription)
+                        Text(isEdited ? "\(createdAt.relativeDescription) · edited" : createdAt.relativeDescription)
                             .font(.dmSans(.regular, size: 12, relativeTo: .caption))
                             .foregroundStyle(Color.pingTextSecondary)
                     }

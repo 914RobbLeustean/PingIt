@@ -8,12 +8,14 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
         && lhs.creatorId == rhs.creatorId
         && lhs.text == rhs.text
         && lhs.description == rhs.description
+        && lhs.category == rhs.category
         && lhs.status == rhs.status
         && lhs.boostCount == rhs.boostCount
         && lhs.rsvpCount == rhs.rsvpCount
         && lhs.participantCount == rhs.participantCount
         && lhs.imageUrl == rhs.imageUrl
         && lhs.expiresAt == rhs.expiresAt
+        && lhs.editedAt == rhs.editedAt
     }
 
     func hash(into hasher: inout Hasher) {
@@ -36,6 +38,8 @@ struct Ping: Codable, Identifiable, Hashable, Sendable {
     var chatId: String?
     var imageUrl: String?
     @ServerTimestamp var createdAt: Date?
+    // Set by the updatePing callable; nil for never-edited pings.
+    var editedAt: Date?
 
     var attendingCount: Int {
         rsvpCount ?? 0

@@ -16,7 +16,7 @@ export {
 } from "./sendHotPingNotification";
 export { moderateImage } from "./moderateImage";
 export { removeContent } from "./removeContent";
-export { deletePing, boostPing, rsvpPing, joinChat, leaveChat } from "./pingCallables";
+export { deletePing, updatePing, boostPing, rsvpPing, joinChat, leaveChat } from "./pingCallables";
 export { onRecapPhotoCreated } from "./recapTriggers";
 export { toggleFollow, searchUsers } from "./socialCallables";
 export {
