@@ -15,58 +15,21 @@
                         <rect key="frame" x="0.0" y="0.0" width="440" height="956"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <!-- Outer glow halo: matches PingItLogoMark's resting glow -->
-                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="glo-Vw-001" userLabel="Logo Glow">
+                            <!-- Amber ping dot (pre-rendered: core + mid ring + glow halo).
+                                 SplashView's first frame reproduces this exactly. -->
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchDot" translatesAutoresizingMaskIntoConstraints="NO" id="dot-Iv-001" userLabel="Launch Dot">
                                 <rect key="frame" x="203" y="461" width="34" height="34"/>
-                                <color key="backgroundColor" red="0.96078431372549022" green="0.65098039215686276" blue="0.13725490196078433" alpha="0.09" colorSpace="custom" customColorSpace="sRGB"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="34" id="glo-wd-001"/>
-                                    <constraint firstAttribute="height" constant="34" id="glo-ht-001"/>
+                                    <constraint firstAttribute="width" constant="34" id="dot-wd-001"/>
+                                    <constraint firstAttribute="height" constant="34" id="dot-ht-001"/>
                                 </constraints>
-                                <userDefinedRuntimeAttributes>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
-                                        <integer key="value" value="17"/>
-                                    </userDefinedRuntimeAttribute>
-                                </userDefinedRuntimeAttributes>
-                            </view>
-                            <!-- Mid ring -->
-                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="mid-Vw-002" userLabel="Logo Mid Ring">
-                                <rect key="frame" x="209" y="467" width="22" height="22"/>
-                                <color key="backgroundColor" red="0.96078431372549022" green="0.65098039215686276" blue="0.13725490196078433" alpha="0.35" colorSpace="custom" customColorSpace="sRGB"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="22" id="mid-wd-002"/>
-                                    <constraint firstAttribute="height" constant="22" id="mid-ht-002"/>
-                                </constraints>
-                                <userDefinedRuntimeAttributes>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
-                                        <integer key="value" value="11"/>
-                                    </userDefinedRuntimeAttribute>
-                                </userDefinedRuntimeAttributes>
-                            </view>
-                            <!-- Amber core dot -->
-                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="cor-Vw-003" userLabel="Logo Core">
-                                <rect key="frame" x="211" y="469" width="18" height="18"/>
-                                <color key="backgroundColor" red="0.96078431372549022" green="0.65098039215686276" blue="0.13725490196078433" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="18" id="cor-wd-003"/>
-                                    <constraint firstAttribute="height" constant="18" id="cor-ht-003"/>
-                                </constraints>
-                                <userDefinedRuntimeAttributes>
-                                    <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
-                                        <integer key="value" value="9"/>
-                                    </userDefinedRuntimeAttribute>
-                                </userDefinedRuntimeAttributes>
-                            </view>
+                            </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
                         <color key="backgroundColor" red="0.035294117647058823" green="0.035294117647058823" blue="0.070588235294117646" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <constraint firstItem="glo-Vw-001" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="glo-cx-001"/>
-                            <constraint firstItem="glo-Vw-001" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="glo-cy-001"/>
-                            <constraint firstItem="mid-Vw-002" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="mid-cx-002"/>
-                            <constraint firstItem="mid-Vw-002" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="mid-cy-002"/>
-                            <constraint firstItem="cor-Vw-003" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cor-cx-003"/>
-                            <constraint firstItem="cor-Vw-003" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cor-cy-003"/>
+                            <constraint firstItem="dot-Iv-001" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="dot-cx-001"/>
+                            <constraint firstItem="dot-Iv-001" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="dot-cy-001"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -75,4 +38,7 @@
             <point key="canvasLocation" x="53" y="375"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="LaunchDot" width="34" height="34"/>
+    </resources>
 </document>
