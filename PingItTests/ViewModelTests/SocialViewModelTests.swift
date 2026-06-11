@@ -114,4 +114,50 @@ struct SocialViewModelTests {
 
         #expect(vm.results.first?.followerCount == 4)
     }
+
+    // MARK: - Block filtering
+
+    @Test func applyBlockFilterRemovesBlockedFromResultsAndFollowing() async {
+        let (vm, follow) = makeVM()
+        var friend = User(username: "friend", email: "f@t.com", usernameLowercase: "friend")
+        friend.id = "user2"
+        var other = User(username: "other", email: "o@t.com", usernameLowercase: "other")
+        other.id = "user3"
+        follow.followingToReturn = [friend, other]
+        await vm.loadFollowing()
+        follow.searchResultsToReturn = [searchResult(userId: "user2"), searchResult(userId: "user3")]
+        vm.searchText = "test"
+        try? await Task.sleep(for: .milliseconds(900))
+
+        vm.applyBlockFilter(blockedIds: ["user2"])
+
+        #expect(vm.results.map(\.userId) == ["user3"])
+        #expect(vm.following.map(\.id) == ["user3"])
+        #expect(!vm.followingIds.contains("user2"))
+        #expect(vm.isFollowing("user3"))
+    }
+
+    @Test func searchResultsLandingAfterBlockAreFiltered() async {
+        let (vm, follow) = makeVM()
+        vm.applyBlockFilter(blockedIds: ["user2"])
+        follow.searchResultsToReturn = [searchResult(userId: "user2"), searchResult(userId: "user3")]
+
+        vm.searchText = "test"
+        try? await Task.sleep(for: .milliseconds(900))
+
+        #expect(vm.results.map(\.userId) == ["user3"])
+    }
+
+    @Test func followingLoadedAfterBlockIsFiltered() async {
+        let (vm, follow) = makeVM()
+        vm.applyBlockFilter(blockedIds: ["user2"])
+        var blocked = User(username: "friend", email: "f@t.com", usernameLowercase: "friend")
+        blocked.id = "user2"
+        follow.followingToReturn = [blocked]
+
+        await vm.loadFollowing()
+
+        #expect(vm.following.isEmpty)
+        #expect(vm.followingIds.isEmpty)
+    }
 }

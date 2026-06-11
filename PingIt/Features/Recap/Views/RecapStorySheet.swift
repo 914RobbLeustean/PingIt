@@ -4,6 +4,7 @@ import PhotosUI
 struct RecapStorySheet: View {
     @Environment(PingRecapService.self) private var recapService
     @Environment(AuthService.self) private var authService
+    @Environment(BlockService.self) private var blockService
     @State private var viewModel: RecapStoryViewModel
     @State private var selectedPhotoItem: PhotosPickerItem?
 
@@ -49,7 +50,11 @@ struct RecapStorySheet: View {
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(24)
         .task {
-            viewModel.configure(recapService: recapService, authService: authService)
+            viewModel.configure(
+                recapService: recapService,
+                authService: authService,
+                blockService: blockService
+            )
             viewModel.startObservingPhotos()
         }
         .onDisappear {
