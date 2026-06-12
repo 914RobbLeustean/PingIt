@@ -94,3 +94,49 @@ firebase deploy --only functions,firestore:rules --project pingit-dev
 - `docs/FIREBASE.md` (if it exists) — composite index table for new indexes.
 - `ARCHITECTURE.md` — if data flows / services changed.
 - `project_status.md` — milestone tracker, if a feature completed.
+
+---
+
+## Fresh-machine build checklist (clone → run the iOS app)
+
+The repo is self-contained for **building** the app. A fresh clone of `main`
+builds and runs after the two manual steps below. (Verified against what git
+actually tracks vs. ignores.)
+
+**Steps:**
+
+1. **Clone** and open `PingIt.xcodeproj` in Xcode.
+2. **Add `GoogleService-Info.plist`** at `PingIt/GoogleService-Info.plist`. It is
+   **gitignored** (contains API keys) and is **not** in a fresh clone — copy it
+   from the Firebase console or another machine. **The app crashes at launch
+   without it** (Firebase configure runs first).
+3. **Set your signing team on ALL THREE targets** — `PingIt`, `PingItTests`,
+   `PingItUITests`. Signing is `Automatic`, but the project has two hardcoded
+   `DEVELOPMENT_TEAM` IDs baked into `project.pbxproj`; changing the team on only
+   the app target can leave the test targets failing to sign. If the bundle IDs
+   (`com.PingIt`, `com.PingItTests`, `com.PingItUITests`) collide with an
+   existing app on your account, change them too.
+4. **Swift packages resolve automatically.** Firebase is referenced via SPM (14
+   remote packages) with a committed `Package.resolved` — Xcode fetches them from
+   GitHub on first open. No CocoaPods, no local package paths. If resolution
+   seems stale: File → Packages → Reset Package Caches.
+5. **Build & run.** Nothing else is needed for a simulator/device build.
+
+**Already in the repo (don't go looking for them):** the shared `PingIt` scheme
+(`xcshareddata/xcschemes/`), `Info.plist`, all fonts (`project_fonts/**`, wired
+into the target's Copy Bundle Resources and registered in `Info.plist` →
+`UIAppFonts`), and `project.pbxproj`.
+
+**Known runtime gaps (NOT missing files — won't block a build):**
+
+- **Push notifications are inert** until the Apple Developer Program enrollment
+  (paid) is active and the Push Notifications capability / `aps-environment`
+  entitlement is added. Tracked issue — expected, not a build failure. Everything
+  else (Firestore, Auth, Storage, Maps, chat) works with just the plist.
+- Any future capability that needs a paid-program entitlement (Sign in with
+  Apple, associated domains for universal links) is likewise inert until enrolled.
+
+**You do NOT need these to build (all gitignored, correctly):**
+`functions/.env.pingit-dev`, `functions/node_modules/`, `functions/lib/`,
+`CLAUDE.md`, `.claude/`, most of `docs/`, `DerivedData/`. The `functions/` install
++ build is only required to **deploy** Cloud Functions, never to build the app.
