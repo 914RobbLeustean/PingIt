@@ -66,9 +66,14 @@ struct ChatView: View {
                 rateLimitService: rateLimitService,
                 analyticsService: analyticsService
             )
-            await viewModel.loadInitialMessages()
+            // Join BEFORE loading messages: the chat read rules only allow
+            // active participants, and joinChat creates that membership record.
+            // Reading first would be permission-denied until the join landed.
             viewModel.startObservingPing()
-            await viewModel.joinChat()
+            let joined = await viewModel.joinChat()
+            if joined {
+                await viewModel.loadInitialMessages()
+            }
         }
         .onDisappear {
             viewModel.stopObserving()

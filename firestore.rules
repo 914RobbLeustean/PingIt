@@ -5,6 +5,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Active membership of a chat. joinChat writes a deterministic doc
+    // chatParticipants/{chatId}_{uid}; leaveChat sets leftAt (it does NOT
+    // delete the doc), and a rejoin clears leftAt. "Active member" = the doc
+    // exists and has no leftAt field. Used to gate chat/message reads.
+    function isActiveChatMember(chatId) {
+      let participantPath = /databases/$(database)/documents/chatParticipants/$(chatId + "_" + request.auth.uid);
+      return signedIn()
+        && exists(participantPath)
+        && !("leftAt" in get(participantPath).data);
+    }
+
     function userPath(userId) {
       return /databases/$(database)/documents/users/$(userId);
     }
@@ -259,13 +270,19 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if signedIn();
+      // Only active participants may read a chat. Membership is established by
+      // the joinChat Cloud Function before the client loads the chat.
+      allow read: if isActiveChatMember(chatId);
       allow create: if safeChatCreate(chatId);
       allow update, delete: if false;
     }
 
     match /chatMessages/{messageId} {
-      allow read: if signedIn();
+      // Read gated on active membership of the message's parent chat. For list
+      // queries Firestore evaluates this per returned document against that
+      // document's chatId field, so a member only ever sees messages of chats
+      // they belong to.
+      allow read: if isActiveChatMember(resource.data.chatId);
       allow create: if safeMessageCreate();
       allow update: if safeReactionUpdate();
       allow delete: if false;

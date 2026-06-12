@@ -149,15 +149,29 @@ final class ChatViewModel {
         listenerRegistration = nil
     }
 
-    func joinChat() async {
-        guard let chatService, currentUserId != nil, !hasJoined else { return }
+    /// Joins the chat. Returns `true` once the caller is an active member
+    /// (already joined, or the join succeeded). Membership must be established
+    /// before loading messages: the Firestore read rules only let active
+    /// participants read a chat's messages. Returns `false` if the join failed
+    /// (errorMessage is set), so the caller can avoid a read that would now be
+    /// permission-denied.
+    @discardableResult
+    func joinChat() async -> Bool {
+        guard let chatService, currentUserId != nil else { return false }
+        if hasJoined { return true }
+        // Show the loading spinner during the join round-trip so opening a chat
+        // doesn't flash the empty state before messages load.
+        isLoading = true
         do {
             _ = try await chatService.joinChatIfNeeded(chatId: chatId)
             joinedChatId = chatId
             hasJoined = true
             analyticsService?.logEvent(AnalyticsService.EventName.chatJoined, parameters: nil)
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            isLoading = false
+            return false
         }
     }
 
