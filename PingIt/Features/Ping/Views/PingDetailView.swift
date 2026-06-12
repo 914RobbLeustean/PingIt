@@ -63,6 +63,7 @@ struct PingDetailView: View {
                         isCreator: viewModel.isCreator,
                         hasUserBoosted: viewModel.hasUserBoosted,
                         canBoost: viewModel.canBoost,
+                        isBoosting: viewModel.isBoosting,
                         onBoost: { Task { await viewModel.boostPing() } }
                     )
                     .padding(.bottom, 18)
@@ -77,6 +78,7 @@ struct PingDetailView: View {
                         isAttending: viewModel.isAttending,
                         isCreator: viewModel.isCreator,
                         isEnabled: viewModel.canToggleRSVP,
+                        isToggling: viewModel.isTogglingRSVP,
                         onToggle: { Task { await viewModel.toggleRSVP() } }
                     )
                     .padding(.bottom, 14)
@@ -484,6 +486,7 @@ private struct DetailStatsCard: View {
     let isCreator: Bool
     let hasUserBoosted: Bool
     let canBoost: Bool
+    let isBoosting: Bool
     let onBoost: () -> Void
 
     var body: some View {
@@ -495,6 +498,7 @@ private struct DetailStatsCard: View {
                     ping: ping,
                     hasUserBoosted: hasUserBoosted,
                     canBoost: canBoost,
+                    isBoosting: isBoosting,
                     onBoost: onBoost
                 )
             }
@@ -521,13 +525,20 @@ private struct DetailBoostButton: View {
     let ping: Ping
     let hasUserBoosted: Bool
     let canBoost: Bool
+    let isBoosting: Bool
     let onBoost: () -> Void
 
     var body: some View {
         Button(action: onBoost) {
             HStack(spacing: 6) {
-                Image(systemName: hasUserBoosted ? "flame.fill" : "flame")
-                    .font(.system(size: 16))
+                if isBoosting {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(width: 16, height: 16)
+                } else {
+                    Image(systemName: hasUserBoosted ? "flame.fill" : "flame")
+                        .font(.system(size: 16))
+                }
                 Text("\(ping.boostCount)")
                     .font(.dmSans(.bold, size: 15, relativeTo: .body))
                 Text(hasUserBoosted ? "boosted" : "boost")
@@ -607,6 +618,7 @@ private struct DetailRSVPButton: View {
     let isAttending: Bool
     let isCreator: Bool
     let isEnabled: Bool
+    let isToggling: Bool
     let onToggle: () -> Void
 
     var body: some View {
@@ -638,8 +650,14 @@ private struct DetailRSVPButton: View {
 
     private func rsvpCapsule(icon: String, text: String, highlighted: Bool) -> some View {
         HStack(spacing: 7) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+            if isToggling {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 15, height: 15)
+            } else {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+            }
             Text(text)
                 .font(.dmSans(.semiBold, size: 14, relativeTo: .body))
             if !isCreator && attendingCount > 0 {

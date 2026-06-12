@@ -6,7 +6,10 @@ import vision from "@google-cloud/vision";
 const client = new vision.ImageAnnotatorClient();
 
 export const moderateImage = onObjectFinalized(
-  { region: "europe-west3", bucket: "pingit-dev.firebasestorage.app" },
+  // No explicit bucket — binds to the project's default Storage bucket so
+  // the trigger fires regardless of project/environment. The handler reads
+  // event.data.bucket for the actual file location.
+  { region: "europe-west3" },
   async (event) => {
     const filePath = event.data.name;
     if (!filePath) return;

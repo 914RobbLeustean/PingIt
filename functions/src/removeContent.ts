@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
 import { defineString } from "firebase-functions/params";
 import { cleanupPing } from "./pingCleanup";
 
@@ -59,8 +59,8 @@ export const removeContent = onCall({ region: "europe-west3" }, async (request) 
     case "user": {
       await db.collection("users").doc(targetId).update({
         suspensionStatus: "suspended",
-        suspensionExpiresAt: new Date(
-          Date.now() + 24 * 60 * 60 * 1000
+        suspensionExpiresAt: Timestamp.fromDate(
+          new Date(Date.now() + 24 * 60 * 60 * 1000)
         ), // 24hr default
       });
       break;
@@ -80,7 +80,7 @@ export const removeContent = onCall({ region: "europe-west3" }, async (request) 
       targetId,
       action: "emergency_removal",
       reason: reason || "No reason provided",
-      timestamp: new Date(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     return { success: true, targetType, targetId };
