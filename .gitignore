@@ -34,6 +34,7 @@ functions/.env.*
 # Documentation (local only, except runbooks)
 docs/*
 !docs/ADMIN_MODERATION_RUNBOOK.md
+!docs/BACKEND_DEPLOY.md
 
 # Git worktrees
 .worktrees/

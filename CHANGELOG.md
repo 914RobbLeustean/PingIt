@@ -21,6 +21,10 @@ Fixes from the App Store launch audit. Full per-issue detail in `bug-fixing/fina
 ### Fixed — Security rules
 - **Block relationships are now private.** `firestore.rules` restricts `blocks` reads to the blocker or blocked party (was any signed-in user). All client block queries are already filtered to satisfy the rule. *(Deploy: `firebase deploy --only firestore:rules`.)*
 - **Cloud Storage now has security rules.** Added `storage.rules` (deny-by-default) and a `"storage"` block in `firebase.json` — the bucket previously had zero access control (any authed user could read/overwrite/delete any file). Writes are auth-required, scoped (`profile_pictures/{userId}` is owner-only; `ping_images`/`recap_photos` are auth-only since ownership/attendee/window checks live on the Firestore doc rules), and constrained to `image/*` under 10 MB. Reads are public (images shown to all users via tokenized download URLs). *(Deployed to pingit-dev via `firebase deploy --only storage`.)*
+- **Chats & messages are now members-only.** `chats`/`chatMessages` reads changed from any-signed-in-user to active membership (`isActiveChatMember` — checks the `chatParticipants/{chatId}_{uid}` doc with no `leftAt`), closing a privacy hole where any user could read every conversation. The chat view now joins before loading messages so the read is permitted. Rejoin re-activates membership, so returning users still see full history. *(Deployed to pingit-dev via `firebase deploy --only firestore:rules`.)*
+
+### Added — Backend deploy reference
+- **`docs/BACKEND_DEPLOY.md`** — a tracked "if you touched X, run Y" cheat sheet for Firebase deploys (rules, indexes, storage, functions, hosting), the asdf Node-version workaround, composite-index reminders, server-authoritative-write list, and common gotchas. Un-ignored in `.gitignore` alongside the moderation runbook.
 
 ### Fixed — Cloud Functions
 - **moderateImage trigger binds to the default bucket.** Removed the hardcoded `pingit-dev.firebasestorage.app` bucket from the trigger config so it works across projects/environments.
