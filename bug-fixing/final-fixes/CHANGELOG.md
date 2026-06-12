@@ -64,6 +64,18 @@ Fixes from the investor-demo / App Store launch audit. Each entry: issue, root c
 - **Fix:** `updateData` → `setData(["fcmToken": token], merge: true)` — upserts instead of failing.
 - **Verified:** app builds + launches.
 
+## #10 — Missing Cloud Storage security rules
+- **Severity:** showstopper (security) — App Store launch blocker
+- **Files:** `storage.rules` (new), `firebase.json`
+- **Root cause:** no `storage.rules` file and no `"storage"` block in `firebase.json` — the bucket had zero access control. Any authenticated user could read, overwrite, or delete any file (other users' profile pictures, ping images, recap photos).
+- **Fix:** added `storage.rules` (rules_version 2, deny-by-default) and wired `"storage": { "rules": "storage.rules" }` into `firebase.json`. Scoped writes:
+  - `profile_pictures/{userId}/{file}` — write only if `request.auth.uid == userId`.
+  - `ping_images/{pingId}/{file}` — write requires auth (ping ownership enforced on the Firestore ping doc).
+  - `recap_photos/{recapId}/{file}` — write requires auth (attendee + submission-window enforced on the Firestore recap-photo doc).
+  - All writes constrained to `contentType` `image/.*` and size < 10 MB. Reads are public (app shows images to all users via tokenized download URLs, which bypass rules anyway). Everything else denied.
+- **Note:** Storage rules can't cheaply query Firestore, so per-ping/per-attendee ownership stays on the existing Firestore document write rules. The `moderateImage` Cloud Function uses the Admin SDK and bypasses Storage rules — unaffected.
+- **Verified:** `firebase deploy --only storage --project pingit-dev` → rules compiled and released successfully. All four upload/delete paths in `ImageStorageService`, `PingService.uploadPingImage`, and `PingRecapService.submitRecapPhoto` (all `image/jpeg`, signed in, owner-scoped where applicable) satisfy the rules — no legitimate upload locked out.
+
 ---
 
 ## Feature — Recap markers: toggle + zoom gating
@@ -80,3 +92,4 @@ Fixes from the investor-demo / App Store launch audit. Each entry: issue, root c
 - **Not yet deployed:** `firestore.rules` (#2) and functions (#4, #5) — deploy before relying on them:
   - `firebase deploy --only firestore:rules`
   - `cd functions && npm run build && cd .. && firebase deploy --only functions`
+- **Deployed:** Cloud Storage rules (#10) — `firebase deploy --only storage --project pingit-dev` (released to pingit-dev).

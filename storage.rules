@@ -1,0 +1,60 @@
+rules_version = '2';
+
+// Cloud Storage security rules for PingIt (project: pingit-dev).
+//
+// Model: deny by default. Reads are public because the app displays images to
+// all users via tokenized download URLs (which bypass these rules anyway), so
+// requiring auth on reads would add no real protection while risking breakage.
+// Writes are tightly scoped, require authentication, and are constrained to
+// reasonably sized image uploads.
+//
+// Note: Storage rules cannot cheaply query Firestore. Ownership of pings and
+// the recap attendee/submission-window enforcement live on the corresponding
+// Firestore document write rules (firestore.rules). Storage's job here is
+// simply to not be wide open: authenticated, image-only, size-capped writes.
+//
+// The moderateImage Cloud Function reads Storage objects via the Admin SDK,
+// which bypasses these rules entirely.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // A valid image upload: content-type image/* and under 10 MB.
+    function isValidImageUpload() {
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Profile pictures: only the owning user may write their own folder.
+    // profile_pictures/{userId}/profile.jpg
+    match /profile_pictures/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn()
+        && request.auth.uid == userId
+        && isValidImageUpload();
+    }
+
+    // Ping images: any authenticated user may upload (ping ownership is
+    // enforced on the Firestore ping document). ping_images/{pingId}/{file}
+    match /ping_images/{pingId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn() && isValidImageUpload();
+    }
+
+    // Recap photos: any authenticated user may upload (attendee status and the
+    // submission window are enforced on the Firestore recap-photo document).
+    // recap_photos/{recapId}/{photoDocId}.jpg
+    match /recap_photos/{recapId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn() && isValidImageUpload();
+    }
+
+    // Deny everything else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
