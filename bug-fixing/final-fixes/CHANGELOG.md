@@ -66,6 +66,14 @@ Fixes from the investor-demo / App Store launch audit. Each entry: issue, root c
 
 ---
 
+## Feature — Recap markers: toggle + zoom gating
+- **File:** `PingIt/Features/Map/ViewModels/MapViewModel.swift`, `PingIt/Features/Map/Views/MapView.swift`
+- **What:** Recap (📸) ghost markers are now a user toggle (`MapRecapsButton` in `MapHeader`, photo icon, same styling as the heatmap button), **on by default**. They render only when zoomed in close (`visibleRegion.span.latitudeDelta < 0.02`) so they stop overlapping active ping pins at wider zoom.
+- **How:** `isRecapsEnabled` (default true, in-memory — resets ON each launch, matching the heatmap toggle) + `toggleRecaps()`. `applyRecapFilter()` now early-returns empty unless enabled AND zoomed in. `visibleRegion` got a `didSet { applyRecapFilter() }` so panning/zooming re-evaluates the gate.
+- **Zoomed-out behavior:** markers simply hidden (no hint pill). Toggle OFF hides regardless of zoom.
+- **No backend impact:** pure client render/filter; no new Firestore reads or indexes.
+- **Tests:** `PingItTests/ViewModelTests/MapViewModelTests.swift` — 3 cases (visible when on+zoomed-in, hidden when zoomed out, toggle off/on). NOT run locally (test target blocked by VPN on this machine); app target builds clean.
+
 ## Build/verification status
 - Swift app: **BUILD SUCCEEDED** (iPhone 17 simulator, Xcode 26.2); launches clean, welcome screen renders, notification prompt fires.
 - Cloud Functions: `npm run build` (tsc) **exit 0**.

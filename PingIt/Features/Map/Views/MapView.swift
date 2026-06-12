@@ -46,7 +46,9 @@ struct MapView: View {
                     onRecenter: handleRecenterTap,
                     isHeatmapEnabled: viewModel.isHeatmapEnabled,
                     isLoadingHeatmap: viewModel.isLoadingHeatmap,
-                    onToggleHeatmap: { Task { await viewModel.toggleHeatmap() } }
+                    onToggleHeatmap: { Task { await viewModel.toggleHeatmap() } },
+                    isRecapsEnabled: viewModel.isRecapsEnabled,
+                    onToggleRecaps: { viewModel.toggleRecaps() }
                 )
 
                 MapAlertStack(
@@ -207,20 +209,22 @@ struct MapView: View {
                 .annotationTitles(.hidden)
             }
 
-            ForEach(viewModel.recaps) { recap in
-                Annotation(
-                    recap.title,
-                    coordinate: CLLocationCoordinate2D(
-                        latitude: recap.location.latitude,
-                        longitude: recap.location.longitude
-                    ),
-                    anchor: .center
-                ) {
-                    RecapAnnotationView(recap: recap) {
-                        sheetRecap = recap
+            if viewModel.isRecapsEnabled {
+                ForEach(viewModel.recaps) { recap in
+                    Annotation(
+                        recap.title,
+                        coordinate: CLLocationCoordinate2D(
+                            latitude: recap.location.latitude,
+                            longitude: recap.location.longitude
+                        ),
+                        anchor: .center
+                    ) {
+                        RecapAnnotationView(recap: recap) {
+                            sheetRecap = recap
+                        }
                     }
+                    .annotationTitles(.hidden)
                 }
-                .annotationTitles(.hidden)
             }
         }
         .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
@@ -556,6 +560,8 @@ private struct MapHeader: View {
     let isHeatmapEnabled: Bool
     let isLoadingHeatmap: Bool
     let onToggleHeatmap: () -> Void
+    let isRecapsEnabled: Bool
+    let onToggleRecaps: () -> Void
 
     var body: some View {
         HStack(alignment: .top) {
@@ -574,10 +580,41 @@ private struct MapHeader: View {
                     isLoading: isLoadingHeatmap,
                     action: onToggleHeatmap
                 )
+                MapRecapsButton(
+                    isEnabled: isRecapsEnabled,
+                    action: onToggleRecaps
+                )
             }
         }
         .padding(.horizontal, 20)
         .padding(.top, 58)
+    }
+}
+
+private struct MapRecapsButton: View {
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: isEnabled ? "photo.fill" : "photo")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(isEnabled ? .black : Color.pingAccent)
+                .frame(width: 42, height: 42)
+                .background {
+                    if isEnabled {
+                        Circle().fill(Color.pingAccent)
+                    } else {
+                        Circle().fill(.ultraThinMaterial)
+                    }
+                }
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isEnabled ? "Hide event recaps" : "Show event recaps")
     }
 }
 

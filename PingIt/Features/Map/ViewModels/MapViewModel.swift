@@ -29,8 +29,20 @@ final class MapViewModel {
     private(set) var isLoadingHeatmap = false
     private var heatmapFetchedAt: Date?
     private static let heatmapCacheSeconds: TimeInterval = 30 * 60
+
+    // Recaps are shown by default but only when zoomed in close, so their
+    // ghost markers don't overlap active ping pins at wider zoom. In-memory
+    // only (resets ON each launch), matching the heatmap toggle.
+    private(set) var isRecapsEnabled = true
+    /// Max latitudeDelta (zoom span) at which recap markers render. Tighter
+    /// than the clustering thresholds so recaps appear only at neighborhood
+    /// zoom, not city/region zoom.
+    private static let recapZoomThreshold: CLLocationDegrees = 0.02
+
     var errorMessage: String?
-    var visibleRegion: MKCoordinateRegion?
+    var visibleRegion: MKCoordinateRegion? {
+        didSet { applyRecapFilter() }
+    }
 
     private(set) var displayCoordinates: [String: CLLocationCoordinate2D] = [:]
 
@@ -98,12 +110,26 @@ final class MapViewModel {
     }
 
     private func applyRecapFilter() {
+        // Hidden when the user toggles recaps off, or when zoomed out past
+        // the threshold — at wider zoom recap ghosts overlap active pins.
+        guard isRecapsEnabled,
+              let region = visibleRegion,
+              region.span.latitudeDelta < Self.recapZoomThreshold else {
+            recaps = []
+            return
+        }
+
         // Empty recaps are visible only to their attendees — a ghost with
         // no photos is just clutter for everyone else.
         recaps = allRecaps.filter {
             $0.ghostExpiresAt > ServerTime.now
             && $0.isVisibleOnMap(to: currentUserId)
         }
+    }
+
+    func toggleRecaps() {
+        isRecapsEnabled.toggle()
+        applyRecapFilter()
     }
 
     func applyBlockFilter() {

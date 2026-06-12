@@ -28,6 +28,10 @@ Fixes from the App Store launch audit. Full per-issue detail in `bug-fixing/fina
 ### UX
 - **RSVP and Boost buttons show a loading spinner** while the call is in flight (Ping Detail), replacing the icon with a `ProgressView` instead of just disabling the button.
 
+### Added — Map recap toggle + zoom gating
+- Recap (📸) ghost markers are now a toggle in the map header (`MapRecapsButton`, photo icon, same styling as the heatmap button), **on by default**. State is in-memory (resets ON each launch, like the heatmap toggle).
+- Recap markers render only when zoomed in close (`visibleRegion.span.latitudeDelta < 0.02`) so they no longer overlap active ping pins at wider zoom; zooming re-evaluates via a `visibleRegion` `didSet`. Toggling off hides them at any zoom. Pure client-side filter — no new reads/indexes.
+
 ### Notes
 - Intentionally **not** changed: `pingRecaps` read rule stays `signedIn()`. Tightening it would break the map's unfiltered recap listener (Firestore fails the whole list query on any rule-violating doc) and thus the public ghost-marker feature. Recap docs are low-sensitivity. Revisit with a client-query + index change.
 
