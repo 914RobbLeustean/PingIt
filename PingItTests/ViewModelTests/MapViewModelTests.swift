@@ -1,5 +1,6 @@
 import Testing
 import CoreLocation
+import MapKit
 import FirebaseFirestore
 @testable import PingIt
 
@@ -156,5 +157,79 @@ struct MapViewModelTests {
 
         #expect(vm.pings.count == 1)
         #expect(vm.pings.first?.text == "Active event")
+    }
+
+    // MARK: - Recap toggle + zoom gating
+
+    /// A recap with photoCount > 0 is visible to anyone (isVisibleOnMap).
+    private func makeVisibleRecap() -> PingRecap {
+        PingRecap(
+            id: "recap1",
+            pingId: "recap1",
+            title: "Last night",
+            category: nil,
+            location: .init(latitude: 46.77, longitude: 23.62),
+            attendeeIds: ["someone"],
+            photoCount: 3,
+            expiresAt: Date.now.addingTimeInterval(-3600),
+            recapWindowClosesAt: Date.now.addingTimeInterval(3600),
+            ghostExpiresAt: Date.now.addingTimeInterval(24 * 3600)
+        )
+    }
+
+    private let closeRegion = MKCoordinateRegion(
+        center: .init(latitude: 46.77, longitude: 23.62),
+        span: .init(latitudeDelta: 0.01, longitudeDelta: 0.01)
+    )
+    private let farRegion = MKCoordinateRegion(
+        center: .init(latitude: 46.77, longitude: 23.62),
+        span: .init(latitudeDelta: 0.2, longitudeDelta: 0.2)
+    )
+
+    @Test("Recaps show when enabled and zoomed in close")
+    func recapsVisibleWhenEnabledAndZoomedIn() async {
+        let recapService = MockPingRecapService()
+        let vm = MapViewModel()
+        vm.configure(pingService: MockPingService(), locationService: MockLocationService(), recapService: recapService)
+        vm.startObserving()
+        vm.visibleRegion = closeRegion
+        recapService.activeRecapsCallback?(.success([makeVisibleRecap()]))
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.isRecapsEnabled == true)   // on by default
+        #expect(vm.recaps.count == 1)
+    }
+
+    @Test("Recaps hidden when zoomed out past threshold")
+    func recapsHiddenWhenZoomedOut() async {
+        let recapService = MockPingRecapService()
+        let vm = MapViewModel()
+        vm.configure(pingService: MockPingService(), locationService: MockLocationService(), recapService: recapService)
+        vm.startObserving()
+        vm.visibleRegion = farRegion
+        recapService.activeRecapsCallback?(.success([makeVisibleRecap()]))
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.recaps.isEmpty)
+    }
+
+    @Test("Toggling recaps off hides markers even when zoomed in")
+    func togglingRecapsOffHidesMarkers() async {
+        let recapService = MockPingRecapService()
+        let vm = MapViewModel()
+        vm.configure(pingService: MockPingService(), locationService: MockLocationService(), recapService: recapService)
+        vm.startObserving()
+        vm.visibleRegion = closeRegion
+        recapService.activeRecapsCallback?(.success([makeVisibleRecap()]))
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(vm.recaps.count == 1)
+
+        vm.toggleRecaps()
+        #expect(vm.isRecapsEnabled == false)
+        #expect(vm.recaps.isEmpty)
+
+        vm.toggleRecaps()
+        #expect(vm.isRecapsEnabled == true)
+        #expect(vm.recaps.count == 1)
     }
 }

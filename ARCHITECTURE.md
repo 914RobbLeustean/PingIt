@@ -529,10 +529,14 @@ SettingsView ── deleteAccount ──▶ DeleteAccountViewModel
    └─ AuthService.signOut() ──▶ auth listener routes to Welcome
 The split exists so the farewell card can render before the auth state flips and SettingsView is unmounted; AuthService.deleteAccount() (the legacy combined method) is preserved and just chains the two steps.
 
-PingItApp ── .task ──▶ NotificationService.requestPermission + registerFCMToken
+PingItApp ── .task ──▶ NotificationService.requestPermission (one-time) + registerFCMToken
           └─ sets UNUserNotificationCenter.delegate + Messaging.delegate
           └─ .onReceive(PingItOpenPing) ──▶ NavigationRouter.pendingPingId
+          └─ .onReceive(PingItOpenRecap) ──▶ NavigationRouter.pendingRecapId
+              (recap_invite + followed_recap_photo pushes route here)
           └─ .onChange(of: auth.uid) ──▶ AnalyticsService.setUserId + CrashReportingService.setUserId
+                                       + registerFCMToken (re-register on account change)
+              registerFCMToken uses setData(merge:) so a pre-user-doc token write upserts
 
 RootView ── checks ──▶ UserService.fetchUser (suspension + onboarding gate); falls through to UserService.ensureUserProfileExists if the Firestore doc is missing
          └─ if suspended ──▶ SuspendedAccountView

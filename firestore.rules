@@ -293,7 +293,11 @@ service cloud.firestore {
     }
 
     match /blocks/{blockId} {
-      allow read: if signedIn();
+      // Only the two parties to a block may read it — block relationships
+      // must not leak the social graph to other users.
+      allow read: if signedIn()
+        && (resource.data.blockerId == request.auth.uid
+          || resource.data.blockedUserId == request.auth.uid);
       allow create: if safeBlockCreate();
       allow delete: if signedIn() && request.auth.uid == resource.data.blockerId;
       allow update: if false;

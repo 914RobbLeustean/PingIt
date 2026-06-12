@@ -26,10 +26,14 @@ final class NotificationService: NSObject, NotificationServicing {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         guard let token = Messaging.messaging().fcmToken else { return }
 
+        // setData(merge:) rather than updateData: the token can arrive before
+        // the user doc exists (token refresh during a fresh sign-up race),
+        // and updateData throws NOT_FOUND in that case — silently dropping the
+        // token so the device never receives notifications. Merge upserts it.
         try? await db
             .collection(Constants.Firestore.usersCollection)
             .document(userId)
-            .updateData(["fcmToken": token])
+            .setData(["fcmToken": token], merge: true)
     }
 
     func updateLastKnownLocation(latitude: Double, longitude: Double) async {
@@ -62,15 +66,18 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         let userInfo = response.notification.request.content.userInfo
         guard let pingId = userInfo["pingId"] as? String else { return }
 
-        // Recap-photo notifications point at an expired ping; route them to
-        // the recap ghost on the map instead of the (unavailable) ping.
-        if userInfo["type"] as? String == "followed_recap_photo" {
+        // Recap notifications point at an expired ping; route them to the
+        // recap (whose document id equals the ping id) instead of the
+        // unavailable ping. `recap_invite` is sent to attendees when a ping
+        // expires; `followed_recap_photo` when a followed user posts a photo.
+        switch userInfo["type"] as? String {
+        case "recap_invite", "followed_recap_photo":
             NotificationCenter.default.post(
                 name: .init("PingItOpenRecap"),
                 object: nil,
                 userInfo: ["recapId": pingId]
             )
-        } else {
+        default:
             NotificationCenter.default.post(
                 name: .init("PingItOpenPing"),
                 object: nil,

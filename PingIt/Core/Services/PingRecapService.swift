@@ -10,7 +10,7 @@ final class PingRecapService: PingRecapServicing {
         onUpdate: @escaping @Sendable (Result<[PingRecap], Error>) -> Void
     ) -> ListenerHandle {
         let registration = db.collection(Constants.Firestore.pingRecapsCollection)
-            .whereField("ghostExpiresAt", isGreaterThan: Date.now)
+            .whereField("ghostExpiresAt", isGreaterThan: ServerTime.now)
             .addSnapshotListener { snapshot, error in
                 if let error {
                     onUpdate(.failure(error))

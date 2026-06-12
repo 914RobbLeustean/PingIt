@@ -73,6 +73,11 @@ struct PingItApp: App {
                 if let uid = newUid {
                     analyticsService.setUserId(uid)
                     crashReportingService.setUserId(uid)
+                    // Re-register the FCM token whenever the signed-in user
+                    // changes so notifications route to the current account.
+                    // The launch .task only fires once, so without this a
+                    // sign-out/sign-in would leave the token on the old uid.
+                    Task { await notificationService.registerFCMToken() }
                 } else {
                     analyticsService.setUserId(nil)
                     crashReportingService.setUserId(nil)

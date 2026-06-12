@@ -20,8 +20,11 @@ GoogleService-Info.plist
 functions/node_modules/
 functions/lib/
 
-# Environment
-.env.example
+# Environment — never commit real env/secret files
+.env
+.env.*
+functions/.env
+functions/.env.*
 
 # macOS
 .DS_Store

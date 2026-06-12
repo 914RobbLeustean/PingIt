@@ -6,6 +6,37 @@ Format: `[YYYY-MM-DD] — Summary of changes`
 
 ---
 
+## [2026-06-12] — Launch-audit fixes (branch `final-fixes`)
+
+Fixes from the App Store launch audit. Full per-issue detail in `bug-fixing/final-fixes/CHANGELOG.md`.
+
+### Fixed — Recap & notifications
+- **Recap ghost markers now use server time.** `PingRecapService.observeActiveRecaps` filtered `ghostExpiresAt` against `Date.now`; switched to `ServerTime.now` so markers appear/expire consistently across devices with clock skew.
+- **Recap invite notifications route correctly.** Tapping the `recap_invite` push (sent by `expirePings` when a ping ends) now opens the recap instead of the expired ping. `NotificationService.didReceive` switches on `type` and routes both `recap_invite` and `followed_recap_photo` to `PingItOpenRecap`.
+
+### Fixed — Push notification registration
+- **FCM token re-registers on account change.** Token registration moved into `onChange(of: authService.currentUser?.uid)` (was only in the one-time launch `.task`), so after sign-out/sign-in the token follows the current account. Permission prompt stays one-time.
+- **FCM token write no longer silently dropped on fresh accounts.** `registerFCMToken` uses `setData(merge:)` instead of `updateData`, which threw NOT_FOUND (swallowed by `try?`) when the token arrived before the user doc existed.
+
+### Fixed — Security rules
+- **Block relationships are now private.** `firestore.rules` restricts `blocks` reads to the blocker or blocked party (was any signed-in user). All client block queries are already filtered to satisfy the rule. *(Deploy: `firebase deploy --only firestore:rules`.)*
+
+### Fixed — Cloud Functions
+- **moderateImage trigger binds to the default bucket.** Removed the hardcoded `pingit-dev.firebasestorage.app` bucket from the trigger config so it works across projects/environments.
+- **Suspension timestamps are Firestore Timestamps.** `removeContent` writes `suspensionExpiresAt` via `Timestamp.fromDate` and the audit `timestamp` via `serverTimestamp()` (were plain JS `Date`s).
+
+### UX
+- **RSVP and Boost buttons show a loading spinner** while the call is in flight (Ping Detail), replacing the icon with a `ProgressView` instead of just disabling the button.
+
+### Added — Map recap toggle + zoom gating
+- Recap (📸) ghost markers are now a toggle in the map header (`MapRecapsButton`, photo icon, same styling as the heatmap button), **on by default**. State is in-memory (resets ON each launch, like the heatmap toggle).
+- Recap markers render only when zoomed in close (`visibleRegion.span.latitudeDelta < 0.02`) so they no longer overlap active ping pins at wider zoom; zooming re-evaluates via a `visibleRegion` `didSet`. Toggling off hides them at any zoom. Pure client-side filter — no new reads/indexes.
+
+### Notes
+- Intentionally **not** changed: `pingRecaps` read rule stays `signedIn()`. Tightening it would break the map's unfiltered recap listener (Firestore fails the whole list query on any rule-violating doc) and thus the public ghost-marker feature. Recap docs are low-sensitivity. Revisit with a client-query + index change.
+
+---
+
 ## [2026-06-11] — Deep links, RSVP + recaps, Social tab, heatmap, ping editing, launch experience
 
 ### Added — Deep Link Sharing
