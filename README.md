@@ -221,13 +221,19 @@ All mocks are `@Observable` and `@MainActor`-isolated, support injectable errors
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/your-username/PingIt.git
+   git clone https://github.com/914RobbLeustean/PingIt.git
    cd PingIt
    ```
 
 2. Set up Firebase
    - Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
    - Add an iOS app and download `GoogleService-Info.plist` into the `PingIt/` directory
+   - **Note:** `GoogleService-Info.plist` is intentionally **not** committed (it is
+     gitignored because it contains API keys). It will not be present in a fresh
+     clone — obtain it from the Firebase console (or a teammate) and place it at
+     `PingIt/GoogleService-Info.plist`. The app crashes at launch without it.
+   - The custom fonts (Syne, DM Sans) under `project_fonts/` **are** committed and
+     referenced by `Info.plist` — no extra font setup is needed.
    - Enable Authentication (Email/Password), Firestore, Storage, Cloud Messaging, Crashlytics, Analytics, and Performance
 
 3. Deploy Firestore Security Rules and indexes
@@ -239,6 +245,7 @@ All mocks are `@Observable` and `@MainActor`-isolated, support injectable errors
    ```bash
    cd functions
    npm install
+   npm run build   # compiles TypeScript to lib/ — required before deploy
    cd ..
    firebase deploy --only functions,hosting
    ```
